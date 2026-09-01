@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include "Math/Easing.hpp"
+#include "Collision/CollisionAttribute.hpp"
 
 namespace {
     constexpr float FULL_ROTATION = 6.2831853f;
@@ -59,6 +60,14 @@ void Enemy::Initialize() {
     SetScale(modelScale_ * spawnStartScale_);
     SetRotation({});
     model_->SetColor(modelColor_);
+
+    collider_ = std::make_unique<Collision::Collider>();
+    collider_->SetName("Enemy")
+        ->SetType(Collision::Type::AABB)
+        ->SetOwner(this)
+        ->AddAttribute(CollisionAttribute::Enemy)
+        ->AddIgnore(CollisionAttribute::Enemy)
+        ->Enable();
 }
 
 void Enemy::Update(float _deltaTime) {
@@ -86,7 +95,17 @@ void Enemy::Update(float _deltaTime) {
         break;
     }
 
+    UpdateCollider();
     UpdateModel();
+}
+
+void Enemy::UpdateCollider() {
+    if (!collider_) {
+        return;
+    }
+
+    collider_->SetTranslate(position_ + offset_ + colliderOffset_);
+    collider_->SetSize(scale_ * 2.0f);
 }
 
 void Enemy::UpdateMovement(float _deltaTime) {

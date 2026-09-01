@@ -2,6 +2,7 @@
 #define ENEMY_HPP_
 
 #include "GameObject/GameObject.hpp"
+#include "Collision/Collider.h"
 
 class Enemy final : public GameObject {
 public:
@@ -30,6 +31,8 @@ private:
     float deathEndScale_ = 0.01f;
     float deathExpandRatio_ = 0.4f;
     bool deathAnimationFinished_ = false;
+    std::unique_ptr<Collision::Collider> collider_;
+    Vector3 colliderOffset_{};
 
 public:
     void SetAppearance(const std::string& _modelName, const Vector3& _scale,
@@ -42,6 +45,8 @@ public:
     State GetState() const { return state_; }
     bool IsAlive() const { return state_ != State::Death; }
     bool IsDeathAnimationFinished() const { return deathAnimationFinished_; }
+    void SetColliderOffset(const Vector3& _offset) { colliderOffset_ = _offset; }
+    const Vector3& GetColliderOffset() const { return colliderOffset_; }
     void Kill();
 
     void Initialize() override;
@@ -52,6 +57,7 @@ private:
     void UpdateMovement(float _deltaTime);
     void UpdateSpawnAnimation(float _deltaTime);
     void UpdateDeathAnimation(float _deltaTime);
+    void UpdateCollider();
     bool IsSpawnAnimationPlaying() const;
 };
 
