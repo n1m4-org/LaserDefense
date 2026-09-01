@@ -11,9 +11,9 @@ void Player::Initialize() {
 
     SetModel("Cube");
 
-    SetPosition({ 0.f, 1.f, 0.f });
+    SetPosition({ 0.f, 0.f, 0.f });
     SetRotation({});
-    SetScale({ 1.f, 1.f, 1.f });
+    SetScale(kModelScale);
 
     velocity_ = {};
     active_   = true;
@@ -38,6 +38,7 @@ void Player::Update(float _deltaTime) {
     ApplyInput();
 
     UpdateComponents(_deltaTime);
+    offset_ = kModelOffset;
     UpdateModel();
 }
 

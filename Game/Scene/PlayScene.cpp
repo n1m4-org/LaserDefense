@@ -2,6 +2,7 @@
 
 #include "Camera/Controller/CameraController.hpp"
 #include "GameObject/Player/Player.h"
+#include "Laser/Laser.hpp"
 #include "Pattern/Singleton.hpp"
 #include "Texture/TextureManager.hpp"
 #include "Time/Time.hpp"
@@ -24,7 +25,12 @@ void PlayScene::Initialize() {
 
     towerManager_ = std::make_unique<TowerManager>();
     towerManager_->Initialize();
-    towerManager_->AddTower(towerPosition);
+    Tower* tower = towerManager_->AddTower(towerPosition);
+
+    laser_ = std::make_unique<Laser>();
+    laser_->Initialize();
+    laser_->SetStart(player_.get());
+    laser_->AddTarget(tower);
 
     enemyManager_ = std::make_unique<EnemyManager>();
     enemyManager_->Initialize();
@@ -44,6 +50,7 @@ void PlayScene::Update() {
     player_->Update(deltaTime);
     enemyManager_->Update(deltaTime);
     towerManager_->Update(deltaTime);
+    laser_->Update();
     floor_->Update();
 }
 
@@ -51,5 +58,6 @@ void PlayScene::Draw() {
     player_->Draw();
     enemyManager_->Draw();
     towerManager_->Draw();
+    laser_->Draw();
     floor_->Draw();
 }

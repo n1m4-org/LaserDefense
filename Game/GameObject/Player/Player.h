@@ -22,6 +22,10 @@ class Player : public GameObject {
     /// 移動速度の初期値 (units/sec)
     static constexpr float kDefaultMoveSpeed = 5.f;
 
+    /// モデルの見た目サイズと、床面からモデル中心までの描画オフセット
+    static constexpr Vector3 kModelScale{0.5f, 0.5f, 0.5f};
+    static constexpr Vector3 kModelOffset{0.0f, 0.5f, 0.0f};
+
 public:
     Player() = default;
     ~Player() override = default;
