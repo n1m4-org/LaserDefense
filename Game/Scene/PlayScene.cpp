@@ -3,6 +3,7 @@
 #include "Camera/Controller/CameraController.hpp"
 #include "GameObject/Player/Player.h"
 #include "Laser/Laser.hpp"
+#include "Light/LightManager.hpp"
 #include "Pattern/Singleton.hpp"
 #include "Texture/TextureManager.hpp"
 #include "Time/Time.hpp"
@@ -12,6 +13,7 @@ PlayScene::~PlayScene() = default;
 
 void PlayScene::Initialize() {
     constexpr Vector3 towerPosition{3.0f, 0.0f, 4.0f};
+    constexpr Vector3 shadowLightOffset{0.0f, 10.0f, 0.0f};
 
     Singleton<TextureManager>::GetInstance()->Load("skybox.dds");
 
@@ -22,6 +24,8 @@ void PlayScene::Initialize() {
     player_ = std::make_unique<Player>();
     player_->Initialize();
     player_->SetInput(input_);
+    Singleton<LightManager>::GetInstance()->SetPosition(
+        player_->GetPosition() + shadowLightOffset);
 
     towerManager_ = std::make_unique<TowerManager>();
     towerManager_->Initialize();
@@ -29,7 +33,7 @@ void PlayScene::Initialize() {
 
     laser_ = std::make_unique<Laser>();
     laser_->Initialize();
-    laser_->SetStart(player_.get());
+    laser_->SetStart(player_.get(), player_->GetModelOffset().y);
     laser_->SetTarget(tower);
 
     enemyManager_ = std::make_unique<EnemyManager>();
@@ -38,16 +42,22 @@ void PlayScene::Initialize() {
 
     floor_ = std::make_unique<Model>();
     floor_->Initialize("plane");
+    floor_->SetTexture("white_x16.png");
+    floor_->SetColor({0.5f, 0.5f, 0.5f, 1.0f});
     floor_->SetTranslate({0.0f, 0.0f, 0.0f});
     floor_->SetRotate({-1.5707963f, 0.0f, 0.0f});
     floor_->SetScale({10.0f, 10.0f, 1.0f});
 }
 
 void PlayScene::Update() {
+    constexpr Vector3 shadowLightOffset{0.0f, 10.0f, 0.0f};
+
     input_.Update();
 
     const float deltaTime = Time::GetDeltaTime();
     player_->Update(deltaTime);
+    Singleton<LightManager>::GetInstance()->SetPosition(
+        player_->GetPosition() + shadowLightOffset);
     enemyManager_->Update(deltaTime);
     towerManager_->Update(deltaTime);
     laser_->Update();

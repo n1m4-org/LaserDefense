@@ -19,12 +19,14 @@ class Player : public GameObject {
     /// 所有権はGameObject::components_が持つため、ここは参照用のポインタ
     MoveComponent* move_{ nullptr };
 
-    /// 移動速度の初期値 (units/sec)
-    static constexpr float kDefaultMoveSpeed = 5.f;
-
-    /// モデルの見た目サイズと、床面からモデル中心までの描画オフセット
-    static constexpr Vector3 kModelScale{0.5f, 0.5f, 0.5f};
-    static constexpr Vector3 kModelOffset{0.0f, 0.5f, 0.0f};
+    std::string modelName_{"Cube"};
+    Vector4 modelColor_{1.0f, 1.0f, 1.0f, 1.0f};
+    Vector3 modelScale_{0.5f, 0.5f, 0.5f};
+    Vector3 modelOffset_{0.0f, 0.5f, 0.0f};
+    Vector3 initialPosition_{};
+    Vector3 initialRotation_{};
+    float moveSpeed_ = 5.0f;
+    float moveLimit_ = 20.0f;
 
 public:
     Player() = default;
@@ -39,8 +41,11 @@ public:
     /// @param _input シーンが保持する入力。Playerより長生きすること
     /// @note Update()より前に一度だけ呼ぶ
     void SetInput(const GameSceneInput& _input) { input_ = &_input; }
+    const Vector3& GetModelOffset() const { return modelOffset_; }
 
 private:
+    void LoadConfig();
+
     /// 入力を自分の動きへ反映する
     /// アクションを増やすときはここに解釈を足していく
     void ApplyInput();
