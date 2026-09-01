@@ -2,6 +2,7 @@
 
 #include "Factory/PostEffectFactory.hpp"
 #include "Scene/EnemyTestScene.hpp"
+#include "Scene/GameSampleScene.hpp"
 
 void MyGame::Initialize(GameEngine::Config& _config) {
     // ゲーム固有の設定（Assets/Config/App.cnf に含まれないもの）
@@ -20,4 +21,5 @@ void MyGame::Initialize(GameEngine::Config& _config) {
 
 void MyGame::Register(){
     RegisterScene<EnemyTestScene>("EnemyTest");
+    RegisterScene<GameSampleScene>("GameSample");
 }
