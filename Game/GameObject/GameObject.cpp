@@ -31,6 +31,18 @@ void GameObject::SetModel(const std::string& _name) {
     model_->SetEnvironmentTexture("skybox.dds");
 }
 
+void GameObject::UpdateComponents(float _deltaTime) {
+    for (const auto& component : components_) {
+        component->Update(_deltaTime);
+    }
+}
+
+void GameObject::DebugComponents() {
+    for (const auto& component : components_) {
+        component->Debug();
+    }
+}
+
 void GameObject::UpdateModel() {
     UpdateTransform();
     // モデル更新
