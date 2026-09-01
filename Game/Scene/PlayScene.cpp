@@ -1,14 +1,15 @@
-#include "EnemyTestScene.hpp"
+#include "PlayScene.hpp"
 
-#include "Enemy/EnemyManager.hpp"
 #include "Camera/Controller/CameraController.hpp"
+#include "GameObject/Player/Player.h"
 #include "Pattern/Singleton.hpp"
 #include "Texture/TextureManager.hpp"
 #include "Time/Time.hpp"
 
-EnemyTestScene::~EnemyTestScene() = default;
+PlayScene::PlayScene() = default;
+PlayScene::~PlayScene() = default;
 
-void EnemyTestScene::Initialize() {
+void PlayScene::Initialize() {
     constexpr Vector3 towerPosition{3.0f, 0.0f, 4.0f};
 
     Singleton<TextureManager>::GetInstance()->Load("skybox.dds");
@@ -16,6 +17,10 @@ void EnemyTestScene::Initialize() {
     if (const auto camera = Singleton<CameraController>::GetInstance()->GetActive()) {
         camera->transform_.translate = {0.0f, 40.0f, -16.5f};
     }
+
+    player_ = std::make_unique<Player>();
+    player_->Initialize();
+    player_->SetInput(input_);
 
     towerManager_ = std::make_unique<TowerManager>();
     towerManager_->Initialize();
@@ -32,13 +37,18 @@ void EnemyTestScene::Initialize() {
     floor_->SetScale({10.0f, 10.0f, 1.0f});
 }
 
-void EnemyTestScene::Update() {
-    enemyManager_->Update(Time::GetDeltaTime());
-    towerManager_->Update(Time::GetDeltaTime());
+void PlayScene::Update() {
+    input_.Update();
+
+    const float deltaTime = Time::GetDeltaTime();
+    player_->Update(deltaTime);
+    enemyManager_->Update(deltaTime);
+    towerManager_->Update(deltaTime);
     floor_->Update();
 }
 
-void EnemyTestScene::Draw() {
+void PlayScene::Draw() {
+    player_->Draw();
     enemyManager_->Draw();
     towerManager_->Draw();
     floor_->Draw();

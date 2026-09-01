@@ -154,7 +154,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
 
     <ClInclude Include="Scene\Input\GameSceneInput.hpp" />
 
-    <ClInclude Include="Scene\EnemyTestScene.hpp" />
+    <ClInclude Include="Scene\PlayScene.hpp" />
     <ClInclude Include="Tower\Tower.hpp" />
     <ClInclude Include="Tower\TowerManager.hpp" />
 
@@ -171,7 +171,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Scene\GameSampleScene.cpp" />
     <ClCompile Include="Scene\Input\GameSceneInput.cpp" />
 
-    <ClCompile Include="Scene\EnemyTestScene.cpp" />
+    <ClCompile Include="Scene\PlayScene.cpp" />
     <ClCompile Include="Tower\Tower.cpp" />
     <ClCompile Include="Tower\TowerManager.cpp" />
 
