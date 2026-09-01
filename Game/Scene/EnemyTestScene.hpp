@@ -5,9 +5,11 @@
 
 #include "Enemy/EnemyManager.hpp"
 #include "IScene.hpp"
+#include "Model.hpp"
 
 class EnemyTestScene final : public IScene {
     std::unique_ptr<EnemyManager> enemyManager_;
+    std::unique_ptr<Model> floor_;
 
 public:
     ~EnemyTestScene() override;
