@@ -9,6 +9,18 @@
         "Movement": {
             "Speed": 1.0
         },
+        "SpawnAnimation": {
+            "DurationSeconds": 1.0,
+            "StartScale": 0.1,
+            "Rotations": 2.0,
+            "MoveDuringAnimation": 0
+        },
+        "DeathAnimation": {
+            "DurationSeconds": 1.0,
+            "PeakScale": 1.3,
+            "EndScale": 0.01,
+            "ExpandRatio": 0.4
+        },
         "Spawn": {
             "IntervalSeconds": 3.0,
             "Range": [20.0, 20.0]
