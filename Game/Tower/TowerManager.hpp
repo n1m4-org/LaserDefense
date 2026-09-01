@@ -11,7 +11,7 @@ class TowerManager final {
 
 public:
     void Initialize();
-    void AddTower(const Vector3& _position);
+    Tower* AddTower(const Vector3& _position);
     void Update(float _deltaTime);
     void Draw() const;
 };
