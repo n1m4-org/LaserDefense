@@ -62,6 +62,8 @@ void Enemy::Initialize() {
 }
 
 void Enemy::Update(float _deltaTime) {
+    offset_ = modelOffset_;
+
     switch (state_) {
     case State::Spawn:
         UpdateSpawnAnimation(_deltaTime);
