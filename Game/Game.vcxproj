@@ -148,6 +148,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Factory\PostEffectFactory.hpp" />
     <ClInclude Include="Scene\GameSampleScene.hpp" />
     <ClInclude Include="Scene\EnemyTestScene.hpp" />
+    <ClInclude Include="Tower\Tower.hpp" />
+    <ClInclude Include="Tower\TowerManager.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Enemy\Enemy.cpp" />
@@ -156,6 +158,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="MyGame.cpp" />
     <ClCompile Include="PostEffectFactory.cpp" />
     <ClCompile Include="Scene\EnemyTestScene.cpp" />
+    <ClCompile Include="Tower\Tower.cpp" />
+    <ClCompile Include="Tower\TowerManager.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>

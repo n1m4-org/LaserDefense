@@ -14,7 +14,7 @@ class EnemyManager final {
 
     std::string modelName_{"Cube"};
     Vector3 modelScale_{0.5f, 0.5f, 0.5f};
-    Vector3 modelOffset_{0.0f, 0.25f, 0.0f};
+    Vector3 modelOffset_{0.0f, 0.5f, 0.0f};
     Vector4 modelColor_{1.0f, 0.0f, 0.0f, 1.0f};
     Vector3 targetPosition_{};
     float moveSpeed_ = 1.0f;
