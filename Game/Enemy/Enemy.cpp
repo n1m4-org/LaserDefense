@@ -12,7 +12,7 @@ namespace {
 }
 
 void Enemy::SetAppearance(const std::string& _modelName, const Vector3& _scale,
-                          const Vector3& _offset, const Vector4& _color) {
+    const Vector3& _offset, const Vector4& _color) {
     modelName_ = _modelName;
     modelScale_ = _scale;
     modelOffset_ = _offset;
@@ -20,12 +20,12 @@ void Enemy::SetAppearance(const std::string& _modelName, const Vector3& _scale,
 }
 
 void Enemy::SetMovement(const Vector3& _targetPosition, float _moveSpeed) {
-    targetPosition_ = {_targetPosition.x, 0.0f, _targetPosition.z};
+    targetPosition_ = { _targetPosition.x, 0.0f, _targetPosition.z };
     moveSpeed_ = _moveSpeed;
 }
 
 void Enemy::SetSpawnAnimation(float _duration, float _startScale,
-                              float _rotations, bool _moveDuringAnimation) {
+    float _rotations, bool _moveDuringAnimation) {
     spawnAnimationDuration_ = _duration;
     spawnStartScale_ = _startScale;
     spawnRotations_ = _rotations;
@@ -33,7 +33,7 @@ void Enemy::SetSpawnAnimation(float _duration, float _startScale,
 }
 
 void Enemy::SetDeathAnimation(float _duration, float _peakScale,
-                              float _endScale, float _expandRatio) {
+    float _endScale, float _expandRatio) {
     deathAnimationDuration_ = _duration;
     deathPeakScale_ = _peakScale;
     deathEndScale_ = _endScale;
@@ -48,6 +48,9 @@ void Enemy::Kill() {
     deathAnimationTime_ = 0.0f;
     deathAnimationFinished_ = false;
     SetVelocity({});
+    if (collider_) {
+        collider_->Disable();
+    }
 }
 
 void Enemy::Initialize() {
@@ -56,7 +59,7 @@ void Enemy::Initialize() {
     deathAnimationTime_ = 0.0f;
     deathAnimationFinished_ = false;
     SetModel(modelName_);
-    SetPosition({0.0f, 0.0f, 0.0f});
+    SetPosition({ 0.0f, 0.0f, 0.0f });
     SetScale(modelScale_ * spawnStartScale_);
     SetRotation({});
     model_->SetColor(modelColor_);
@@ -67,6 +70,9 @@ void Enemy::Initialize() {
         ->SetOwner(this)
         ->AddAttribute(CollisionAttribute::Enemy)
         ->AddIgnore(CollisionAttribute::Enemy)
+        ->SetEvent(Collision::EventType::Trigger, [this](const Collision::Collider* _other) {
+        OnCollisionTrigger(_other);
+            })
         ->Enable();
 }
 
@@ -74,25 +80,25 @@ void Enemy::Update(float _deltaTime) {
     offset_ = modelOffset_;
 
     switch (state_) {
-    case State::Spawn:
-        UpdateSpawnAnimation(_deltaTime);
+        case State::Spawn:
+            UpdateSpawnAnimation(_deltaTime);
 
-        if (moveDuringSpawnAnimation_ && state_ == State::Spawn) {
+            if (moveDuringSpawnAnimation_ && state_ == State::Spawn) {
+                UpdateMovement(_deltaTime);
+            }
+
+            if (state_ == State::Spawn && !IsSpawnAnimationPlaying()) {
+                state_ = State::Move;
+            }
+            break;
+
+        case State::Move:
             UpdateMovement(_deltaTime);
-        }
+            break;
 
-        if (state_ == State::Spawn && !IsSpawnAnimationPlaying()) {
-            state_ = State::Move;
-        }
-        break;
-
-    case State::Move:
-        UpdateMovement(_deltaTime);
-        break;
-
-    case State::Death:
-        UpdateDeathAnimation(_deltaTime);
-        break;
+        case State::Death:
+            UpdateDeathAnimation(_deltaTime);
+            break;
     }
 
     UpdateCollider();
@@ -116,12 +122,22 @@ void Enemy::UpdateMovement(float _deltaTime) {
     if (distance <= moveDistance) {
         SetPosition(targetPosition_);
         SetVelocity({});
-        Kill();
     } else {
         SetVelocity(toTarget.Normalize() * moveSpeed_);
         ApplyVelocity(_deltaTime);
     }
 
+}
+
+void Enemy::OnCollisionTrigger(const Collision::Collider* _other) {
+    if (!_other) {
+        return;
+    }
+    if ((_other->GetAttribute() & CollisionAttribute::Tower) == 0u) {
+        return;
+    }
+
+    Kill();
 }
 
 void Enemy::UpdateSpawnAnimation(float _deltaTime) {
@@ -141,7 +157,7 @@ void Enemy::UpdateSpawnAnimation(float _deltaTime) {
     const float rotationAngle = FULL_ROTATION * spawnRotations_;
 
     SetScale(Ease::Out::Cubic(startScale, modelScale_, t));
-    SetRotation(Ease::InOut::Cubic(Vector3{}, {0.0f, rotationAngle, 0.0f}, t));
+    SetRotation(Ease::InOut::Cubic(Vector3{}, { 0.0f, rotationAngle, 0.0f }, t));
     offset_ = Ease::Out::Cubic(modelOffset_ * spawnStartScale_, modelOffset_, t);
 
     if (!IsSpawnAnimationPlaying()) {

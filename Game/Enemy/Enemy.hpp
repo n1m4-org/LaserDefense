@@ -58,6 +58,7 @@ private:
     void UpdateSpawnAnimation(float _deltaTime);
     void UpdateDeathAnimation(float _deltaTime);
     void UpdateCollider();
+    void OnCollisionTrigger(const Collision::Collider* _other);
     bool IsSpawnAnimationPlaying() const;
 };
 
