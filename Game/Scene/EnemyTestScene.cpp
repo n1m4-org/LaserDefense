@@ -9,15 +9,21 @@
 EnemyTestScene::~EnemyTestScene() = default;
 
 void EnemyTestScene::Initialize() {
+    constexpr Vector3 towerPosition{3.0f, 0.0f, 4.0f};
+
     Singleton<TextureManager>::GetInstance()->Load("skybox.dds");
 
     if (const auto camera = Singleton<CameraController>::GetInstance()->GetActive()) {
         camera->transform_.translate = {0.0f, 40.0f, -16.5f};
     }
 
+    towerManager_ = std::make_unique<TowerManager>();
+    towerManager_->Initialize();
+    towerManager_->AddTower(towerPosition);
+
     enemyManager_ = std::make_unique<EnemyManager>();
     enemyManager_->Initialize();
-    enemyManager_->SetTargetPosition(0.0f, 0.0f);
+    enemyManager_->SetTargetPosition(towerPosition.x, towerPosition.z);
 
     floor_ = std::make_unique<Model>();
     floor_->Initialize("plane");
@@ -28,10 +34,12 @@ void EnemyTestScene::Initialize() {
 
 void EnemyTestScene::Update() {
     enemyManager_->Update(Time::GetDeltaTime());
+    towerManager_->Update(Time::GetDeltaTime());
     floor_->Update();
 }
 
 void EnemyTestScene::Draw() {
     enemyManager_->Draw();
+    towerManager_->Draw();
     floor_->Draw();
 }
