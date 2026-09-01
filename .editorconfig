@@ -1,0 +1,9 @@
+root = true
+
+# All files
+[*]
+indent_style = space
+indent_size = 4
+
+[*.{hpp,cpp,hlsl,hlsli}]
+charset = utf-8

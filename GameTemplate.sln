@@ -1,0 +1,68 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.2.11415.280
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Game", "Game\Game.vcxproj", "{7FA9857C-6BE0-860D-14CD-6C1000E3020F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{DBC7D3B0-C769-FE86-B024-12DB9C6585D7} = {DBC7D3B0-C769-FE86-B024-12DB9C6585D7}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DirectXTex", "Engine\externals\DirectXTex\DirectXTex_Desktop_2022_Win10.vcxproj", "{371B9FA9-4C90-4AC6-A123-ACED756D6C77}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Engine", "Engine\Engine.vcxproj", "{DBC7D3B0-C769-FE86-B024-12DB9C6585D7}"
+	ProjectSection(ProjectDependencies) = postProject
+		{371B9FA9-4C90-4AC6-A123-ACED756D6C77} = {371B9FA9-4C90-4AC6-A123-ACED756D6C77}
+		{05A9737C-E682-451F-A307-4B01DEB9D44B} = {05A9737C-E682-451F-A307-4B01DEB9D44B}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "imgui", "Engine\externals\imgui\imgui.vcxproj", "{05A9737C-E682-451F-A307-4B01DEB9D44B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CollisionLib", "Engine\Lib\Collision\CollisionLib.vcxproj", "{3B4663F4-D09B-4503-AEB0-B2477444918F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GESTD", "Engine\Lib\GESTD\GESTD.vcxproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Audio", "Engine\Lib\Audio\Audio.vcxproj", "{4AA5FDEE-80D9-4E30-8EFF-D9435C7C4416}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7FA9857C-6BE0-860D-14CD-6C1000E3020F}.Debug|x64.ActiveCfg = Debug|x64
+		{7FA9857C-6BE0-860D-14CD-6C1000E3020F}.Debug|x64.Build.0 = Debug|x64
+		{7FA9857C-6BE0-860D-14CD-6C1000E3020F}.Release|x64.ActiveCfg = Release|x64
+		{7FA9857C-6BE0-860D-14CD-6C1000E3020F}.Release|x64.Build.0 = Release|x64
+		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Debug|x64.ActiveCfg = Debug|x64
+		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Debug|x64.Build.0 = Debug|x64
+		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Release|x64.ActiveCfg = Release|x64
+		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Release|x64.Build.0 = Release|x64
+		{DBC7D3B0-C769-FE86-B024-12DB9C6585D7}.Debug|x64.ActiveCfg = Debug|x64
+		{DBC7D3B0-C769-FE86-B024-12DB9C6585D7}.Debug|x64.Build.0 = Debug|x64
+		{DBC7D3B0-C769-FE86-B024-12DB9C6585D7}.Release|x64.ActiveCfg = Release|x64
+		{DBC7D3B0-C769-FE86-B024-12DB9C6585D7}.Release|x64.Build.0 = Release|x64
+		{05A9737C-E682-451F-A307-4B01DEB9D44B}.Debug|x64.ActiveCfg = Debug|x64
+		{05A9737C-E682-451F-A307-4B01DEB9D44B}.Debug|x64.Build.0 = Debug|x64
+		{05A9737C-E682-451F-A307-4B01DEB9D44B}.Release|x64.ActiveCfg = Release|x64
+		{05A9737C-E682-451F-A307-4B01DEB9D44B}.Release|x64.Build.0 = Release|x64
+		{3B4663F4-D09B-4503-AEB0-B2477444918F}.Debug|x64.ActiveCfg = Debug|x64
+		{3B4663F4-D09B-4503-AEB0-B2477444918F}.Debug|x64.Build.0 = Debug|x64
+		{3B4663F4-D09B-4503-AEB0-B2477444918F}.Release|x64.ActiveCfg = Release|x64
+		{3B4663F4-D09B-4503-AEB0-B2477444918F}.Release|x64.Build.0 = Release|x64
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|x64.ActiveCfg = Debug|x64
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|x64.Build.0 = Debug|x64
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|x64.ActiveCfg = Release|x64
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|x64.Build.0 = Release|x64
+		{4AA5FDEE-80D9-4E30-8EFF-D9435C7C4416}.Debug|x64.ActiveCfg = Debug|x64
+		{4AA5FDEE-80D9-4E30-8EFF-D9435C7C4416}.Debug|x64.Build.0 = Debug|x64
+		{4AA5FDEE-80D9-4E30-8EFF-D9435C7C4416}.Release|x64.ActiveCfg = Release|x64
+		{4AA5FDEE-80D9-4E30-8EFF-D9435C7C4416}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F7AF1797-DD95-4644-BF53-ECB9C58C92EB}
+	EndGlobalSection
+EndGlobal

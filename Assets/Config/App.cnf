@@ -1,0 +1,15 @@
+# Application Configuration
+# Modify these values to change application behavior.
+
+# Window title
+title=DarkRun
+
+# Target frames per second
+fps=60
+
+# Window resolution
+width=1280
+height=720
+
+# Show mouse cursor (true / false)
+showCursor=false
