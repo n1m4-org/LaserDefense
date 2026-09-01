@@ -1,3 +1,5 @@
+#define NOMINMAX
+
 #include "EnemyManager.hpp"
 
 #include <algorithm>
@@ -54,6 +56,23 @@ void EnemyManager::LoadConfig() {
         moveSpeed_ = read(movement->second, "Speed", moveSpeed_);
     }
 
+    if (const auto animation = groups.find("SpawnAnimation"); animation != groups.end()) {
+        spawnAnimationDuration_ = read(animation->second, "DurationSeconds", spawnAnimationDuration_);
+        spawnStartScale_ = read(animation->second, "StartScale", spawnStartScale_);
+        spawnRotations_ = read(animation->second, "Rotations", spawnRotations_);
+        const int32_t moveDuringAnimation = read(
+            animation->second, "MoveDuringAnimation",
+            static_cast<int32_t>(moveDuringSpawnAnimation_));
+        moveDuringSpawnAnimation_ = moveDuringAnimation != 0;
+    }
+
+    if (const auto animation = groups.find("DeathAnimation"); animation != groups.end()) {
+        deathAnimationDuration_ = read(animation->second, "DurationSeconds", deathAnimationDuration_);
+        deathPeakScale_ = read(animation->second, "PeakScale", deathPeakScale_);
+        deathEndScale_ = read(animation->second, "EndScale", deathEndScale_);
+        deathExpandRatio_ = read(animation->second, "ExpandRatio", deathExpandRatio_);
+    }
+
     if (const auto spawn = groups.find("Spawn"); spawn != groups.end()) {
         spawnIntervalSeconds_ = read(spawn->second, "IntervalSeconds", spawnIntervalSeconds_);
         spawnRange_ = read(spawn->second, "Range", spawnRange_);
@@ -65,6 +84,12 @@ void EnemyManager::LoadConfig() {
     if (moveSpeed_ < 0.0f) {
         moveSpeed_ = 0.0f;
     }
+    spawnAnimationDuration_ = std::max(spawnAnimationDuration_, 0.0f);
+    spawnStartScale_ = std::max(spawnStartScale_, 0.0001f);
+    deathAnimationDuration_ = std::max(deathAnimationDuration_, 0.0f);
+    deathPeakScale_ = std::max(deathPeakScale_, 0.0001f);
+    deathEndScale_ = std::max(deathEndScale_, 0.0001f);
+    deathExpandRatio_ = std::clamp(deathExpandRatio_, 0.01f, 0.99f);
     spawnRange_.x = std::abs(spawnRange_.x);
     spawnRange_.y = std::abs(spawnRange_.y);
 }
@@ -73,6 +98,10 @@ void EnemyManager::SpawnEnemy(const Vector3& _position) {
     auto enemy = std::make_unique<Enemy>();
     enemy->SetAppearance(modelName_, modelScale_, modelOffset_, modelColor_);
     enemy->SetMovement(targetPosition_, moveSpeed_);
+    enemy->SetSpawnAnimation(spawnAnimationDuration_, spawnStartScale_,
+                             spawnRotations_, moveDuringSpawnAnimation_);
+    enemy->SetDeathAnimation(deathAnimationDuration_, deathPeakScale_,
+                             deathEndScale_, deathExpandRatio_);
     enemy->Initialize();
     enemy->SetPosition(_position);
     enemies_.push_back(std::move(enemy));
@@ -95,7 +124,7 @@ void EnemyManager::Update(float _deltaTime) {
     }
 
     std::erase_if(enemies_, [](const std::unique_ptr<Enemy>& _enemy) {
-        return !_enemy->IsAlive();
+        return _enemy->IsDeathAnimationFinished();
     });
 }
 
