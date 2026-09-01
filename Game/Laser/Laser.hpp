@@ -2,7 +2,6 @@
 #define LASER_HPP_
 
 #include <memory>
-#include <vector>
 
 #include "Math/Vector3.hpp"
 
@@ -19,7 +18,7 @@ class Laser final {
 
     std::unique_ptr<Line> line_;
     Endpoint start_{};
-    std::vector<Endpoint> targets_;
+    Endpoint target_{};
 
 public:
     Laser();
@@ -30,9 +29,8 @@ public:
     void Draw() const;
 
     void SetStart(const GameObject* _object, float _lineHeight = kDefaultLineHeight);
-    void AddTarget(const GameObject* _object, float _lineHeight = kDefaultLineHeight);
-    void RemoveTarget(const GameObject* _object);
-    void ClearTargets();
+    void SetTarget(const GameObject* _object, float _lineHeight = kDefaultLineHeight);
+    void ClearTarget();
 };
 
 #endif // LASER_HPP_

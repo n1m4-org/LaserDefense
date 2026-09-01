@@ -30,7 +30,7 @@ void PlayScene::Initialize() {
     laser_ = std::make_unique<Laser>();
     laser_->Initialize();
     laser_->SetStart(player_.get());
-    laser_->AddTarget(tower);
+    laser_->SetTarget(tower);
 
     enemyManager_ = std::make_unique<EnemyManager>();
     enemyManager_->Initialize();
