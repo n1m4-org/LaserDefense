@@ -141,6 +141,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Collision\CollisionAttribute.hpp" />
     <ClInclude Include="Enemy\Enemy.hpp" />
     <ClInclude Include="Enemy\EnemyManager.hpp" />
     <ClInclude Include="GameObject\GameObject.hpp" />
