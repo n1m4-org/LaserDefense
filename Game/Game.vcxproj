@@ -141,6 +141,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Enemy\Enemy.hpp" />
+    <ClInclude Include="Enemy\EnemyManager.hpp" />
     <ClInclude Include="GameObject\GameObject.hpp" />
     <ClInclude Include="GameObject\Component\Component.hpp" />
     <ClInclude Include="GameObject\Component\MoveComponent.hpp" />
@@ -148,16 +150,26 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="MyGame.hpp" />
     <ClInclude Include="Factory\PostEffectFactory.hpp" />
     <ClInclude Include="Scene\GameSampleScene.hpp" />
+
     <ClInclude Include="Scene\Input\GameSceneInput.hpp" />
+
+    <ClInclude Include="Scene\EnemyTestScene.hpp" />
+
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Enemy\Enemy.cpp" />
+    <ClCompile Include="Enemy\EnemyManager.cpp" />
     <ClCompile Include="GameObject\GameObject.cpp" />
     <ClCompile Include="GameObject\Component\MoveComponent.cpp" />
     <ClCompile Include="GameObject\Player\Player.cpp" />
     <ClCompile Include="MyGame.cpp" />
     <ClCompile Include="PostEffectFactory.cpp" />
+
     <ClCompile Include="Scene\GameSampleScene.cpp" />
     <ClCompile Include="Scene\Input\GameSceneInput.cpp" />
+
+    <ClCompile Include="Scene\EnemyTestScene.cpp" />
+
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
