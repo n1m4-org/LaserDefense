@@ -7,9 +7,13 @@
 
 class GameObject;
 class Line;
+namespace Collision {
+    class Collider;
+}
 
 class Laser final {
     static constexpr float kDefaultLineHeight = 0.5f;
+    static constexpr float kDefaultColliderRadius = 0.1f;
 
     struct Endpoint {
         const GameObject* object = nullptr;
@@ -17,8 +21,10 @@ class Laser final {
     };
 
     std::unique_ptr<Line> line_;
+    std::unique_ptr<Collision::Collider> collider_;
     Endpoint start_{};
     Endpoint target_{};
+    float colliderRadius_ = kDefaultColliderRadius;
 
 public:
     Laser();
@@ -31,6 +37,7 @@ public:
     void SetStart(const GameObject* _object, float _lineHeight = kDefaultLineHeight);
     void SetTarget(const GameObject* _object, float _lineHeight = kDefaultLineHeight);
     void ClearTarget();
+    void SetColliderRadius(float _radius);
 };
 
 #endif // LASER_HPP_
