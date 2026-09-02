@@ -12,26 +12,8 @@
                 -1.0,
                 0.0
             ],
-            "intensity": 0.0,
+            "intensity": 1.0,
             "type": 0
-        },
-        "73de8595-4481-44bf-93ca-8116f6386675": {
-            "castShadow": 1,
-            "color": [
-                1.0,
-                0.8,
-                0.0,
-                1.0
-            ],
-            "decay": 3.0,
-            "intensity": 10.0,
-            "position": [
-                -15.0,
-                20.0,
-                -15.0
-            ],
-            "radius": 15.0,
-            "type": 1
         }
     }
 }

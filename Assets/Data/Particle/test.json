@@ -1,0 +1,50 @@
+{
+    "Emitters": [
+        {
+            "Billboard": true,
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "ColorKeys": [
+                {
+                    "Time": 0.7400000095367432,
+                    "Value": [
+                        1.0,
+                        1.0,
+                        0.007843137718737125,
+                        0.9921568632125854
+                    ]
+                }
+            ],
+            "Duration": 1.0,
+            "Frequency": 0.0,
+            "ParticleLifetime": 4.440000057220459,
+            "Primitive": "Billboard",
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "RotationVelocity": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "Size": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "SpawnCount": 1,
+            "Texture": "white_x16.png",
+            "Velocity": [
+                0.0,
+                0.6600000262260437,
+                0.0
+            ]
+        }
+    ]
+}

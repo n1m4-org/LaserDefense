@@ -151,14 +151,12 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Laser\Laser.hpp" />
     <ClInclude Include="MyGame.hpp" />
     <ClInclude Include="Factory\PostEffectFactory.hpp" />
+    <ClInclude Include="Scene\ParticleTest.h" />
     <ClInclude Include="Scene\GameSampleScene.hpp" />
-
     <ClInclude Include="Scene\Input\GameSceneInput.hpp" />
-
     <ClInclude Include="Scene\PlayScene.hpp" />
     <ClInclude Include="Tower\Tower.hpp" />
     <ClInclude Include="Tower\TowerManager.hpp" />
-
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Enemy\Enemy.cpp" />
@@ -168,15 +166,13 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="GameObject\Player\Player.cpp" />
     <ClCompile Include="Laser\Laser.cpp" />
     <ClCompile Include="MyGame.cpp" />
+    <ClCompile Include="Scene\ParticleTest.cpp" />
     <ClCompile Include="PostEffectFactory.cpp" />
-
     <ClCompile Include="Scene\GameSampleScene.cpp" />
     <ClCompile Include="Scene\Input\GameSceneInput.cpp" />
-
     <ClCompile Include="Scene\PlayScene.cpp" />
     <ClCompile Include="Tower\Tower.cpp" />
     <ClCompile Include="Tower\TowerManager.cpp" />
-
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>

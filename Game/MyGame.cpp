@@ -2,6 +2,7 @@
 
 #include "Factory/PostEffectFactory.hpp"
 #include "Scene/GameSampleScene.hpp"
+#include "Scene/ParticleTest.h"
 #include "Scene/PlayScene.hpp"
 
 void MyGame::Initialize(GameEngine::Config& _config) {
@@ -22,4 +23,5 @@ void MyGame::Initialize(GameEngine::Config& _config) {
 void MyGame::Register() {
     RegisterScene<PlayScene>("Play");
     RegisterScene<GameSampleScene>("GameSample");
+    RegisterScene<ParticleTest>("Particle");
 }
