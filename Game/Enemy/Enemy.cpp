@@ -194,6 +194,7 @@ void Enemy::OnCollisionTrigger(const Collision::Collider* _other) {
     if ((_other->GetAttribute() & CollisionAttribute::Tower) != 0u) {
         Kill(awardsScoreOnTowerHit_);
     }
+
 }
 
 void Enemy::UpdateSpawnAnimation(float _deltaTime) {
