@@ -1,0 +1,43 @@
+{
+    "TimeLimit": {
+        "Rule": {
+            "StartSeconds": 40.0,
+            "MaxSeconds": 60.0
+        },
+        "Gauge": {
+            "Position": [32.0, 88.0],
+            "Size": [420.0, 17.0],
+            "FrameThickness": 3.0,
+            "FrameColor": [0.04, 0.04, 0.07, 0.85],
+            "SafeColor": [0.25, 0.95, 0.55, 1.0],
+            "WarningColor": [1.0, 0.85, 0.25, 1.0],
+            "DangerColor": [1.0, 0.28, 0.28, 1.0],
+            "GhostColor": [1.0, 1.0, 1.0, 0.9],
+            "WarningRatio": 0.3,
+            "DangerRatio": 0.15,
+            "FillDuration": 0.6
+        },
+        "GainEffect": {
+            "FlashDuration": 0.22,
+            "FlashStrength": 0.85,
+            "PunchDuration": 0.32,
+            "PunchScale": 1.5,
+            "DangerBlinkSpeed": 9.0,
+            "DangerBlinkStrength": 0.45
+        },
+        "Value": {
+            "Label": "TIME ",
+            "Position": [32.0, 24.0],
+            "FontSize": 40.0,
+            "PunchScale": 1.35
+        },
+        "Popup": {
+            "Position": [36.0, 126.0],
+            "FontSize": 34.0,
+            "Color": [0.6, 1.0, 0.75, 1.0],
+            "RiseDistance": 44.0,
+            "DurationSeconds": 0.9,
+            "StackOffset": 32.0
+        }
+    }
+}

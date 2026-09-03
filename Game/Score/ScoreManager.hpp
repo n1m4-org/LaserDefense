@@ -8,7 +8,7 @@
 #include "Math/Vector4.hpp"
 #include "Text/Text.hpp"
 
-/** @brief スコアの保持・加算・画面表示をまとめて受け持つクラス
+/** スコアの保持・加算・画面表示をまとめて受け持つクラス
  *
  *  敵1体あたりの点数は Enemy / EnemyManager 側が持つ
  *

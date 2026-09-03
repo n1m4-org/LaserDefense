@@ -6,7 +6,7 @@
         },
         "Display": {
             "Label": "SCORE ",
-            "Position": [32.0, 24.0],
+            "Position": [995.0, 24.0],
             "FontSize": 40.0,
             "Color": [1.0, 1.0, 1.0, 1.0],
             "Digits": 6,

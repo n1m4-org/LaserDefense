@@ -8,6 +8,7 @@
 #include "Model.hpp"
 #include "Scene/Input/GameSceneInput.hpp"
 #include "Score/ScoreManager.hpp"
+#include "TimeLimit/TimeLimitManager.hpp"
 #include "Tower/TowerManager.hpp"
 
 class Player;
@@ -23,6 +24,7 @@ class PlayScene final : public IScene {
     std::unique_ptr<EnemyManager> enemyManager_;
     std::unique_ptr<TowerManager> towerManager_;
     std::unique_ptr<ScoreManager> scoreManager_;
+    std::unique_ptr<TimeLimitManager> timeLimitManager_;
     std::unique_ptr<Model> floor_;
     std::unique_ptr<Line> mouseCursor_;
     bool cursorVisible_ = false;

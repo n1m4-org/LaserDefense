@@ -9,10 +9,6 @@
         "Movement": {
             "Speed": 1.0
         },
-        "Health": {
-            "MaxHp": 10.0,
-            "KnockbackBrake": 5.0
-        },
         "SpawnAnimation": {
             "DurationSeconds": 1.0,
             "StartScale": 0.1,
@@ -33,6 +29,9 @@
         "Score": {
             "Value": 100,
             "AwardOnTowerHit": 0
+        },
+        "TimeBonus": {
+            "Seconds": 3.0
         }
     }
 }

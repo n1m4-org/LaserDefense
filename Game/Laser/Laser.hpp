@@ -2,7 +2,6 @@
 #define LASER_HPP_
 
 #include <memory>
-#include "Combat/AttackHit.hpp"
 
 #include "Math/Vector3.hpp"
 #include "src/ParticleSystem/Emitter/Emitter.hpp"
@@ -32,10 +31,6 @@ class Laser final {
     Endpoint start_{};
     Endpoint target_{};
     float colliderRadius_ = kDefaultColliderRadius;
-    float attackPower_ = 5.0f;
-    float knockbackPower_ = 18.0f;
-    float damageMultiplier_ = 1.0f;
-    float knockbackMultiplier_ = 1.0f;
     GESTD::ReferencePtr<ParticleSystem> particleSystem_;
     std::shared_ptr<BeamState> beamState_;
     EmitterHandle beamHandle_;
@@ -53,8 +48,6 @@ public:
     void ClearTarget();
     const GameObject* GetConnectedTarget() const;
     void SetColliderRadius(float _radius);
-    void SetAttackMultipliers(float _damage, float _knockback);
-    AttackHit GetAttackHit() const;
 
 private:
     void LoadConfig();
