@@ -24,6 +24,10 @@
         "Spawn": {
             "IntervalSeconds": 3.0,
             "Range": [20.0, 20.0]
+        },
+        "Score": {
+            "Value": 100,
+            "AwardOnTowerHit": 0
         }
     }
 }
