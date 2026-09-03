@@ -9,6 +9,7 @@ class Tower final : public GameObject {
     Vector3 colliderOffset_{};
 
 public:
+    void SetHovered(bool _hovered);
     void SetColliderOffset(const Vector3& _offset) { colliderOffset_ = _offset; }
     const Vector3& GetColliderOffset() const { return colliderOffset_; }
 
