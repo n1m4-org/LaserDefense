@@ -4,11 +4,15 @@
 #include "GameObject/GameObject.hpp"
 #include "Collision/Collider.h"
 
-class Tower final : public GameObject {
+class Tower : public GameObject {
     std::unique_ptr<Collision::Collider> collider_;
     Vector3 colliderOffset_{};
 
+protected:
+    Vector3 modelOffset_{0.0f, 5.0f, 0.0f};
+
 public:
+    virtual void SetHovered(bool _hovered);
     void SetColliderOffset(const Vector3& _offset) { colliderOffset_ = _offset; }
     const Vector3& GetColliderOffset() const { return colliderOffset_; }
 

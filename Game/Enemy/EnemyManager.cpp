@@ -78,6 +78,7 @@ void EnemyManager::LoadConfig() {
     if (const auto spawn = groups.find("Spawn"); spawn != groups.end()) {
         spawnIntervalSeconds_ = read(spawn->second, "IntervalSeconds", spawnIntervalSeconds_);
         spawnRange_ = read(spawn->second, "Range", spawnRange_);
+        spawnExcludeRange_ = read(spawn->second, "ExcludeRange", spawnExcludeRange_);
     }
 
     // 敵1体あたりの獲得スコア。ここの値を変えるだけで得点バランスを調整できる
@@ -108,6 +109,8 @@ void EnemyManager::LoadConfig() {
     deathExpandRatio_ = std::clamp(deathExpandRatio_, 0.01f, 0.99f);
     spawnRange_.x = std::abs(spawnRange_.x);
     spawnRange_.y = std::abs(spawnRange_.y);
+    spawnExcludeRange_.x = std::isfinite(spawnExcludeRange_.x) ? std::abs(spawnExcludeRange_.x) : 10.0f;
+    spawnExcludeRange_.y = std::isfinite(spawnExcludeRange_.y) ? std::abs(spawnExcludeRange_.y) : 10.0f;
     scoreValue_ = std::max(scoreValue_, 0);
     timeBonusSeconds_ = std::max(timeBonusSeconds_, 0.0f);
 }
@@ -131,8 +134,19 @@ void EnemyManager::Update(float _deltaTime) {
         const auto random = Singleton<RandomEngine>::GetInstance();
         const float halfWidth = spawnRange_.x * 0.5f;
         const float halfDepth = spawnRange_.y * 0.5f;
-        SpawnEnemy({random->Get(-halfWidth, halfWidth), 0.0f,
-                    random->Get(-halfDepth, halfDepth)});
+        // 目標のメインタワーを中心とした矩形内には出現させない。
+        // 設定で全域が除外されても無限ループしないよう上限を設ける。
+        for (int attempt = 0; attempt < 128; ++attempt) {
+            const Vector3 position{random->Get(-halfWidth, halfWidth), 0.0f,
+                                   random->Get(-halfDepth, halfDepth)};
+            const bool excluded = spawnExcludeRange_.x > 0.0f && spawnExcludeRange_.y > 0.0f
+                && std::abs(position.x - targetPosition_.x) <= spawnExcludeRange_.x * 0.5f
+                && std::abs(position.z - targetPosition_.z) <= spawnExcludeRange_.y * 0.5f;
+            if (!excluded) {
+                SpawnEnemy(position);
+                break;
+            }
+        }
         spawnTimer_.Restart();
     }
 

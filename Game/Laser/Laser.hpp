@@ -46,9 +46,11 @@ public:
     void SetStart(const GameObject* _object, float _lineHeight = kDefaultLineHeight);
     void SetTarget(const GameObject* _object, float _lineHeight = kDefaultLineHeight);
     void ClearTarget();
+    const GameObject* GetConnectedTarget() const;
     void SetColliderRadius(float _radius);
 
 private:
+    void LoadConfig();
     void InitializeBeamEffect();
     void UpdateBeamEffect(const Vector3& _start, const Vector3& _end);
     void StopBeamEffect();

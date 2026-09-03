@@ -2,6 +2,13 @@
 
 #include "Collision/CollisionAttribute.hpp"
 
+void Tower::SetHovered(bool _hovered) {
+    if (model_) {
+        model_->SetColor(_hovered ? Vector4{1.0f, 0.0f, 0.0f, 1.0f}
+                                 : Vector4{0.0f, 1.0f, 0.0f, 1.0f});
+    }
+}
+
 void Tower::Initialize() {
     SetModel("Cube");
     SetScale({1.0f, 5.0f, 1.0f});
@@ -18,7 +25,7 @@ void Tower::Initialize() {
 
 void Tower::Update(float _deltaTime) {
     static_cast<void>(_deltaTime);
-    offset_ = {0.0f, 5.0f, 0.0f};
+    offset_ = modelOffset_;
     UpdateCollider();
     UpdateModel();
 }
