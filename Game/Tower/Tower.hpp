@@ -10,6 +10,7 @@ class Tower : public GameObject {
 
 protected:
     Vector3 modelOffset_{0.0f, 5.0f, 0.0f};
+    void SetEnemyCollisionEnabled(bool _enabled);
 
 public:
     virtual void SetHovered(bool _hovered);

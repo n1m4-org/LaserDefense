@@ -2,6 +2,7 @@
 #define PLAY_SCENE_HPP_
 
 #include <memory>
+#include <array>
 
 #include "Enemy/EnemyManager.hpp"
 #include "IScene.hpp"
@@ -26,6 +27,11 @@ class PlayScene final : public IScene {
     std::unique_ptr<ScoreManager> scoreManager_;
     std::unique_ptr<TimeLimitManager> timeLimitManager_;
     std::unique_ptr<Model> floor_;
+    std::array<std::unique_ptr<Model>, 8> fences_;
+    float stageSize_ = 200.0f;
+    float towerMargin_ = 20.0f;
+    float fenceHeight_ = 2.0f;
+    float wallBounce_ = 0.8f;
     std::unique_ptr<Line> mouseCursor_;
     bool cursorVisible_ = false;
 
@@ -38,6 +44,7 @@ public:
     void Draw() override;
 
 private:
+    void LoadStageConfig();
     void UpdateTowerSelection();
 };
 

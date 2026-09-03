@@ -26,8 +26,9 @@
             "ExpandRatio": 0.4
         },
         "Spawn": {
-            "IntervalSeconds": 3.0,
-            "Range": [90.0, 90.0],
+            "IntervalSeconds": 0.5,
+            "Count": 1,
+            "Range": [50.0, 50.0],
             "ExcludeRange": [10.0, 10.0]
         },
         "Score": {

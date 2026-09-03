@@ -4,6 +4,9 @@
 
 void MainTower::Initialize() {
     Tower::Initialize();
+    // 通常タワーは敵を無視するが、メインタワーの柱は判定を有効にする。
+    // 土台のコライダーも従来どおりEnemyを無視しない。
+    SetEnemyCollisionEnabled(true);
     // 土台は幅6・高さ2。通常タワーと同じ高さ10の柱をその上に置く。
     modelOffset_ = {0.0f, 7.0f, 0.0f};
     baseModel_ = std::make_unique<Model>();
