@@ -19,8 +19,14 @@ void Tower::Initialize() {
         ->SetType(Collision::Type::AABB)
         ->SetOwner(this)
         ->AddAttribute(CollisionAttribute::Tower)
-        ->AddIgnore(CollisionAttribute::Tower)
+        ->AddIgnore(CollisionAttribute::Tower | CollisionAttribute::Enemy)
         ->Enable();
+}
+
+void Tower::SetEnemyCollisionEnabled(bool _enabled) {
+    if (!collider_) return;
+    if (_enabled) collider_->RemoveIgnore(CollisionAttribute::Enemy);
+    else collider_->AddIgnore(CollisionAttribute::Enemy);
 }
 
 void Tower::Update(float _deltaTime) {
