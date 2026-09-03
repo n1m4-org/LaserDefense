@@ -14,6 +14,7 @@
 void PlayerCamera::Initialize(const Player& _player) {
     LoadConfig();
     focus_ = _player.GetPosition() + _player.GetModelOffset();
+    distance_ = GetTargetDistance(_player);
     ApplyCamera();
 }
 
@@ -32,14 +33,29 @@ void PlayerCamera::LoadConfig() {
         return std::isfinite(value) ? value : _fallback;
     };
     followSpeed_ = std::max(read("FollowSpeed", followSpeed_), 0.0f);
-    distance_ = std::max(read("Distance", distance_), 1.0f);
+    minDistance_ = std::max(read("MinDistance", minDistance_), 1.0f);
+    maxDistance_ = std::max(read("MaxDistance", maxDistance_), minDistance_);
+    speedDistanceFactor_ = std::max(read("SpeedDistanceFactor", speedDistanceFactor_), 0.0f);
+    zoomSpeed_ = std::max(read("ZoomSpeed", zoomSpeed_), 0.0f);
+}
+
+float PlayerCamera::GetTargetDistance(const Player& _player) const {
+    const auto& velocity = _player.GetVelocity();
+    const float speed = std::hypot(velocity.x, velocity.z);
+    const float blend = std::isfinite(speed)
+        ? std::clamp(speed * speedDistanceFactor_, 0.0f, 1.0f) : 0.0f;
+    return minDistance_ + (maxDistance_ - minDistance_) * blend;
 }
 
 void PlayerCamera::Update(const Player& _player, float _deltaTime) {
     if (std::isfinite(_deltaTime) && _deltaTime > 0.0f) {
-        // フレームレートによらず滑らかに追従。速度による距離変更は行わない。
-        const float blend = 1.0f - std::exp(-followSpeed_ * std::min(_deltaTime, 0.1f));
+        // 位置の追従とズームを別々の速度で滑らかに補間する。
+        const float dt = std::min(_deltaTime, 0.1f);
+        const float blend = 1.0f - std::exp(-followSpeed_ * dt);
         focus_ += (_player.GetPosition() + _player.GetModelOffset() - focus_) * blend;
+        const float zoomBlend = 1.0f - std::exp(-zoomSpeed_ * dt);
+        distance_ += (GetTargetDistance(_player) - distance_) * zoomBlend;
+        distance_ = std::clamp(distance_, minDistance_, maxDistance_);
     }
     ApplyCamera();
 }
@@ -53,6 +69,6 @@ void PlayerCamera::ApplyCamera() const {
         + Vector3{0.0f, std::sin(pitch) * distance_, -std::cos(pitch) * distance_};
     camera->transform_.rotate = Vector3{pitch, 0.0f, 0.0f};
     camera->SetFov(1.0f);
-    camera->SetFar(std::max(200.0f, distance_ + 100.0f));
+    camera->SetFar(std::max(200.0f, maxDistance_ + 100.0f));
     camera->Update();
 }

@@ -2,7 +2,10 @@
     "PlayerCamera": {
         "Follow": {
             "FollowSpeed": 8.0,
-            "Distance": 50.0
+            "MinDistance": 30.0,
+            "MaxDistance": 60.0,
+            "SpeedDistanceFactor": 0.02,
+            "ZoomSpeed": 3.0
         }
     }
 }

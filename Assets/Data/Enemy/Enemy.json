@@ -23,7 +23,8 @@
         },
         "Spawn": {
             "IntervalSeconds": 3.0,
-            "Range": [20.0, 20.0]
+            "Range": [90.0, 90.0],
+            "ExcludeRange": [10.0, 10.0]
         },
         "Score": {
             "Value": 100,

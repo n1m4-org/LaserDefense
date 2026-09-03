@@ -25,7 +25,7 @@ void Tower::Initialize() {
 
 void Tower::Update(float _deltaTime) {
     static_cast<void>(_deltaTime);
-    offset_ = {0.0f, 5.0f, 0.0f};
+    offset_ = modelOffset_;
     UpdateCollider();
     UpdateModel();
 }

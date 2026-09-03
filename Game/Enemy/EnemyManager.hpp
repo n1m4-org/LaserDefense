@@ -30,7 +30,8 @@ class EnemyManager final {
     float deathEndScale_ = 0.01f;
     float deathExpandRatio_ = 0.4f;
     float spawnIntervalSeconds_ = 3.0f;
-    Vector2 spawnRange_{20.0f, 20.0f};
+    Vector2 spawnRange_{90.0f, 90.0f};
+    Vector2 spawnExcludeRange_{10.0f, 10.0f};
 
     /// 敵1体を倒したときの獲得スコア。Enemy.json の "Score" / "Value" で変更できる
     int32_t scoreValue_ = 100;
