@@ -11,6 +11,7 @@
 
 class ScoreManager;
 class TimeLimitManager;
+class ComboManager;
 
 class EnemyManager final {
     std::vector<std::unique_ptr<Enemy>> enemies_;
@@ -46,6 +47,8 @@ class EnemyManager final {
     ScoreManager* scoreManager_ = nullptr;
     /// 制限時間の加算先。未設定(nullptr)なら時間加算は行われない
     TimeLimitManager* timeLimitManager_ = nullptr;
+    /// コンボの加算先。未設定(nullptr)ならコンボは数えられず、倍率は常に1になる
+    ComboManager* comboManager_ = nullptr;
 
 public:
     ~EnemyManager();
@@ -64,6 +67,11 @@ public:
     void SetTimeLimitManager(TimeLimitManager* _timeLimitManager) {
         timeLimitManager_ = _timeLimitManager;
     }
+
+    /// @brief 連続撃破を数える ComboManager を設定する
+    /// @param _comboManager コンボを加算する ComboManager（所有権は持たない）
+    /// @note 設定するとスコアにコンボ倍率が掛かるようになる
+    void SetComboManager(ComboManager* _comboManager) { comboManager_ = _comboManager; }
 
     void Update(float _deltaTime);
     void Draw() const;

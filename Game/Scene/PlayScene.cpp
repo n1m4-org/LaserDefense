@@ -64,11 +64,15 @@ void PlayScene::Initialize() {
     timeLimitManager_ = std::make_unique<TimeLimitManager>();
     timeLimitManager_->Initialize();
 
+    comboManager_ = std::make_unique<ComboManager>();
+    comboManager_->Initialize();
+
     enemyManager_ = std::make_unique<EnemyManager>();
     enemyManager_->Initialize();
     enemyManager_->SetTargetPosition(mainTowerPosition.x, mainTowerPosition.z);
     enemyManager_->SetScoreManager(scoreManager_.get());
     enemyManager_->SetTimeLimitManager(timeLimitManager_.get());
+    enemyManager_->SetComboManager(comboManager_.get());
 
     floor_ = std::make_unique<Model>();
     floor_->Initialize("plane");
@@ -103,6 +107,7 @@ void PlayScene::Update() {
     laser_->Update();
     scoreManager_->Update(deltaTime);
     timeLimitManager_->Update(deltaTime);
+    comboManager_->Update(deltaTime);
     floor_->Update();
 }
 
@@ -181,4 +186,5 @@ void PlayScene::UpdateTowerSelection() {
 
     scoreManager_->Draw();
     timeLimitManager_->Draw();
+    comboManager_->Draw();
 }

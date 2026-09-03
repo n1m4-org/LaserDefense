@@ -3,6 +3,7 @@
 
 #include <memory>
 
+#include "Combo/ComboManager.hpp"
 #include "Enemy/EnemyManager.hpp"
 #include "IScene.hpp"
 #include "Model.hpp"
@@ -25,6 +26,7 @@ class PlayScene final : public IScene {
     std::unique_ptr<TowerManager> towerManager_;
     std::unique_ptr<ScoreManager> scoreManager_;
     std::unique_ptr<TimeLimitManager> timeLimitManager_;
+    std::unique_ptr<ComboManager> comboManager_;
     std::unique_ptr<Model> floor_;
     std::unique_ptr<Line> mouseCursor_;
     bool cursorVisible_ = false;
