@@ -9,6 +9,7 @@
 #include "Json/JsonParams.hpp"
 #include "Pattern/Singleton.hpp"
 #include "Random/RandomEngine.hpp"
+#include "Score/ScoreManager.hpp"
 
 EnemyManager::~EnemyManager() = default;
 
@@ -78,6 +79,15 @@ void EnemyManager::LoadConfig() {
         spawnRange_ = read(spawn->second, "Range", spawnRange_);
     }
 
+    // 敵1体あたりの獲得スコア。ここの値を変えるだけで得点バランスを調整できる
+    if (const auto score = groups.find("Score"); score != groups.end()) {
+        scoreValue_ = read(score->second, "Value", scoreValue_);
+        const int32_t awardOnTowerHit = read(
+            score->second, "AwardOnTowerHit",
+            static_cast<int32_t>(awardScoreOnTowerHit_));
+        awardScoreOnTowerHit_ = awardOnTowerHit != 0;
+    }
+
     if (spawnIntervalSeconds_ <= 0.0f) {
         spawnIntervalSeconds_ = 3.0f;
     }
@@ -92,6 +102,7 @@ void EnemyManager::LoadConfig() {
     deathExpandRatio_ = std::clamp(deathExpandRatio_, 0.01f, 0.99f);
     spawnRange_.x = std::abs(spawnRange_.x);
     spawnRange_.y = std::abs(spawnRange_.y);
+    scoreValue_ = std::max(scoreValue_, 0);
 }
 
 void EnemyManager::SpawnEnemy(const Vector3& _position) {
@@ -102,6 +113,7 @@ void EnemyManager::SpawnEnemy(const Vector3& _position) {
                              spawnRotations_, moveDuringSpawnAnimation_);
     enemy->SetDeathAnimation(deathAnimationDuration_, deathPeakScale_,
                              deathEndScale_, deathExpandRatio_);
+    enemy->SetScoreValue(scoreValue_, awardScoreOnTowerHit_);
     enemy->Initialize();
     enemy->SetPosition(_position);
     enemies_.push_back(std::move(enemy));
@@ -123,9 +135,25 @@ void EnemyManager::Update(float _deltaTime) {
         }
     }
 
+    // 削除の前にスコアを回収する（死亡演出が1フレームで終わる設定でも取りこぼさない）
+    CollectScore();
+
     std::erase_if(enemies_, [](const std::unique_ptr<Enemy>& _enemy) {
         return _enemy->IsDeathAnimationFinished();
     });
+}
+
+void EnemyManager::CollectScore() {
+    if (!scoreManager_) {
+        return;
+    }
+
+    for (const auto& enemy : enemies_) {
+        // TakeScoreReward() は1体につき1回だけ0以外を返すので二重加算されない
+        if (const int32_t reward = enemy->TakeScoreReward(); reward != 0) {
+            scoreManager_->AddScore(reward);
+        }
+    }
 }
 
 void EnemyManager::Draw() const {
