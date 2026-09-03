@@ -2,11 +2,16 @@
 #include "Laser.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <cstdint>
 #include <limits>
+#include <variant>
 
 #include "Collision/Collider.h"
 #include "Collision/CollisionAttribute.hpp"
 #include "GameObject/GameObject.hpp"
+#include "Json/JsonParams.hpp"
+#include "Pattern/Singleton.hpp"
 #include "Line.hpp"
 #include "Math/MathUtils.hpp"
 #include "src/ParticleSystem/ParticleSystem.hpp"
@@ -25,6 +30,7 @@ Laser::~Laser() {
 void Laser::Initialize(GESTD::ReferencePtr<ParticleSystem> _particleSystem) {
     StopBeamEffect();
     particleSystem_ = _particleSystem;
+    LoadConfig();
 
     collider_ = std::make_unique<Collision::Collider>();
     collider_->SetName("Laser")
@@ -34,6 +40,18 @@ void Laser::Initialize(GESTD::ReferencePtr<ParticleSystem> _particleSystem) {
         ->AddIgnore(CollisionAttribute::Laser);
     collider_->Disable();
     InitializeBeamEffect();
+}
+
+void Laser::LoadConfig() {
+    const auto json = Singleton<JsonParams>::GetInstance();
+    if (!json->Load("Laser", "Laser")) return;
+    const auto groups = json->GetGroups("Laser");
+    const auto collider = groups.find("Collider");
+    if (collider == groups.end()) return;
+    const auto radius = collider->second.find("Radius");
+    if (radius == collider->second.end()) return;
+    if (const auto value = std::get_if<float>(&radius->second)) SetColliderRadius(*value);
+    else if (const auto integer = std::get_if<int32_t>(&radius->second)) SetColliderRadius(static_cast<float>(*integer));
 }
 
 void Laser::InitializeBeamEffect() {
@@ -156,5 +174,11 @@ void Laser::ClearTarget() {
 }
 
 void Laser::SetColliderRadius(float _radius) {
+    if (!std::isfinite(_radius)) return;
     colliderRadius_ = std::max(_radius, 0.0001f);
+}
+
+const GameObject* Laser::GetConnectedTarget() const {
+    return start_.object && start_.object->IsActive()
+        && target_.object && target_.object->IsActive() ? target_.object : nullptr;
 }

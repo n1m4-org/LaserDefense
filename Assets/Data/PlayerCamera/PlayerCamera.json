@@ -1,0 +1,8 @@
+{
+    "PlayerCamera": {
+        "Follow": {
+            "FollowSpeed": 8.0,
+            "Distance": 50.0
+        }
+    }
+}

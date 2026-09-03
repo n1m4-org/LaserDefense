@@ -14,6 +14,8 @@ public:
     Tower* AddTower(const Vector3& _position);
     void Update(float _deltaTime);
     void Draw() const;
+    Tower* PickTower(const Vector3& _origin, const Vector3& _direction, float _length) const;
+    void SetHoveredTower(const Tower* _tower);
 };
 
 #endif // TOWER_MANAGER_HPP_

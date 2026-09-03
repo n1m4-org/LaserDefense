@@ -13,6 +13,16 @@
         "Movement": {
             "Speed": 20.0,
             "Limit": 100.0
+        },
+        "Grapple": {
+            "FreeAcceleration": 35.0,
+            "FreeDrag": 0.5,
+            "PullStrength": 8.0,
+            "RadialDamping": 4.0,
+            "SwingAcceleration": 60.0,
+            "ConnectedDrag": 0.3,
+            "OrbitRadius": 3.0,
+            "MaxSpeed": 35.0
         }
     }
 }
