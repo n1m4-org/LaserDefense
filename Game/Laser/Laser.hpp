@@ -50,6 +50,7 @@ public:
     void SetColliderRadius(float _radius);
 
 private:
+    void LoadConfig();
     void InitializeBeamEffect();
     void UpdateBeamEffect(const Vector3& _start, const Vector3& _end);
     void StopBeamEffect();

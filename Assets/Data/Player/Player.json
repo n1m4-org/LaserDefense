@@ -16,7 +16,7 @@
         },
         "Grapple": {
             "FreeAcceleration": 35.0,
-            "FreeDrag": 1.5,
+            "FreeDrag": 0.5,
             "PullStrength": 8.0,
             "RadialDamping": 4.0,
             "SwingAcceleration": 60.0,

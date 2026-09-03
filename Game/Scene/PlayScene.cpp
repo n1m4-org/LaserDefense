@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "Camera/Controller/CameraController.hpp"
+#include "Camera/PlayerCamera.hpp"
 #include "GameObject/Player/Player.h"
 #include "Laser/Laser.hpp"
 #include "Light/LightManager.hpp"
@@ -31,18 +32,12 @@ void PlayScene::Initialize() {
 
     Singleton<TextureManager>::GetInstance()->Load("skybox.dds");
 
-    if (const auto camera = Singleton<CameraController>::GetInstance()->GetActive()) {
-        camera->transform_.translate = {0.0f, 65.0f, -45.0f};
-        camera->transform_.rotate = Vector3{std::atan2(65.0f, 45.0f), 0.0f, 0.0f};
-        camera->SetFov(1.0f);
-        camera->SetFar(200.0f);
-        camera->Update();
-    }
-
     player_ = std::make_unique<Player>();
     player_->Initialize();
     player_->SetInput(input_);
     player_->EnableGrappleMovement();
+    playerCamera_ = std::make_unique<PlayerCamera>();
+    playerCamera_->Initialize(*player_);
     Singleton<LightManager>::GetInstance()->SetPosition(
         player_->GetPosition() + shadowLightOffset);
 
@@ -82,6 +77,8 @@ void PlayScene::Update() {
     input_.Update();
 
     const float deltaTime = Time::GetDeltaTime();
+    // 選択判定・カーソル・描画に同じカメラ行列を使う。
+    playerCamera_->Update(*player_, deltaTime);
     towerManager_->Update(deltaTime);
     UpdateTowerSelection();
     player_->SetGrappleTarget(laser_->GetConnectedTarget());
