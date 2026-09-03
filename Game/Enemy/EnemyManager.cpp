@@ -10,6 +10,7 @@
 #include "Pattern/Singleton.hpp"
 #include "Random/RandomEngine.hpp"
 #include "Score/ScoreManager.hpp"
+#include "TimeLimit/TimeLimitManager.hpp"
 
 EnemyManager::~EnemyManager() = default;
 
@@ -85,8 +86,13 @@ void EnemyManager::LoadConfig() {
         scoreValue_ = read(score->second, "Value", scoreValue_);
         const int32_t awardOnTowerHit = read(
             score->second, "AwardOnTowerHit",
-            static_cast<int32_t>(awardScoreOnTowerHit_));
-        awardScoreOnTowerHit_ = awardOnTowerHit != 0;
+            static_cast<int32_t>(awardRewardOnTowerHit_));
+        awardRewardOnTowerHit_ = awardOnTowerHit != 0;
+    }
+
+    // 敵1体あたりの制限時間の加算秒数。ここの値を変えるだけで難易度を調整できる
+    if (const auto timeBonus = groups.find("TimeBonus"); timeBonus != groups.end()) {
+        timeBonusSeconds_ = read(timeBonus->second, "Seconds", timeBonusSeconds_);
     }
 
     if (spawnIntervalSeconds_ <= 0.0f) {
@@ -106,6 +112,7 @@ void EnemyManager::LoadConfig() {
     spawnExcludeRange_.x = std::isfinite(spawnExcludeRange_.x) ? std::abs(spawnExcludeRange_.x) : 10.0f;
     spawnExcludeRange_.y = std::isfinite(spawnExcludeRange_.y) ? std::abs(spawnExcludeRange_.y) : 10.0f;
     scoreValue_ = std::max(scoreValue_, 0);
+    timeBonusSeconds_ = std::max(timeBonusSeconds_, 0.0f);
 }
 
 void EnemyManager::SpawnEnemy(const Vector3& _position) {
@@ -116,7 +123,7 @@ void EnemyManager::SpawnEnemy(const Vector3& _position) {
                              spawnRotations_, moveDuringSpawnAnimation_);
     enemy->SetDeathAnimation(deathAnimationDuration_, deathPeakScale_,
                              deathEndScale_, deathExpandRatio_);
-    enemy->SetScoreValue(scoreValue_, awardScoreOnTowerHit_);
+    enemy->SetDefeatReward(scoreValue_, timeBonusSeconds_, awardRewardOnTowerHit_);
     enemy->Initialize();
     enemy->SetPosition(_position);
     enemies_.push_back(std::move(enemy));
@@ -149,23 +156,26 @@ void EnemyManager::Update(float _deltaTime) {
         }
     }
 
-    // 削除の前にスコアを回収する（死亡演出が1フレームで終わる設定でも取りこぼさない）
-    CollectScore();
+    // 削除の前に報酬を回収する（死亡演出が1フレームで終わる設定でも取りこぼさない）
+    CollectDefeatRewards();
 
     std::erase_if(enemies_, [](const std::unique_ptr<Enemy>& _enemy) {
         return _enemy->IsDeathAnimationFinished();
     });
 }
 
-void EnemyManager::CollectScore() {
-    if (!scoreManager_) {
-        return;
-    }
-
+void EnemyManager::CollectDefeatRewards() {
     for (const auto& enemy : enemies_) {
-        // TakeScoreReward() は1体につき1回だけ0以外を返すので二重加算されない
-        if (const int32_t reward = enemy->TakeScoreReward(); reward != 0) {
-            scoreManager_->AddScore(reward);
+        // ConsumeDefeatReward() は1体につき1回だけ true を返すので二重加算されない
+        if (!enemy->ConsumeDefeatReward()) {
+            continue;
+        }
+
+        if (scoreManager_) {
+            scoreManager_->AddScore(enemy->GetScoreValue());
+        }
+        if (timeLimitManager_) {
+            timeLimitManager_->AddTime(enemy->GetTimeBonusSeconds());
         }
     }
 }
