@@ -31,14 +31,14 @@ class Player : public GameObject {
     // PlaySceneだけで有効化。通常のテストシーンの移動は維持する。
     bool grappleMovement_ = false;
     const GameObject* grappleTarget_ = nullptr;
-    float freeAcceleration_ = 35.0f;
-    float freeDrag_ = 1.5f;
-    float pullStrength_ = 8.0f;
-    float radialDamping_ = 4.0f;
+    float moveAcceleration_ = 35.0f;
+    float moveBrake_ = 1.5f;
+    float towerPullPower_ = 8.0f;
+    float towerApproachBrake_ = 4.0f;
     float swingAcceleration_ = 60.0f;
-    float connectedDrag_ = 0.3f;
-    float orbitRadius_ = 3.0f;
-    float maxGrappleSpeed_ = 35.0f;
+    float swingBrake_ = 0.3f;
+    float towerKeepDistance_ = 3.0f;
+    float swingMaxSpeed_ = 35.0f;
 
 public:
     Player() = default;

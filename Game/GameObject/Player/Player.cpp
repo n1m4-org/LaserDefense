@@ -71,14 +71,14 @@ void Player::LoadConfig() {
             const float value = read(grapple->second, _key, _fallback);
             return std::isfinite(value) ? std::max(value, 0.0f) : _fallback;
         };
-        freeAcceleration_ = parameter("FreeAcceleration", freeAcceleration_);
-        freeDrag_ = parameter("FreeDrag", freeDrag_);
-        pullStrength_ = parameter("PullStrength", pullStrength_);
-        radialDamping_ = parameter("RadialDamping", radialDamping_);
+        moveAcceleration_ = parameter("MoveAcceleration", moveAcceleration_);
+        moveBrake_ = parameter("MoveBrake", moveBrake_);
+        towerPullPower_ = parameter("TowerPullPower", towerPullPower_);
+        towerApproachBrake_ = parameter("TowerApproachBrake", towerApproachBrake_);
         swingAcceleration_ = parameter("SwingAcceleration", swingAcceleration_);
-        connectedDrag_ = parameter("ConnectedDrag", connectedDrag_);
-        orbitRadius_ = std::max(parameter("OrbitRadius", orbitRadius_), 0.01f);
-        maxGrappleSpeed_ = parameter("MaxSpeed", maxGrappleSpeed_);
+        swingBrake_ = parameter("SwingBrake", swingBrake_);
+        towerKeepDistance_ = std::max(parameter("TowerKeepDistance", towerKeepDistance_), 0.01f);
+        swingMaxSpeed_ = parameter("SwingMaxSpeed", swingMaxSpeed_);
     }
 
     modelScale_.x = std::max(std::abs(modelScale_.x), 0.0001f);
@@ -129,7 +129,7 @@ void Player::UpdateGrappleMovement(float _deltaTime) {
     position_.y = 0.0f;
     for (int i = 0; i < steps; ++i) {
         const float previousSpeed = velocity_.Length();
-        Vector3 acceleration = direction * freeAcceleration_;
+        Vector3 acceleration = direction * moveAcceleration_;
         if (connected) {
             Vector3 toTarget = grappleTarget_->GetPosition() - position_;
             toTarget.y = 0.0f;
@@ -139,16 +139,16 @@ void Player::UpdateGrappleMovement(float _deltaTime) {
                 ? toTarget * (1.0f / distance) : Vector3{1.0f, 0.0f, 0.0f};
             const Vector3 tangentInput = direction - inward * dotXZ(direction, inward);
             // ばね状の引力。半径内では押し戻し、横向きの慣性は保持する。
-            const float pull = (distance - orbitRadius_) * pullStrength_
-                - dotXZ(velocity_, inward) * radialDamping_;
+            const float pull = (distance - towerKeepDistance_) * towerPullPower_
+                - dotXZ(velocity_, inward) * towerApproachBrake_;
             acceleration = inward * pull + tangentInput * swingAcceleration_;
         }
         velocity_ += acceleration * dt;
-        const float damping = std::exp(-(connected ? connectedDrag_ : freeDrag_) * dt);
+        const float damping = std::exp(-(connected ? swingBrake_ : moveBrake_) * dt);
         velocity_ = velocity_ * damping;
 
         // 解放時は高速の慣性を保つ。通常入力だけではSpeedを超えて加速しない。
-        const float speedLimit = connected ? maxGrappleSpeed_
+        const float speedLimit = connected ? swingMaxSpeed_
             : std::max(moveSpeed_, previousSpeed * damping);
         const float speed = velocity_.Length();
         if (speed > speedLimit && speed > 0.0001f) velocity_ = velocity_ * (speedLimit / speed);

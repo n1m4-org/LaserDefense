@@ -1,4 +1,5 @@
 #include "TowerManager.hpp"
+#include "MainTower.hpp"
 
 #include "Collision/CollisionAttribute.hpp"
 #include "Collision/CollisionManager.h"
@@ -36,6 +37,16 @@ Tower* TowerManager::AddTower(const Vector3& _position) {
     tower->Initialize();
     tower->SetPosition(_position);
     Tower* addedTower = tower.get();
+    towers_.push_back(std::move(tower));
+    return addedTower;
+}
+
+MainTower* TowerManager::AddMainTower(const Vector3& _position) {
+    auto tower = std::make_unique<MainTower>();
+    tower->Initialize();
+    tower->SetPosition(_position);
+    tower->Update(0.0f);
+    MainTower* addedTower = tower.get();
     towers_.push_back(std::move(tower));
     return addedTower;
 }

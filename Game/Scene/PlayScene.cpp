@@ -24,9 +24,11 @@ PlayScene::PlayScene() = default;
 PlayScene::~PlayScene() = default;
 
 void PlayScene::Initialize() {
-    constexpr std::array<Vector3, 4> towerPositions{{
-        {-15.0f, 0.0f, -15.0f}, {15.0f, 0.0f, -15.0f},
-        {-15.0f, 0.0f, 15.0f}, {15.0f, 0.0f, 15.0f}
+    constexpr Vector3 mainTowerPosition{0.0f, 0.0f, 0.0f};
+    constexpr std::array<Vector3, 8> towerPositions{{
+        {-35.0f, 0.0f, -35.0f}, {0.0f, 0.0f, -35.0f}, {35.0f, 0.0f, -35.0f},
+        {-35.0f, 0.0f, 0.0f}, {35.0f, 0.0f, 0.0f},
+        {-35.0f, 0.0f, 35.0f}, {0.0f, 0.0f, 35.0f}, {35.0f, 0.0f, 35.0f}
     }};
     constexpr Vector3 shadowLightOffset{0.0f, 10.0f, 0.0f};
 
@@ -34,6 +36,8 @@ void PlayScene::Initialize() {
 
     player_ = std::make_unique<Player>();
     player_->Initialize();
+    // 画面手前（-Z）に出現。高さは床と同じ0。
+    player_->SetPosition(mainTowerPosition + Vector3{0.0f, 0.0f, -8.0f});
     player_->SetInput(input_);
     player_->EnableGrappleMovement();
     playerCamera_ = std::make_unique<PlayerCamera>();
@@ -43,6 +47,7 @@ void PlayScene::Initialize() {
 
     towerManager_ = std::make_unique<TowerManager>();
     towerManager_->Initialize();
+    towerManager_->AddMainTower(mainTowerPosition);
     for (const Vector3& position : towerPositions) {
         towerManager_->AddTower(position);
     }
@@ -58,7 +63,7 @@ void PlayScene::Initialize() {
 
     enemyManager_ = std::make_unique<EnemyManager>();
     enemyManager_->Initialize();
-    enemyManager_->SetTargetPosition(towerPositions.front().x, towerPositions.front().z);
+    enemyManager_->SetTargetPosition(mainTowerPosition.x, mainTowerPosition.z);
     enemyManager_->SetScoreManager(scoreManager_.get());
 
     floor_ = std::make_unique<Model>();
@@ -67,7 +72,7 @@ void PlayScene::Initialize() {
     floor_->SetColor({0.5f, 0.5f, 0.5f, 1.0f});
     floor_->SetTranslate({0.0f, 0.0f, 0.0f});
     floor_->SetRotate({-1.5707963f, 0.0f, 0.0f});
-    floor_->SetScale({25.0f, 25.0f, 1.0f});
+    floor_->SetScale({50.0f, 50.0f, 1.0f});
 
     mouseCursor_ = std::make_unique<Line>();
     mouseCursor_->Initialize();
@@ -119,7 +124,8 @@ void PlayScene::UpdateTowerSelection() {
     // フォーカス喪失時も接続を解除する（Input側が前フレーム値を保持する場合への対策）。
     DWORD foregroundProcess = 0;
     GetWindowThreadProcessId(GetForegroundWindow(), &foregroundProcess);
-    mouseAvailable = mouseAvailable && foregroundProcess == GetCurrentProcessId();
+    const bool hasFocus = foregroundProcess == GetCurrentProcessId();
+    mouseAvailable = mouseAvailable && hasFocus;
 #ifdef _DEBUG
     if (const auto* context = ImGui::GetCurrentContext(); context && context->HoveredWindow) {
         mouseAvailable = mouseAvailable && std::string(context->HoveredWindow->Name) == "Scene";
@@ -155,9 +161,10 @@ void PlayScene::UpdateTowerSelection() {
     }
 
     towerManager_->SetHoveredTower(hovered);
-    if (!mouseAvailable || !mouse->IsMousePress(0)) {
+    // カーソルがSceneやタワーから外れても保持。ボタン解放またはフォーカス喪失で解除。
+    if (!hasFocus || !mouse->IsMousePress(0)) {
         laser_->ClearTarget();
-    } else if (mouse->IsMouseTrigger(0)) {
+    } else if (mouseAvailable && mouse->IsMouseTrigger(0)) {
         // 押し始めたTowerを保持。ドラッグで別Towerへ乗り換えない。
         if (hovered) laser_->SetTarget(hovered);
         else laser_->ClearTarget();
