@@ -34,8 +34,9 @@ private:
     float deathExpandRatio_ = 0.4f;
     bool deathAnimationFinished_ = false;
     int32_t scoreValue_ = 100;              //!< この敵を倒したときに加算されるスコア
-    bool awardsScoreOnTowerHit_ = false;    //!< タワーに接触して消滅した場合もスコアを与えるか
-    bool scorePending_ = false;             //!< スコアが未回収か（二重加算を防ぐためのフラグ）
+    float timeBonusSeconds_ = 3.0f;         //!< この敵を倒したときに加算される制限時間（秒）
+    bool awardsRewardOnTowerHit_ = false;   //!< タワーに接触して消滅した場合も報酬を与えるか
+    bool rewardPending_ = false;            //!< 撃破報酬が未回収か（二重加算を防ぐためのフラグ）
     std::unique_ptr<Collision::Collider> collider_;
     Vector3 colliderOffset_{};
 
@@ -53,30 +54,37 @@ public:
     void SetColliderOffset(const Vector3& _offset) { colliderOffset_ = _offset; }
     const Vector3& GetColliderOffset() const { return colliderOffset_; }
 
-    /// @brief 撃破時に得られるスコアを設定する
+    /// @brief 撃破時に得られる報酬（スコア・制限時間）を設定する
     /// @param _score            1体あたりの獲得スコア
-    /// @param _awardOnTowerHit  タワーに接触して消えた場合もスコアを与えるか
-    /// @note 通常は EnemyManager が JSON の値を渡すので、点数を変えたい場合は
-    ///       Assets/Data/Enemy/Enemy.json の "Score" を書き換えるだけでよい
-    void SetScoreValue(int32_t _score, bool _awardOnTowerHit = false) {
+    /// @param _timeBonusSeconds 1体あたりの制限時間の加算秒数
+    /// @param _awardOnTowerHit  タワーに接触して消えた場合も報酬を与えるか
+    /// @note 通常は EnemyManager が JSON の値を渡すので、報酬を変えたい場合は
+    ///       Assets/Data/Enemy/Enemy.json の "Score" / "TimeBonus" を書き換えるだけでよい
+    void SetDefeatReward(int32_t _score, float _timeBonusSeconds,
+                         bool _awardOnTowerHit = false) {
         scoreValue_ = _score;
-        awardsScoreOnTowerHit_ = _awardOnTowerHit;
+        timeBonusSeconds_ = _timeBonusSeconds;
+        awardsRewardOnTowerHit_ = _awardOnTowerHit;
     }
 
     /// @brief 1体あたりの獲得スコアを取得する
     int32_t GetScoreValue() const { return scoreValue_; }
 
-    /// @brief 未回収のスコアを持っているか
-    bool IsScorePending() const { return scorePending_; }
+    /// @brief 1体あたりの制限時間の加算秒数を取得する
+    float GetTimeBonusSeconds() const { return timeBonusSeconds_; }
 
-    /// @brief 未回収のスコアを受け取る（1体につき1回だけ0以外を返す）
-    /// @return 加算すべきスコア。未撃破または回収済みなら0
-    /// @note 呼び出した時点で回収済みになるため、二重加算されることはない
-    int32_t TakeScoreReward();
+    /// @brief 未回収の撃破報酬を持っているか
+    bool IsRewardPending() const { return rewardPending_; }
+
+    /// @brief 未回収の撃破報酬を受け取る（1体につき1回だけ true を返す）
+    /// @return 報酬を渡すべきなら true。未撃破または回収済みなら false
+    /// @note 呼び出した時点で回収済みになるため、二重加算されることはない。
+    ///       実際の値は GetScoreValue() / GetTimeBonusSeconds() から取る
+    bool ConsumeDefeatReward();
 
     /// @brief この敵を撃破状態にする
-    /// @param _awardsScore この撃破をスコア加算の対象にするか
-    void Kill(bool _awardsScore = true);
+    /// @param _awardsReward この撃破を報酬（スコア・時間）の対象にするか
+    void Kill(bool _awardsReward = true);
 
     void Initialize() override;
     void Update(float _deltaTime) override;

@@ -157,6 +157,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
 
     <ClInclude Include="Scene\PlayScene.hpp" />
     <ClInclude Include="Score\ScoreManager.hpp" />
+    <ClInclude Include="TimeLimit\TimeLimitManager.hpp" />
     <ClInclude Include="Tower\Tower.hpp" />
     <ClInclude Include="Tower\TowerManager.hpp" />
 
@@ -176,6 +177,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
 
     <ClCompile Include="Scene\PlayScene.cpp" />
     <ClCompile Include="Score\ScoreManager.cpp" />
+    <ClCompile Include="TimeLimit\TimeLimitManager.cpp" />
     <ClCompile Include="Tower\Tower.cpp" />
     <ClCompile Include="Tower\TowerManager.cpp" />
 
