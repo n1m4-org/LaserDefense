@@ -46,38 +46,12 @@ void Laser::LoadConfig() {
     const auto json = Singleton<JsonParams>::GetInstance();
     if (!json->Load("Laser", "Laser")) return;
     const auto groups = json->GetGroups("Laser");
-    if (const auto attack = groups.find("Attack"); attack != groups.end()) {
-        const auto read = [&](const char* _key, float _fallback) {
-            const auto entry = attack->second.find(_key);
-            if (entry == attack->second.end()) return _fallback;
-            float value = _fallback;
-            if (const auto number = std::get_if<float>(&entry->second)) value = *number;
-            else if (const auto integer = std::get_if<int32_t>(&entry->second)) value = static_cast<float>(*integer);
-            return std::isfinite(value) ? std::max(value, 0.0f) : _fallback;
-        };
-        attackPower_ = read("AttackPower", attackPower_);
-        knockbackPower_ = read("KnockbackPower", knockbackPower_);
-    }
     const auto collider = groups.find("Collider");
     if (collider == groups.end()) return;
     const auto radius = collider->second.find("Radius");
     if (radius == collider->second.end()) return;
     if (const auto value = std::get_if<float>(&radius->second)) SetColliderRadius(*value);
     else if (const auto integer = std::get_if<int32_t>(&radius->second)) SetColliderRadius(static_cast<float>(*integer));
-}
-
-void Laser::SetAttackMultipliers(float _damage, float _knockback) {
-    damageMultiplier_ = std::isfinite(_damage) ? std::max(_damage, 0.0f) : 1.0f;
-    knockbackMultiplier_ = std::isfinite(_knockback) ? std::max(_knockback, 0.0f) : 1.0f;
-}
-
-AttackHit Laser::GetAttackHit() const {
-    if (!GetConnectedTarget()) return {};
-    Vector3 direction = start_.object->GetPosition() - target_.object->GetPosition();
-    direction.y = 0.0f;
-    const float length = direction.Length();
-    direction = length > 0.0001f ? direction * (1.0f / length) : Vector3{};
-    return {attackPower_ * damageMultiplier_, direction * (knockbackPower_ * knockbackMultiplier_)};
 }
 
 void Laser::InitializeBeamEffect() {
