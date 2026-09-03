@@ -10,6 +10,7 @@
 #include "Pattern/Singleton.hpp"
 #include "Random/RandomEngine.hpp"
 #include "Score/ScoreManager.hpp"
+#include "Combo/ComboManager.hpp"
 #include "TimeLimit/TimeLimitManager.hpp"
 
 EnemyManager::~EnemyManager() = default;
@@ -175,15 +176,33 @@ void EnemyManager::Update(float _deltaTime) {
 
 void EnemyManager::CollectDefeatRewards() {
     for (const auto& enemy : enemies_) {
+        // 取り逃がし（タワーへ到達された）はコンボを途切れさせる。
+        // 撃破報酬の判定より先に行い、同フレームの撃破が新しいコンボとして始まるようにする
+        if (enemy->ConsumeTowerReach()) {
+            if (comboManager_ && comboManager_->IsBreakOnTowerReach()) {
+                comboManager_->Break();
+            }
+        }
+
         // ConsumeDefeatReward() は1体につき1回だけ true を返すので二重加算されない
         if (!enemy->ConsumeDefeatReward()) {
             continue;
         }
 
+        // 先にコンボを進めてから倍率を取る。こうすると倒したその1体にも倍率が乗る
+        int32_t multiplier = 1;
+        if (comboManager_) {
+            comboManager_->AddCombo();
+            multiplier = comboManager_->GetMultiplier();
+        }
+
         if (scoreManager_) {
-            scoreManager_->AddScore(enemy->GetScoreValue());
+            // ScoreManager 側の倍率（アイテム効果など）とは掛け合わせになる。
+            // 第2引数はコンボ倍率で、加算演出をどれだけ派手にするかにだけ使われる
+            scoreManager_->AddScore(enemy->GetScoreValue() * multiplier, multiplier);
         }
         if (timeLimitManager_) {
+            // 制限時間にはコンボ倍率を掛けない。掛けると上限に張り付いて緊張感が失われるため
             timeLimitManager_->AddTime(enemy->GetTimeBonusSeconds());
         }
     }

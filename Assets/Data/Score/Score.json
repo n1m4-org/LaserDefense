@@ -11,6 +11,26 @@
             "Color": [1.0, 1.0, 1.0, 1.0],
             "Digits": 6,
             "CountUpSpeed": 600.0
+        },
+        "GainEffect": {
+            "PunchDuration": 0.3,
+            "PunchScale": 1.25,
+            "PunchScaleHigh": 1.7,
+            "FlashDuration": 0.25,
+            "GainColor": [0.75, 1.0, 0.85, 1.0],
+            "HighGainColor": [1.0, 0.6, 0.2, 1.0],
+            "StrengthMax": 8
+        },
+        "Popup": {
+            "TopY": 78.0,
+            "FontSize": 30.0,
+            "FontSizeHigh": 46.0,
+            "Color": [0.75, 1.0, 0.85, 1.0],
+            "HighColor": [1.0, 0.6, 0.2, 1.0],
+            "RiseDistance": 46.0,
+            "DurationSeconds": 0.85,
+            "StackOffset": 30.0,
+            "CharWidthRatio": 0.53
         }
     }
 }
