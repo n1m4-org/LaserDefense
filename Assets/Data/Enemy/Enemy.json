@@ -33,6 +33,9 @@
         "Score": {
             "Value": 100,
             "AwardOnTowerHit": 0
+        },
+        "TimeBonus": {
+            "Seconds": 3.0
         }
     }
 }

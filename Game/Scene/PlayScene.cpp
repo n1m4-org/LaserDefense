@@ -57,14 +57,18 @@ void PlayScene::Initialize() {
     laser_->SetStart(player_.get(), player_->GetModelOffset().y);
     laser_->ClearTarget();
 
-    // スコアは EnemyManager より先に用意し、加算先として渡しておく
+    // スコアと制限時間は EnemyManager より先に用意し、撃破報酬の加算先として渡しておく
     scoreManager_ = std::make_unique<ScoreManager>();
     scoreManager_->Initialize();
+
+    timeLimitManager_ = std::make_unique<TimeLimitManager>();
+    timeLimitManager_->Initialize();
 
     enemyManager_ = std::make_unique<EnemyManager>();
     enemyManager_->Initialize();
     enemyManager_->SetTargetPosition(mainTowerPosition.x, mainTowerPosition.z);
     enemyManager_->SetScoreManager(scoreManager_.get());
+    enemyManager_->SetTimeLimitManager(timeLimitManager_.get());
 
     floor_ = std::make_unique<Model>();
     floor_->Initialize("plane");
@@ -98,6 +102,7 @@ void PlayScene::Update() {
     enemyManager_->Update(deltaTime);
     laser_->Update();
     scoreManager_->Update(deltaTime);
+    timeLimitManager_->Update(deltaTime);
     floor_->Update();
 }
 
@@ -107,6 +112,10 @@ void PlayScene::Draw() {
     towerManager_->Draw();
     laser_->Draw();
     floor_->Draw();
+
+
+    // UI は 3D の描画がすべて終わったあとに重ねる
+
     if (cursorVisible_) mouseCursor_->Draw();
 }
 
@@ -169,5 +178,7 @@ void PlayScene::UpdateTowerSelection() {
         if (hovered) laser_->SetTarget(hovered);
         else laser_->ClearTarget();
     }
+
     scoreManager_->Draw();
+    timeLimitManager_->Draw();
 }
