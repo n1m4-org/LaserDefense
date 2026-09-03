@@ -11,8 +11,8 @@
             "Rotation": [0.0, 0.0, 0.0]
         },
         "Movement": {
-            "Speed": 5.0,
-            "Limit": 20.0
+            "Speed": 20.0,
+            "Limit": 100.0
         }
     }
 }

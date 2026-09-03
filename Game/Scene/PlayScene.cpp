@@ -32,7 +32,7 @@ void PlayScene::Initialize() {
     Tower* tower = towerManager_->AddTower(towerPosition);
 
     laser_ = std::make_unique<Laser>();
-    laser_->Initialize();
+    laser_->Initialize(Particle());
     laser_->SetStart(player_.get(), player_->GetModelOffset().y);
     laser_->SetTarget(tower);
 

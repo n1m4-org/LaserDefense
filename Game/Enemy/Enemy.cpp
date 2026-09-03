@@ -133,7 +133,9 @@ void Enemy::OnCollisionTrigger(const Collision::Collider* _other) {
     if (!_other) {
         return;
     }
-    if ((_other->GetAttribute() & CollisionAttribute::Tower) == 0u) {
+    constexpr uint32_t lethalAttributes =
+        CollisionAttribute::Tower | CollisionAttribute::Laser;
+    if ((_other->GetAttribute() & lethalAttributes) == 0u) {
         return;
     }
 
