@@ -1,6 +1,10 @@
+#define NOMINMAX
 #include "PlayScene.hpp"
 
 #include <array>
+#include <algorithm>
+#include <cstdint>
+#include <variant>
 #include <cmath>
 
 #include "Camera/Controller/CameraController.hpp"
@@ -9,6 +13,7 @@
 #include "Laser/Laser.hpp"
 #include "Light/LightManager.hpp"
 #include "Input.hpp"
+#include "Json/JsonParams.hpp"
 #include "Line.hpp"
 #include "Math/MathUtils.hpp"
 #include "Pattern/Singleton.hpp"
@@ -23,13 +28,31 @@
 PlayScene::PlayScene() = default;
 PlayScene::~PlayScene() = default;
 
+void PlayScene::LoadStageConfig() {
+    const auto json = Singleton<JsonParams>::GetInstance();
+    if (!json->Load("Stage", "BattleStage")) return;
+    const auto groups = json->GetGroups("BattleStage");
+    const auto layout = groups.find("Layout");
+    if (layout == groups.end()) return;
+    const auto read = [&](const char* _key, float _fallback) {
+        const auto entry = layout->second.find(_key);
+        if (entry == layout->second.end()) return _fallback;
+        float value = _fallback;
+        if (const auto number = std::get_if<float>(&entry->second)) value = *number;
+        else if (const auto integer = std::get_if<int32_t>(&entry->second)) value = static_cast<float>(*integer);
+        return std::isfinite(value) ? value : _fallback;
+    };
+    stageSize_ = std::max(read("Size", stageSize_), 20.0f);
+    towerMargin_ = std::clamp(read("TowerMargin", towerMargin_), 2.0f, stageSize_ * 0.5f - 5.0f);
+    fenceHeight_ = std::max(read("FenceHeight", fenceHeight_), 0.1f);
+    wallBounce_ = std::clamp(read("WallBounce", wallBounce_), 0.0f, 1.0f);
+}
+
 void PlayScene::Initialize() {
+    LoadStageConfig();
+    const float halfSize = stageSize_ * 0.5f;
+    const float towerPosition = halfSize - towerMargin_;
     constexpr Vector3 mainTowerPosition{0.0f, 0.0f, 0.0f};
-    constexpr std::array<Vector3, 8> towerPositions{{
-        {-35.0f, 0.0f, -35.0f}, {0.0f, 0.0f, -35.0f}, {35.0f, 0.0f, -35.0f},
-        {-35.0f, 0.0f, 0.0f}, {35.0f, 0.0f, 0.0f},
-        {-35.0f, 0.0f, 35.0f}, {0.0f, 0.0f, 35.0f}, {35.0f, 0.0f, 35.0f}
-    }};
     constexpr Vector3 shadowLightOffset{0.0f, 10.0f, 0.0f};
 
     Singleton<TextureManager>::GetInstance()->Load("skybox.dds");
@@ -40,6 +63,7 @@ void PlayScene::Initialize() {
     player_->SetPosition(mainTowerPosition + Vector3{0.0f, 0.0f, -8.0f});
     player_->SetInput(input_);
     player_->EnableGrappleMovement();
+    player_->SetStageBoundary(halfSize, wallBounce_);
     playerCamera_ = std::make_unique<PlayerCamera>();
     playerCamera_->Initialize(*player_);
     Singleton<LightManager>::GetInstance()->SetPosition(
@@ -48,8 +72,14 @@ void PlayScene::Initialize() {
     towerManager_ = std::make_unique<TowerManager>();
     towerManager_->Initialize();
     towerManager_->AddMainTower(mainTowerPosition);
-    for (const Vector3& position : towerPositions) {
-        towerManager_->AddTower(position);
+    // 5×5の等間隔配置。中央はメインタワーなので通常タワーを重ねない。
+    for (int row = 0; row < 5; ++row) {
+        for (int column = 0; column < 5; ++column) {
+            if (row == 2 && column == 2) continue;
+            const float x = -towerPosition + static_cast<float>(column) * towerPosition * 0.5f;
+            const float z = -towerPosition + static_cast<float>(row) * towerPosition * 0.5f;
+            towerManager_->AddTower({x, 0.0f, z});
+        }
     }
 
     laser_ = std::make_unique<Laser>();
@@ -76,7 +106,28 @@ void PlayScene::Initialize() {
     floor_->SetColor({0.5f, 0.5f, 0.5f, 1.0f});
     floor_->SetTranslate({0.0f, 0.0f, 0.0f});
     floor_->SetRotate({-1.5707963f, 0.0f, 0.0f});
-    floor_->SetScale({50.0f, 50.0f, 1.0f});
+    floor_->SetScale({halfSize, halfSize, 1.0f});
+
+    const float halfHeight = fenceHeight_ * 0.5f;
+    const std::array<Vector3, 4> fencePositions{{
+        {0.0f, halfHeight, -halfSize}, {0.0f, halfHeight, halfSize},
+        {-halfSize, halfHeight, 0.0f}, {halfSize, halfHeight, 0.0f}
+    }};
+    // Planeは片面なので表裏を用意し、ステージの内外どちらからでも見えるようにする。
+    for (size_t side = 0; side < fencePositions.size(); ++side) {
+        for (size_t face = 0; face < 2; ++face) {
+            auto& fence = fences_[side * 2 + face];
+            fence = std::make_unique<Model>();
+            fence->Initialize("plane");
+            fence->SetTexture("white_x16.png");
+            fence->SetColor({1.0f, 0.4f, 0.05f, 0.4f});
+            fence->SetScale({halfSize, halfHeight, 1.0f});
+            fence->SetTranslate(fencePositions[side]);
+            fence->SetRotate({0.0f, (side < 2 ? 0.0f : MathUtils::F_PI * 0.5f)
+                + static_cast<float>(face) * MathUtils::F_PI, 0.0f});
+            fence->Update();
+        }
+    }
 
     mouseCursor_ = std::make_unique<Line>();
     mouseCursor_->Initialize();
@@ -104,6 +155,7 @@ void PlayScene::Update() {
     scoreManager_->Update(deltaTime);
     timeLimitManager_->Update(deltaTime);
     floor_->Update();
+    for (const auto& fence : fences_) fence->Update();
 }
 
 void PlayScene::Draw() {
@@ -112,6 +164,7 @@ void PlayScene::Draw() {
     towerManager_->Draw();
     laser_->Draw();
     floor_->Draw();
+    for (const auto& fence : fences_) fence->Draw();
 
 
     // UI は 3D の描画がすべて終わったあとに重ねる
