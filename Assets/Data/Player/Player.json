@@ -15,14 +15,14 @@
             "Limit": 100.0
         },
         "Grapple": {
-            "MoveAcceleration": 35.0,
-            "MoveBrake": 0.5,
-            "TowerPullPower": 8.0,
-            "TowerApproachBrake": 2.0,
-            "SwingAcceleration": 60.0,
-            "SwingBrake": 0.1,
-            "TowerKeepDistance": 5.0,
-            "SwingMaxSpeed": 80.0
+            "MoveAcceleration": 40.0,
+            "MoveBrake": 0.1,
+            "TowerPullPower": 10.0,
+            "TowerApproachBrake": 1.0,
+            "SwingAcceleration": 10.0,
+            "SwingBrake": 0.05,
+            "TowerKeepDistance": 1.0,
+            "SwingMaxSpeed": 200.0
         }
     }
 }
