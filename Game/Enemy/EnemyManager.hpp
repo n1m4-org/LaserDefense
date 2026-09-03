@@ -22,6 +22,8 @@ class EnemyManager final {
     Vector4 modelColor_{1.0f, 0.0f, 0.0f, 1.0f};
     Vector3 targetPosition_{};
     float moveSpeed_ = 1.0f;
+    float maxHp_ = 10.0f;
+    float knockbackBrake_ = 5.0f;
     float spawnAnimationDuration_ = 1.0f;
     float spawnStartScale_ = 0.1f;
     float spawnRotations_ = 2.0f;

@@ -1,5 +1,9 @@
 {
     "Laser": {
+        "Attack": {
+            "AttackPower": 5.0,
+            "KnockbackPower": 18.0
+        },
         "Collider": {
             "Radius": 0.8
         }
