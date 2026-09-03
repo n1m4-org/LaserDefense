@@ -98,6 +98,13 @@ void Player::ApplyInput() {
     // 例: if (input_->IsConnect()) connect_->ToggleLine();
 }
 
+void Player::SetStageBoundary(float _halfSize, float _bounce) {
+    if (!std::isfinite(_halfSize) || !std::isfinite(_bounce)) return;
+    stageBoundaryEnabled_ = true;
+    stageHalfSize_ = std::max(_halfSize, 1.0f);
+    wallBounce_ = std::clamp(_bounce, 0.0f, 1.0f);
+}
+
 void Player::Update(float _deltaTime) {
     if (!active_) return;
 
@@ -153,14 +160,21 @@ void Player::UpdateGrappleMovement(float _deltaTime) {
         const float speed = velocity_.Length();
         if (speed > speedLimit && speed > 0.0001f) velocity_ = velocity_ * (speedLimit / speed);
         position_ += velocity_ * dt;
-        if (position_.x < -moveLimit_ || position_.x > moveLimit_) {
-            position_.x = std::clamp(position_.x, -moveLimit_, moveLimit_);
-            velocity_.x = 0.0f;
-        }
-        if (position_.z < -moveLimit_ || position_.z > moveLimit_) {
-            position_.z = std::clamp(position_.z, -moveLimit_, moveLimit_);
-            velocity_.z = 0.0f;
-        }
+        // Cubeの半サイズ分内側で反射する。壁と平行な速度成分は維持。
+        const auto reflectAxis = [&](float& _position, float& _velocity, float _halfExtent) {
+            const float limit = stageBoundaryEnabled_
+                ? std::max(stageHalfSize_ - _halfExtent, 0.0f) : moveLimit_;
+            const float bounce = stageBoundaryEnabled_ ? wallBounce_ : 0.0f;
+            if (_position < -limit) {
+                _position = -limit;
+                if (_velocity < 0.0f) _velocity = -_velocity * bounce;
+            } else if (_position > limit) {
+                _position = limit;
+                if (_velocity > 0.0f) _velocity = -_velocity * bounce;
+            }
+        };
+        reflectAxis(position_.x, velocity_.x, std::abs(scale_.x));
+        reflectAxis(position_.z, velocity_.z, std::abs(scale_.z));
     }
 }
 

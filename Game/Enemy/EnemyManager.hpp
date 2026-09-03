@@ -15,7 +15,7 @@ class ComboManager;
 
 class EnemyManager final {
     std::vector<std::unique_ptr<Enemy>> enemies_;
-    Timer spawnTimer_{std::chrono::milliseconds{3000}};
+    Timer spawnTimer_{std::chrono::milliseconds{2000}};
 
     std::string modelName_{"Cube"};
     Vector3 modelScale_{0.5f, 0.5f, 0.5f};
@@ -33,9 +33,10 @@ class EnemyManager final {
     float deathPeakScale_ = 1.3f;
     float deathEndScale_ = 0.01f;
     float deathExpandRatio_ = 0.4f;
-    float spawnIntervalSeconds_ = 3.0f;
-    Vector2 spawnRange_{90.0f, 90.0f};
-    Vector2 spawnExcludeRange_{10.0f, 10.0f};
+    float spawnIntervalSeconds_ = 2.0f;
+    int32_t spawnCount_ = 4;
+    Vector2 spawnRange_{150.0f, 150.0f};
+    Vector2 spawnExcludeRange_{30.0f, 30.0f};
 
     /// 敵1体を倒したときの獲得スコア。Enemy.json の "Score" / "Value" で変更できる
     int32_t scoreValue_ = 100;

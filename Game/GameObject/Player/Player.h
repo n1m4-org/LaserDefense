@@ -27,6 +27,9 @@ class Player : public GameObject {
     Vector3 initialRotation_{};
     float moveSpeed_ = 5.0f;
     float moveLimit_ = 20.0f;
+    bool stageBoundaryEnabled_ = false;
+    float stageHalfSize_ = 100.0f;
+    float wallBounce_ = 0.8f;
 
     // PlaySceneだけで有効化。通常のテストシーンの移動は維持する。
     bool grappleMovement_ = false;
@@ -55,6 +58,7 @@ public:
     void SetInput(const GameSceneInput& _input) { input_ = &_input; }
     const Vector3& GetModelOffset() const { return modelOffset_; }
     void EnableGrappleMovement() { grappleMovement_ = true; }
+    void SetStageBoundary(float _halfSize, float _bounce);
     // シーン所有の接続先。Update前に毎フレーム設定する。
     void SetGrappleTarget(const GameObject* _target) { grappleTarget_ = _target; }
 

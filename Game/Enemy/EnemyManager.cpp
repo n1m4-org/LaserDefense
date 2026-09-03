@@ -83,6 +83,7 @@ void EnemyManager::LoadConfig() {
 
     if (const auto spawn = groups.find("Spawn"); spawn != groups.end()) {
         spawnIntervalSeconds_ = read(spawn->second, "IntervalSeconds", spawnIntervalSeconds_);
+        spawnCount_ = read(spawn->second, "Count", spawnCount_);
         spawnRange_ = read(spawn->second, "Range", spawnRange_);
         spawnExcludeRange_ = read(spawn->second, "ExcludeRange", spawnExcludeRange_);
     }
@@ -102,11 +103,12 @@ void EnemyManager::LoadConfig() {
     }
 
     if (spawnIntervalSeconds_ <= 0.0f) {
-        spawnIntervalSeconds_ = 3.0f;
+        spawnIntervalSeconds_ = 2.0f;
     }
     if (moveSpeed_ < 0.0f) {
         moveSpeed_ = 0.0f;
     }
+    spawnCount_ = std::clamp(spawnCount_, 0, 128);
     spawnAnimationDuration_ = std::max(spawnAnimationDuration_, 0.0f);
     spawnStartScale_ = std::max(spawnStartScale_, 0.0001f);
     deathAnimationDuration_ = std::max(deathAnimationDuration_, 0.0f);
@@ -115,8 +117,8 @@ void EnemyManager::LoadConfig() {
     deathExpandRatio_ = std::clamp(deathExpandRatio_, 0.01f, 0.99f);
     spawnRange_.x = std::abs(spawnRange_.x);
     spawnRange_.y = std::abs(spawnRange_.y);
-    spawnExcludeRange_.x = std::isfinite(spawnExcludeRange_.x) ? std::abs(spawnExcludeRange_.x) : 10.0f;
-    spawnExcludeRange_.y = std::isfinite(spawnExcludeRange_.y) ? std::abs(spawnExcludeRange_.y) : 10.0f;
+    spawnExcludeRange_.x = std::isfinite(spawnExcludeRange_.x) ? std::abs(spawnExcludeRange_.x) : 30.0f;
+    spawnExcludeRange_.y = std::isfinite(spawnExcludeRange_.y) ? std::abs(spawnExcludeRange_.y) : 30.0f;
     scoreValue_ = std::max(scoreValue_, 0);
     timeBonusSeconds_ = std::max(timeBonusSeconds_, 0.0f);
 }
@@ -143,7 +145,8 @@ void EnemyManager::Update(float _deltaTime) {
         const float halfDepth = spawnRange_.y * 0.5f;
         // 目標のメインタワーを中心とした矩形内には出現させない。
         // 設定で全域が除外されても無限ループしないよう上限を設ける。
-        for (int attempt = 0; attempt < 128; ++attempt) {
+        int32_t spawned = 0;
+        for (int attempt = 0; attempt < 128 * spawnCount_ && spawned < spawnCount_; ++attempt) {
             const Vector3 position{random->Get(-halfWidth, halfWidth), 0.0f,
                                    random->Get(-halfDepth, halfDepth)};
             const bool excluded = spawnExcludeRange_.x > 0.0f && spawnExcludeRange_.y > 0.0f
@@ -151,7 +154,7 @@ void EnemyManager::Update(float _deltaTime) {
                 && std::abs(position.z - targetPosition_.z) <= spawnExcludeRange_.y * 0.5f;
             if (!excluded) {
                 SpawnEnemy(position);
-                break;
+                ++spawned;
             }
         }
         spawnTimer_.Restart();
