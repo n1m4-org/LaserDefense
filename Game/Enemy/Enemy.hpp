@@ -5,8 +5,6 @@
 
 #include "GameObject/GameObject.hpp"
 #include "Collision/Collider.h"
-#include "Combat/AttackHit.hpp"
-#include "Sprite.hpp"
 
 class Enemy final : public GameObject {
 public:
@@ -23,12 +21,6 @@ private:
     Vector4 modelColor_{1.0f, 0.0f, 0.0f, 1.0f};
     Vector3 targetPosition_{};
     float moveSpeed_ = 1.0f;
-    float maxHp_ = 10.0f;
-    float hp_ = 10.0f;
-    float knockbackBrake_ = 5.0f;
-    Vector3 knockbackVelocity_{};
-    Sprite hpBarBackground_;
-    Sprite hpBarFill_;
     State state_ = State::Spawn;
     float spawnAnimationTime_ = 0.0f;
     float spawnAnimationDuration_ = 1.0f;
@@ -49,10 +41,6 @@ private:
     Vector3 colliderOffset_{};
 
 public:
-    void SetHealth(float _maxHp, float _knockbackBrake);
-    float GetHp() const { return hp_; }
-    float GetMaxHp() const { return maxHp_; }
-    void TakeDamage(const AttackHit& _hit);
     void SetAppearance(const std::string& _modelName, const Vector3& _scale,
                        const Vector3& _offset, const Vector4& _color);
     void SetMovement(const Vector3& _targetPosition, float _moveSpeed);
@@ -103,7 +91,6 @@ public:
     void Draw() override;
 
 private:
-    void DrawHpBar();
     void UpdateMovement(float _deltaTime);
     void UpdateSpawnAnimation(float _deltaTime);
     void UpdateDeathAnimation(float _deltaTime);

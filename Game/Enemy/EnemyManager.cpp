@@ -58,11 +58,6 @@ void EnemyManager::LoadConfig() {
         moveSpeed_ = read(movement->second, "Speed", moveSpeed_);
     }
 
-    if (const auto health = groups.find("Health"); health != groups.end()) {
-        maxHp_ = read(health->second, "MaxHp", maxHp_);
-        knockbackBrake_ = read(health->second, "KnockbackBrake", knockbackBrake_);
-    }
-
     if (const auto animation = groups.find("SpawnAnimation"); animation != groups.end()) {
         spawnAnimationDuration_ = read(animation->second, "DurationSeconds", spawnAnimationDuration_);
         spawnStartScale_ = read(animation->second, "StartScale", spawnStartScale_);
@@ -122,7 +117,6 @@ void EnemyManager::LoadConfig() {
 
 void EnemyManager::SpawnEnemy(const Vector3& _position) {
     auto enemy = std::make_unique<Enemy>();
-    enemy->SetHealth(maxHp_, knockbackBrake_);
     enemy->SetAppearance(modelName_, modelScale_, modelOffset_, modelColor_);
     enemy->SetMovement(targetPosition_, moveSpeed_);
     enemy->SetSpawnAnimation(spawnAnimationDuration_, spawnStartScale_,
