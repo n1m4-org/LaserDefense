@@ -46,6 +46,7 @@ public:
     void SetStart(const GameObject* _object, float _lineHeight = kDefaultLineHeight);
     void SetTarget(const GameObject* _object, float _lineHeight = kDefaultLineHeight);
     void ClearTarget();
+    const GameObject* GetConnectedTarget() const;
     void SetColliderRadius(float _radius);
 
 private:

@@ -42,6 +42,7 @@ void PlayScene::Initialize() {
     player_ = std::make_unique<Player>();
     player_->Initialize();
     player_->SetInput(input_);
+    player_->EnableGrappleMovement();
     Singleton<LightManager>::GetInstance()->SetPosition(
         player_->GetPosition() + shadowLightOffset);
 
@@ -81,12 +82,13 @@ void PlayScene::Update() {
     input_.Update();
 
     const float deltaTime = Time::GetDeltaTime();
+    towerManager_->Update(deltaTime);
+    UpdateTowerSelection();
+    player_->SetGrappleTarget(laser_->GetConnectedTarget());
     player_->Update(deltaTime);
     Singleton<LightManager>::GetInstance()->SetPosition(
         player_->GetPosition() + shadowLightOffset);
     enemyManager_->Update(deltaTime);
-    towerManager_->Update(deltaTime);
-    UpdateTowerSelection();
     laser_->Update();
     floor_->Update();
 }

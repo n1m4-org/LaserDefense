@@ -158,3 +158,8 @@ void Laser::ClearTarget() {
 void Laser::SetColliderRadius(float _radius) {
     colliderRadius_ = std::max(_radius, 0.0001f);
 }
+
+const GameObject* Laser::GetConnectedTarget() const {
+    return start_.object && start_.object->IsActive()
+        && target_.object && target_.object->IsActive() ? target_.object : nullptr;
+}
