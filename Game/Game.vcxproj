@@ -142,6 +142,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Collision\CollisionAttribute.hpp" />
+    <ClInclude Include="Combat\AttackHit.hpp" />
     <ClInclude Include="Enemy\Enemy.hpp" />
     <ClInclude Include="Enemy\EnemyManager.hpp" />
     <ClInclude Include="GameObject\GameObject.hpp" />
@@ -149,6 +150,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="GameObject\Component\MoveComponent.hpp" />
     <ClInclude Include="GameObject\Player\Player.h" />
     <ClInclude Include="Laser\Laser.hpp" />
+    <ClInclude Include="Camera\PlayerCamera.hpp" />
     <ClInclude Include="MyGame.hpp" />
     <ClInclude Include="Factory\PostEffectFactory.hpp" />
     <ClInclude Include="Scene\GameSampleScene.hpp" />
@@ -156,7 +158,10 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Scene\Input\GameSceneInput.hpp" />
 
     <ClInclude Include="Scene\PlayScene.hpp" />
+    <ClInclude Include="Score\ScoreManager.hpp" />
+    <ClInclude Include="TimeLimit\TimeLimitManager.hpp" />
     <ClInclude Include="Tower\Tower.hpp" />
+    <ClInclude Include="Tower\MainTower.hpp" />
     <ClInclude Include="Tower\TowerManager.hpp" />
 
   </ItemGroup>
@@ -167,6 +172,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="GameObject\Component\MoveComponent.cpp" />
     <ClCompile Include="GameObject\Player\Player.cpp" />
     <ClCompile Include="Laser\Laser.cpp" />
+    <ClCompile Include="Camera\PlayerCamera.cpp" />
     <ClCompile Include="MyGame.cpp" />
     <ClCompile Include="PostEffectFactory.cpp" />
 
@@ -174,7 +180,10 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Scene\Input\GameSceneInput.cpp" />
 
     <ClCompile Include="Scene\PlayScene.cpp" />
+    <ClCompile Include="Score\ScoreManager.cpp" />
+    <ClCompile Include="TimeLimit\TimeLimitManager.cpp" />
     <ClCompile Include="Tower\Tower.cpp" />
+    <ClCompile Include="Tower\MainTower.cpp" />
     <ClCompile Include="Tower\TowerManager.cpp" />
 
     <ClCompile Include="main.cpp" />

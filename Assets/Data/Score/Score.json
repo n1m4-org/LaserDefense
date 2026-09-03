@@ -1,0 +1,16 @@
+{
+    "Score": {
+        "Initial": {
+            "Score": 0,
+            "Multiplier": 1
+        },
+        "Display": {
+            "Label": "SCORE ",
+            "Position": [995.0, 24.0],
+            "FontSize": 40.0,
+            "Color": [1.0, 1.0, 1.0, 1.0],
+            "Digits": 6,
+            "CountUpSpeed": 600.0
+        }
+    }
+}

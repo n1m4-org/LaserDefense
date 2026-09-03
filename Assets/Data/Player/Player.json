@@ -11,8 +11,18 @@
             "Rotation": [0.0, 0.0, 0.0]
         },
         "Movement": {
-            "Speed": 5.0,
-            "Limit": 20.0
+            "Speed": 20.0,
+            "Limit": 100.0
+        },
+        "Grapple": {
+            "MoveAcceleration": 40.0,
+            "MoveBrake": 0.1,
+            "TowerPullPower": 10.0,
+            "TowerApproachBrake": 1.0,
+            "SwingAcceleration": 10.0,
+            "SwingBrake": 0.05,
+            "TowerKeepDistance": 1.0,
+            "SwingMaxSpeed": 200.0
         }
     }
 }

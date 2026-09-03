@@ -9,6 +9,10 @@
         "Movement": {
             "Speed": 1.0
         },
+        "Health": {
+            "MaxHp": 10.0,
+            "KnockbackBrake": 5.0
+        },
         "SpawnAnimation": {
             "DurationSeconds": 1.0,
             "StartScale": 0.1,
@@ -22,8 +26,17 @@
             "ExpandRatio": 0.4
         },
         "Spawn": {
-            "IntervalSeconds": 3.0,
-            "Range": [20.0, 20.0]
+            "IntervalSeconds": 0.5,
+            "Count": 1,
+            "Range": [50.0, 50.0],
+            "ExcludeRange": [10.0, 10.0]
+        },
+        "Score": {
+            "Value": 100,
+            "AwardOnTowerHit": 0
+        },
+        "TimeBonus": {
+            "Seconds": 3.0
         }
     }
 }
