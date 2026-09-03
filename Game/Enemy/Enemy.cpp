@@ -3,12 +3,34 @@
 #include "Enemy.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 #include "Math/Easing.hpp"
 #include "Collision/CollisionAttribute.hpp"
+#include "Laser/Laser.hpp"
+#include "Camera/Controller/CameraController.hpp"
+#include "Math/MathUtils.hpp"
+#include "Pattern/Singleton.hpp"
+#include "Screen/Screen.hpp"
 
 namespace {
     constexpr float FULL_ROTATION = 6.2831853f;
+}
+
+void Enemy::SetHealth(float _maxHp, float _knockbackBrake) {
+    maxHp_ = std::isfinite(_maxHp) ? std::max(_maxHp, 0.0001f) : 10.0f;
+    hp_ = maxHp_;
+    knockbackBrake_ = std::isfinite(_knockbackBrake) ? std::max(_knockbackBrake, 0.0f) : 5.0f;
+}
+
+void Enemy::TakeDamage(const AttackHit& _hit) {
+    if (!active_ || !IsAlive() || !std::isfinite(_hit.damage) || _hit.damage <= 0.0f) return;
+    hp_ = std::max(0.0f, hp_ - _hit.damage);
+    if (std::isfinite(_hit.knockbackVelocity.x) && std::isfinite(_hit.knockbackVelocity.z)) {
+        // 再ヒット時は今回の攻撃方向で上書きし、無制限な速度の蓄積を避ける。
+        knockbackVelocity_ = {_hit.knockbackVelocity.x, 0.0f, _hit.knockbackVelocity.z};
+    }
+    if (hp_ <= 0.0f) Kill(true);
 }
 
 void Enemy::SetAppearance(const std::string& _modelName, const Vector3& _scale,
@@ -54,6 +76,7 @@ void Enemy::Kill(bool _awardsReward) {
         return;
     }
     state_ = State::Death;
+    hp_ = 0.0f;
     // 報酬対象の撃破なら、回収待ち状態にする
     rewardPending_ = _awardsReward;
     deathAnimationTime_ = 0.0f;
@@ -65,6 +88,14 @@ void Enemy::Kill(bool _awardsReward) {
 }
 
 void Enemy::Initialize() {
+    hp_ = maxHp_;
+    knockbackVelocity_ = {};
+    hpBarBackground_.Initialize("white_x16.png");
+    hpBarBackground_.SetAnchorPoint({0.0f, 0.0f});
+    hpBarBackground_.SetColor({0.1f, 0.1f, 0.1f, 1.0f});
+    hpBarFill_.Initialize("white_x16.png");
+    hpBarFill_.SetAnchorPoint({0.0f, 0.0f});
+    hpBarFill_.SetColor({0.2f, 1.0f, 0.2f, 1.0f});
     state_ = State::Spawn;
     spawnAnimationTime_ = 0.0f;
     deathAnimationTime_ = 0.0f;
@@ -113,6 +144,14 @@ void Enemy::Update(float _deltaTime) {
             break;
     }
 
+    // 通常移動とは別の速度として加算。死亡演出中も吹き飛びを継続する。
+    if (std::isfinite(_deltaTime) && _deltaTime > 0.0f) {
+        const float dt = std::min(_deltaTime, 0.1f);
+        const float decay = std::exp(-knockbackBrake_ * dt);
+        const float travel = knockbackBrake_ > 0.0001f ? (1.0f - decay) / knockbackBrake_ : dt;
+        position_ += knockbackVelocity_ * travel;
+        knockbackVelocity_ = knockbackVelocity_ * decay;
+    }
     UpdateCollider();
     UpdateModel();
 }
@@ -145,18 +184,16 @@ void Enemy::OnCollisionTrigger(const Collision::Collider* _other) {
     if (!_other) {
         return;
     }
-    constexpr uint32_t lethalAttributes =
-        CollisionAttribute::Tower | CollisionAttribute::Laser;
-    if ((_other->GetAttribute() & lethalAttributes) == 0u) {
+    if ((_other->GetAttribute() & CollisionAttribute::Laser) != 0u) {
+        // LaserカテゴリのOwnerはLaser。Triggerなので接触開始時のみダメージ。
+        if (const auto* laser = static_cast<const Laser*>(_other->GetOwner())) {
+            TakeDamage(laser->GetAttackHit());
+        }
         return;
     }
-
-    // レーザーで倒した場合のみ報酬（スコア・制限時間）の対象にする。
-    // タワーへ到達されたケースも報酬にしたい場合は
-    // Enemy.json の "Score" / "AwardOnTowerHit" を 1 にする
-    const bool killedByLaser =
-        (_other->GetAttribute() & CollisionAttribute::Laser) != 0u;
-    Kill(killedByLaser || awardsRewardOnTowerHit_);
+    if ((_other->GetAttribute() & CollisionAttribute::Tower) != 0u) {
+        Kill(awardsRewardOnTowerHit_);
+    }
 }
 
 void Enemy::UpdateSpawnAnimation(float _deltaTime) {
@@ -229,4 +266,27 @@ void Enemy::Draw() {
     if (model_) {
         model_->Draw();
     }
+    DrawHpBar();
+}
+
+void Enemy::DrawHpBar() {
+    if (!active_ || !IsAlive() || hp_ >= maxHp_ || hp_ <= 0.0f) return;
+    const auto camera = Singleton<CameraController>::GetInstance()->GetActive();
+    const auto screen = Singleton<Screen>::GetInstance();
+    if (!camera || screen->Width() <= 0.0f || screen->Height() <= 0.0f) return;
+    const Vector3 head = GetTransform().translate + Vector3{0.0f, scale_.y + 0.3f, 0.0f};
+    const Vector3 projected = MathUtils::Matrix::Transform(head, camera->GetViewProjection());
+    if (!std::isfinite(projected.x) || !std::isfinite(projected.y)
+        || !std::isfinite(projected.z) || projected.z < 0.0f || projected.z > 1.0f
+        || std::abs(projected.x) > 1.0f || std::abs(projected.y) > 1.0f) return;
+    const float x = (projected.x + 1.0f) * 0.5f * screen->Width() - 16.0f;
+    const float y = (1.0f - projected.y) * 0.5f * screen->Height() - 8.0f;
+    hpBarBackground_.SetPosition({x, y});
+    hpBarBackground_.SetSize({32.0f, 5.0f});
+    hpBarFill_.SetPosition({x + 1.0f, y + 1.0f});
+    hpBarFill_.SetSize({30.0f * std::clamp(hp_ / maxHp_, 0.0f, 1.0f), 3.0f});
+    hpBarBackground_.Update();
+    hpBarFill_.Update();
+    hpBarBackground_.Draw();
+    hpBarFill_.Draw();
 }
