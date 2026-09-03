@@ -36,9 +36,14 @@ void PlayScene::Initialize() {
     laser_->SetStart(player_.get(), player_->GetModelOffset().y);
     laser_->SetTarget(tower);
 
+    // スコアは EnemyManager より先に用意し、加算先として渡しておく
+    scoreManager_ = std::make_unique<ScoreManager>();
+    scoreManager_->Initialize();
+
     enemyManager_ = std::make_unique<EnemyManager>();
     enemyManager_->Initialize();
     enemyManager_->SetTargetPosition(towerPosition.x, towerPosition.z);
+    enemyManager_->SetScoreManager(scoreManager_.get());
 
     floor_ = std::make_unique<Model>();
     floor_->Initialize("plane");
@@ -61,6 +66,7 @@ void PlayScene::Update() {
     enemyManager_->Update(deltaTime);
     towerManager_->Update(deltaTime);
     laser_->Update();
+    scoreManager_->Update(deltaTime);
     floor_->Update();
 }
 
@@ -70,4 +76,5 @@ void PlayScene::Draw() {
     towerManager_->Draw();
     laser_->Draw();
     floor_->Draw();
+    scoreManager_->Draw();
 }

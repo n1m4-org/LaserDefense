@@ -1,6 +1,8 @@
 #ifndef ENEMY_HPP_
 #define ENEMY_HPP_
 
+#include <cstdint>
+
 #include "GameObject/GameObject.hpp"
 #include "Collision/Collider.h"
 
@@ -31,6 +33,9 @@ private:
     float deathEndScale_ = 0.01f;
     float deathExpandRatio_ = 0.4f;
     bool deathAnimationFinished_ = false;
+    int32_t scoreValue_ = 100;              //!< この敵を倒したときに加算されるスコア
+    bool awardsScoreOnTowerHit_ = false;    //!< タワーに接触して消滅した場合もスコアを与えるか
+    bool scorePending_ = false;             //!< スコアが未回収か（二重加算を防ぐためのフラグ）
     std::unique_ptr<Collision::Collider> collider_;
     Vector3 colliderOffset_{};
 
@@ -47,7 +52,31 @@ public:
     bool IsDeathAnimationFinished() const { return deathAnimationFinished_; }
     void SetColliderOffset(const Vector3& _offset) { colliderOffset_ = _offset; }
     const Vector3& GetColliderOffset() const { return colliderOffset_; }
-    void Kill();
+
+    /// @brief 撃破時に得られるスコアを設定する
+    /// @param _score            1体あたりの獲得スコア
+    /// @param _awardOnTowerHit  タワーに接触して消えた場合もスコアを与えるか
+    /// @note 通常は EnemyManager が JSON の値を渡すので、点数を変えたい場合は
+    ///       Assets/Data/Enemy/Enemy.json の "Score" を書き換えるだけでよい
+    void SetScoreValue(int32_t _score, bool _awardOnTowerHit = false) {
+        scoreValue_ = _score;
+        awardsScoreOnTowerHit_ = _awardOnTowerHit;
+    }
+
+    /// @brief 1体あたりの獲得スコアを取得する
+    int32_t GetScoreValue() const { return scoreValue_; }
+
+    /// @brief 未回収のスコアを持っているか
+    bool IsScorePending() const { return scorePending_; }
+
+    /// @brief 未回収のスコアを受け取る（1体につき1回だけ0以外を返す）
+    /// @return 加算すべきスコア。未撃破または回収済みなら0
+    /// @note 呼び出した時点で回収済みになるため、二重加算されることはない
+    int32_t TakeScoreReward();
+
+    /// @brief この敵を撃破状態にする
+    /// @param _awardsScore この撃破をスコア加算の対象にするか
+    void Kill(bool _awardsScore = true);
 
     void Initialize() override;
     void Update(float _deltaTime) override;

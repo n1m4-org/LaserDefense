@@ -40,11 +40,22 @@ void Enemy::SetDeathAnimation(float _duration, float _peakScale,
     deathExpandRatio_ = _expandRatio;
 }
 
-void Enemy::Kill() {
+int32_t Enemy::TakeScoreReward() {
+    if (!scorePending_) {
+        return 0;
+    }
+    // 回収済みにしてから返すことで、同じ敵から二重にスコアが入らないようにする
+    scorePending_ = false;
+    return scoreValue_;
+}
+
+void Enemy::Kill(bool _awardsScore) {
     if (state_ == State::Death) {
         return;
     }
     state_ = State::Death;
+    // スコア加算対象の撃破なら、回収待ち状態にする
+    scorePending_ = _awardsScore;
     deathAnimationTime_ = 0.0f;
     deathAnimationFinished_ = false;
     SetVelocity({});
@@ -58,6 +69,7 @@ void Enemy::Initialize() {
     spawnAnimationTime_ = 0.0f;
     deathAnimationTime_ = 0.0f;
     deathAnimationFinished_ = false;
+    scorePending_ = false;
     SetModel(modelName_);
     SetPosition({ 0.0f, 0.0f, 0.0f });
     SetScale(modelScale_ * spawnStartScale_);
@@ -139,7 +151,12 @@ void Enemy::OnCollisionTrigger(const Collision::Collider* _other) {
         return;
     }
 
-    Kill();
+    // レーザーで倒した場合のみスコアの対象にする。
+    // タワーへ到達されたケースもスコアにしたい場合は
+    // Enemy.json の "Score" / "AwardOnTowerHit" を 1 にする
+    const bool killedByLaser =
+        (_other->GetAttribute() & CollisionAttribute::Laser) != 0u;
+    Kill(killedByLaser || awardsScoreOnTowerHit_);
 }
 
 void Enemy::UpdateSpawnAnimation(float _deltaTime) {
