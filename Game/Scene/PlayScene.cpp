@@ -154,7 +154,7 @@ void PlayScene::Update() {
     player_->Update(deltaTime);
     const Vector3& playerVelocity = player_->GetVelocity();
     const float playerSpeed = std::hypot(playerVelocity.x, playerVelocity.z);
-    laser_->UpdateKnockbackMultiplier(playerSpeed, player_->GetSwingMaxSpeed());
+    laser_->UpdateSpeedMultipliers(playerSpeed, player_->GetSwingMaxSpeed());
     Singleton<LightManager>::GetInstance()->SetPosition(
         player_->GetPosition() + shadowLightOffset);
     enemyManager_->Update(deltaTime);

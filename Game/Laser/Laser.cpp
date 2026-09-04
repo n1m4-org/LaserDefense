@@ -57,6 +57,8 @@ void Laser::LoadConfig() {
         };
         attackPower_ = read("AttackPower", attackPower_);
         knockbackPower_ = read("KnockbackPower", knockbackPower_);
+        maxSpeedDamageMultiplier_ = std::max(
+            read("MaxSpeedDamageMultiplier", maxSpeedDamageMultiplier_), 1.0f);
         maxSpeedKnockbackMultiplier_ = std::max(
             read("MaxSpeedKnockbackMultiplier", maxSpeedKnockbackMultiplier_), 1.0f);
     }
@@ -73,12 +75,14 @@ void Laser::SetAttackMultipliers(float _damage, float _knockback) {
     knockbackMultiplier_ = std::isfinite(_knockback) ? std::max(_knockback, 0.0f) : 1.0f;
 }
 
-void Laser::UpdateKnockbackMultiplier(float _currentSpeed, float _maxSpeed) {
+void Laser::UpdateSpeedMultipliers(float _currentSpeed, float _maxSpeed) {
     float speedRatio = 0.0f;
     if (std::isfinite(_currentSpeed) && std::isfinite(_maxSpeed) && _maxSpeed > 0.0001f) {
         speedRatio = std::clamp(_currentSpeed / _maxSpeed, 0.0f, 1.0f);
     }
-    // 停止時は1倍、最高速度以上ではJSON指定の最大倍率になる。
+    // 停止時は1倍、最高速度以上ではそれぞれJSON指定の最大倍率になる。
+    damageMultiplier_ = 1.0f
+        + (maxSpeedDamageMultiplier_ - 1.0f) * speedRatio;
     knockbackMultiplier_ = 1.0f
         + (maxSpeedKnockbackMultiplier_ - 1.0f) * speedRatio;
 }
