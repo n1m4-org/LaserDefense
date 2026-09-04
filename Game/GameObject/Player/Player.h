@@ -57,6 +57,7 @@ public:
     /// @note Update()より前に一度だけ呼ぶ
     void SetInput(const GameSceneInput& _input) { input_ = &_input; }
     const Vector3& GetModelOffset() const { return modelOffset_; }
+    float GetSwingMaxSpeed() const { return swingMaxSpeed_; }
     void EnableGrappleMovement() { grappleMovement_ = true; }
     void SetStageBoundary(float _halfSize, float _bounce);
     // シーン所有の接続先。Update前に毎フレーム設定する。

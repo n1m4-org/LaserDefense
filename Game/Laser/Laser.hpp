@@ -36,6 +36,7 @@ class Laser final {
     float knockbackPower_ = 18.0f;
     float damageMultiplier_ = 1.0f;
     float knockbackMultiplier_ = 1.0f;
+    float maxSpeedKnockbackMultiplier_ = 2.0f;
     GESTD::ReferencePtr<ParticleSystem> particleSystem_;
     std::shared_ptr<BeamState> beamState_;
     EmitterHandle beamHandle_;
@@ -54,6 +55,7 @@ public:
     const GameObject* GetConnectedTarget() const;
     void SetColliderRadius(float _radius);
     void SetAttackMultipliers(float _damage, float _knockback);
+    void UpdateKnockbackMultiplier(float _currentSpeed, float _maxSpeed);
     AttackHit GetAttackHit() const;
 
 private:
