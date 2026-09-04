@@ -1,158 +1,163 @@
-#ifndef TIME_LIMIT_MANAGER_HPP_
-#define TIME_LIMIT_MANAGER_HPP_
+#ifndef SURVIVAL_TIME_MANAGER_HPP_
+#define SURVIVAL_TIME_MANAGER_HPP_
 
 #include <array>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "Math/Vector2.hpp"
 #include "Math/Vector4.hpp"
 #include "Sprite.hpp"
 #include "Text/Text.hpp"
 
-/** 制限時間の管理と UI 表示（ゲージ＋数値）を受け持つクラス
+/** 「何秒タワーを守れたか」を数える生存時間の管理と UI 表示を受け持つクラス
  *
-
+ *  制限時間ではなくカウントアップなので、時間切れという概念は無い。
+ *  ゲームが終わるのはタワーの HP が尽きたときだけで、
+ *  この時間は「どれだけ耐えたか」という成績になる。
+ *
+ *  ## なぜリング型なのか
+ *  タワーHPが横長のバーなので、時間も横バーにすると形が同じで見分けがつかない。
+ *  時計を連想させる円形にすることで、一目でどちらの情報か分かるようにしている。
+ *
+ *  ## 目盛りの意味
+ *  リング1周 = secondsPerLap_ 秒（既定60秒）で、tickCount_ 個の目盛りに分割される。
+ *  既定では 60秒 ÷ 20目盛り = 3秒/目盛り。3秒ごとに1つずつ点灯していく。
+ *
+ *  1周し終える（＝1分耐えた）とリング全体が光り、そのままの色で満タンを保つ。
+ *  次の1分は新しい色が上から重なっていくので、リングは空に戻らず
+ *  「何色まで到達したか」がそのまま耐えた分数の記録になる。
+ *  中央の数値は経過時間の合計を "分:秒" で出しているので、
+ *  リングは「今の1分のどこか＋何周したか」、数値は「通算どれだけ耐えたか」を表す。
+ *
  *  ## パラメータの変更方法
- *  下記メンバーの初期値はすべて Assets/Data/TimeLimit/TimeLimit.json から上書きされる。
- *  演出の強さ・速さ・色・配置は再ビルドせずに JSON の値だけで調整できる。
+ *  下記メンバーの初期値はすべて Assets/Data/SurvivalTime/SurvivalTime.json から
+ *  上書きされる。配置・色・演出は再ビルドせずに JSON の値だけで調整できる。
  */
-class TimeLimitManager final {
-    /// 同時に表示できる「+○○s」ポップアップの最大数
-    static constexpr size_t POPUP_COUNT = 4;
+class SurvivalTimeManager final {
+    /// 目盛りスプライトの確保数（tickCount_ はこれを超えられない）
+    static constexpr size_t TICK_MAX = 64;
 
-    /** 「+○○s」ポップアップ1個分の状態 */
-    struct GainPopup {
-        Text text{};              // 表示用テキスト
-        float elapsed = 0.0f;     // 表示開始からの経過秒数
-        float baseY = 0.0f;       // 浮き上がりの起点になる Y 座標
-        bool active = false;      // 表示中かどうか
-    };
+    // ─── 生存時間 ──────────────────────────────────────────────
+    float elapsedSeconds_ = 0.0f;       // 経過時間（秒）。守り切った長さそのもの
+    bool counting_ = true;              // false の間はカウントが止まる（ポーズ用）
 
-    // ─── 制限時間のルール ──────────────────────────────────────
-    float remainingSeconds_ = 30.0f;    // 現在の残り時間（秒）
-    float startSeconds_ = 30.0f;        // 開始時 / Reset() 時の残り時間
-    float maxSeconds_ = 99.0f;          // 残り時間の上限。ゲージ満タンの基準にもなる
-    bool countingDown_ = true;          // false の間はカウントダウンが止まる（ポーズ用）
-
-    // ─── ゲージの表示状態 ──────────────────────────────────────
-    float displayRatio_ = 1.0f;         // 実際に描いているゲージの割合（0〜1）
-    float fillDuration_ = 0.45f;        // 増加分を本体バーが埋めきるまでの秒数
-    float fillTimer_ = 0.0f;            // 埋めるアニメーションの残り時間
-    float fillStartRatio_ = 1.0f;       // 埋めるアニメーションを始めたときの割合
+    // ─── リングの状態 ──────────────────────────────────────────
+    int32_t litCount_ = 0;              // 現在点灯している目盛りの数
+    int32_t lapCount_ = 0;              // 何周したか（＝何分耐えたか）
+    /// 目盛りごとの「点灯した直後」の残り時間。灯った瞬間を白く光らせるのに使う
+    std::array<float, TICK_MAX> tickGainTimers_{};
 
     // ─── 演出用タイマー ────────────────────────────────────────
-    float flashTimer_ = 0.0f;           // フラッシュの残り時間
+    float lapFlashTimer_ = 0.0f;        // 1周し終えた瞬間のフラッシュの残り時間
     float punchTimer_ = 0.0f;           // パンチスケールの残り時間
-    float blinkTime_ = 0.0f;            // 危険時の明滅に使う経過時間
 
-    // ─── ゲージの見た目設定 ────────────────────────────────────
-    Vector2 gaugePosition_{32.0f, 150.0f};      // ゲージ左端・中心のピクセル座標
-    Vector2 gaugeSize_{420.0f, 26.0f};          // ゲージ本体のサイズ（満タン時）
-    float frameThickness_ = 4.0f;               // ゲージを囲む枠の太さ
-    Vector4 frameColor_{0.05f, 0.05f, 0.08f, 0.85f};    // 枠 兼 空き部分の色
-    Vector4 safeColor_{0.25f, 0.95f, 0.55f, 1.0f};      // 残り時間が十分あるときの色
-    Vector4 warningColor_{1.0f, 0.85f, 0.25f, 1.0f};    // 残り時間が減ってきたときの色
-    Vector4 dangerColor_{1.0f, 0.28f, 0.28f, 1.0f};     // 残り時間が危険なときの色
-    Vector4 ghostColor_{1.0f, 1.0f, 1.0f, 0.9f};        // 増えた分を先行表示するゴーストバーの色
-    float warningRatio_ = 0.4f;         // この割合を下回ると warningColor_ になる
-    float dangerRatio_ = 0.2f;          // この割合を下回ると dangerColor_ になり明滅する
+    // ─── リングの見た目設定 ────────────────────────────────────
+    Vector2 ringCenter_{104.0f, 96.0f};         // リングの中心のピクセル座標
+    float ringRadius_ = 50.0f;                  // 中心から目盛りの中心までの距離
+    Vector2 tickSize_{7.0f, 16.0f};             // 目盛り1個のサイズ（x=太さ, y=長さ）
+    int32_t tickCount_ = 20;                    // 目盛りの数。1目盛り = secondsPerLap_ / これ 秒
+    float secondsPerLap_ = 60.0f;               // リングが1周する秒数
+    Vector4 emptyColor_{0.13f, 0.13f, 0.17f, 0.85f};    // まだ1周もしていない部分の色
+    Vector4 gainColor_{1.0f, 1.0f, 1.0f, 1.0f};         // 灯った直後の目盛りの色
+    /// 周回ごとの目盛りの色。耐えた分数が進むほど先の色になり、使い切ったら先頭へ戻る
+    std::vector<Vector4> lapColors_{
+        {0.25f, 0.95f, 0.55f, 1.0f},    // 1分目: 緑
+        {1.0f,  0.85f, 0.30f, 1.0f},    // 2分目: 黄
+        {1.0f,  0.55f, 0.25f, 1.0f},    // 3分目: 橙
+        {1.0f,  0.40f, 0.70f, 1.0f},    // 4分目: 桃
+        {0.70f, 0.50f, 1.0f,  1.0f},    // 5分目: 紫
+    };
+    float gainFlashDuration_ = 0.5f;    // 灯った目盛りが白く光っている秒数
 
-    // ─── 「増えた瞬間」の演出設定 ──────────────────────────────
-    float flashDuration_ = 0.35f;       // フラッシュの長さ（秒）
-    float flashStrength_ = 0.85f;       // フラッシュの最大濃度（0〜1）
-    float punchDuration_ = 0.32f;       // パンチスケールの長さ（秒）
-    float punchScale_ = 1.5f;           // 膨らむ倍率。1.0 で演出なし
-    float blinkSpeed_ = 9.0f;           // 危険時の明滅の速さ
-    float blinkStrength_ = 0.45f;       // 危険時の明滅の強さ（0で明滅なし）
+    // ─── 「1周した瞬間」の演出設定 ─────────────────────────────
+    float lapFlashDuration_ = 0.6f;     // 1周したときのフラッシュの長さ（秒）
+    float punchDuration_ = 0.35f;       // パンチスケールの長さ（秒）
+    float punchScale_ = 1.5f;           // 目盛りが伸びる倍率。1.0 で演出なし
+    float valuePunchScale_ = 1.3f;      // 1周した瞬間に数値を何倍まで大きくするか
 
     // ─── 数値表示の設定 ────────────────────────────────────────
-    Text valueText_{};                          // 残り秒数のテキスト
-    std::string valueLabel_{"TIME "};           // 数字の前に付ける文字列
-    Vector2 valuePosition_{32.0f, 88.0f};       // テキスト左上のピクセル座標
-    float valueFontSize_ = 40.0f;               // 通常時のフォントサイズ
-    float valuePunchScale_ = 1.35f;             // 時間が増えた瞬間に何倍まで大きくするか
+    // リングの中心へ置くので中央揃えにする（Text は左揃えしかできないので幅を見積もる）
+    Text valueText_{};
+    float valueFontSize_ = 30.0f;               // 通常時のフォントサイズ
+    int32_t minuteDigits_ = 2;                  // 分に確保しておく桁数（1桁のうちは空けておく）
+    float valueOffsetY_ = -20.0f;               // リング中心から見たテキスト上端のずれ
+    Vector4 valueColor_{0.9f, 1.0f, 0.95f, 1.0f};       // 文字色
+    float charWidthRatio_ = 0.53f;              // 中央揃えに使う「1文字幅 ÷ フォントサイズ」の目安
 
-    // ─── 「+○○s」ポップアップの設定 ───────────────────────────
-    std::array<GainPopup, POPUP_COUNT> popups_{};   // 使い回すポップアップ（確保数は POPUP_COUNT）
-    Vector2 popupPosition_{470.0f, 132.0f};         // ポップアップの出現位置
-    float popupFontSize_ = 34.0f;                   // ポップアップのフォントサイズ
-    Vector4 popupColor_{0.55f, 1.0f, 0.7f, 1.0f};   // ポップアップの色
-    float popupRiseDistance_ = 52.0f;               // 消えるまでに何ピクセル上へ浮くか
-    float popupDuration_ = 0.9f;                    // 表示してから消えるまでの秒数
-    float popupStackOffset_ = 30.0f;                // 同時表示が重なったときに縦へずらす量
+    // ─── ラベル（"TIME"）の設定 ────────────────────────────────
+    Text labelText_{};
+    std::string label_{"TIME"};                 // リングの下に出す見出し
+    float labelFontSize_ = 20.0f;               // フォントサイズ
+    float labelOffsetY_ = 66.0f;                // リング中心から見たテキスト上端のずれ
+    Vector4 labelColor_{0.75f, 0.8f, 0.88f, 1.0f};      // 文字色
 
     // ─── 描画に使うスプライト ──────────────────────────────────
-    Sprite frameSprite_{};      // 枠（＝時間が減った部分の下地）
-    Sprite ghostSprite_{};      // 増えた分を先行表示する明るいバー
-    Sprite fillSprite_{};       // 残り時間を表す本体バー
-    Sprite flashSprite_{};      // 増えた瞬間に光らせる白いオーバーレイ
+    /// リングの目盛り。先頭 tickCount_ 個だけを初期化して使う
+    std::array<Sprite, TICK_MAX> tickSprites_{};
+
+    bool visible_ = true;           // UI 全体の表示 / 非表示
 
 public:
-    /// JSON からパラメータを読み込み、ゲージとテキストを初期化する
+    /// JSON からパラメータを読み込み、リングとテキストを初期化する
     void Initialize();
 
-    /// 残り時間を減らし、UI と演出を更新する
+    /// 経過時間を進め、UI と演出を更新する
     /// _deltaTime 前フレームからの経過秒数
     void Update(float _deltaTime);
 
-    /// ゲージ・数値・ポップアップを描画キューへ積む
+    /// リングと数値を描画キューへ積む
     /// スプライトを使うので、3D の描画がすべて終わったあとに呼ぶ
     void Draw();
 
-    /// 残り時間を増やし、「増えた」ことが分かる演出を再生する
-    /// _seconds 加算する秒数（0以下なら何もしない）
-    /// 上限 maxSeconds_ で頭打ちになり、実際に増えた分だけが演出に反映される
-    void AddTime(float _seconds);
-
-    /// 残り時間を開始値へ戻す（リトライ時などに使用）
+    /// 経過時間を 0 に戻す（リトライ時などに使用）
     void Reset();
 
     // ─── Getter / Setter ───────────────────────────────────────
 
-    /// @brief 残り時間（秒）
-    float GetRemainingSeconds() const { return remainingSeconds_; }
+    /// @brief 守り切った時間（秒）
+    /// @note リザルト画面などで成績として使う
+    float GetElapsedSeconds() const { return elapsedSeconds_; }
 
-    /// @brief 時間切れかどうか
-    bool IsTimeUp() const { return remainingSeconds_ <= 0.0f; }
+    /// @brief 何周したか（＝何分耐えたか）
+    int32_t GetLapCount() const { return lapCount_; }
 
-    /// @brief 残り時間の割合（0〜1）。ゲージの見た目ではなく実値を返す
-    float GetRemainingRatio() const;
-
-    /// @brief カウントダウンの一時停止 / 再開
-    void SetCountingDown(bool _countingDown) { countingDown_ = _countingDown; }
+    /// @brief カウントの一時停止 / 再開
+    void SetCounting(bool _counting) { counting_ = _counting; }
 
     /// @brief UI の表示 / 非表示を切り替える
     void SetVisible(bool _visible);
 
 private:
-    /// @brief Assets/Data/TimeLimit/TimeLimit.json から各パラメータを読み込む
+    /// @brief Assets/Data/SurvivalTime/SurvivalTime.json から各パラメータを読み込む
     /// @note ファイルやキーが無い場合はメンバーの初期値がそのまま使われる
     void LoadConfig();
 
-    /// @brief ゲージの追従とタイマー類を進める
-    void UpdateGauge(float _deltaTime);
+    /// @brief 点灯数の更新とタイマー類を進める
+    void UpdateRing(float _deltaTime);
 
-    /// @brief ポップアップの浮き上がりとフェードを進める
-    void UpdatePopups(float _deltaTime);
+    /// @brief 現在の状態を目盛りスプライトの位置・サイズ・色へ反映する
+    void ApplyTickSprites();
 
-    /// @brief 現在の状態をスプライトの位置・サイズ・色へ反映する
-    void ApplyGaugeSprites();
-
-    /// @brief 残り秒数のテキストを更新する
+    /// @brief 経過時間のテキストを更新する
     void RefreshValueText();
 
-    /// @brief 空いているポップアップを1つ使って「+○○s」を表示する
-    void SpawnGainPopup(float _seconds);
+    /// @brief 今の周回で点灯しているべき目盛り数を求める
+    int32_t CalcLitCount() const;
 
-    /// @brief 残量に応じたゲージの基本色を返す（危険時の明滅もここで掛ける）
-    Vector4 GetGaugeColor() const;
+    /// @brief 指定した周回の色を返す（色を使い切ったら先頭から繰り返す）
+    /// @param _lap 0 が1分目
+    Vector4 GetLapColor(int32_t _lap) const;
 
     /// @brief パンチスケールの現在倍率を返す（演出中でなければ 1.0）
     float GetPunchScale() const;
 
-    /// @brief フラッシュの現在の濃度を返す（演出中でなければ 0.0）
-    float GetFlashAlpha() const;
+    /// @brief 1周フラッシュの現在の濃度を返す（演出中でなければ 0.0）
+    float GetLapFlashAlpha() const;
+
+    /// @brief 文字列の描画幅を概算する（Text に中央揃え機能が無いため自前で見積もる）
+    float EstimateTextWidth(const std::string& _text, float _fontSize) const;
 };
 
-#endif // TIME_LIMIT_MANAGER_HPP_
+#endif // SURVIVAL_TIME_MANAGER_HPP_

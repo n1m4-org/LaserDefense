@@ -1,6 +1,6 @@
 #define NOMINMAX
 
-#include "TimeLimitManager.hpp"
+#include "SurvivalTimeManager.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -10,8 +10,11 @@
 #include "Pattern/Singleton.hpp"
 
 namespace {
-    /// ゲージやフラッシュに使う単色テクスチャ
+    /// 目盛りに使う単色テクスチャ
     const std::string WHITE_TEXTURE = "white_x16.png";
+
+    /// 円周を一周するラジアン
+    constexpr float TWO_PI = 6.283185307f;
 
     /// 終わり際がゆっくりになる補間（演出の減衰に使う）
     float EaseOutCubic(float _t) {
@@ -35,128 +38,84 @@ namespace {
     }
 }
 
-void TimeLimitManager::Initialize() {
+void SurvivalTimeManager::Initialize() {
     LoadConfig();
 
-    remainingSeconds_ = startSeconds_;
-    displayRatio_ = GetRemainingRatio();
-    fillTimer_ = 0.0f;
-    flashTimer_ = 0.0f;
+    elapsedSeconds_ = 0.0f;
+    lapCount_ = 0;
+    lapFlashTimer_ = 0.0f;
     punchTimer_ = 0.0f;
-    blinkTime_ = 0.0f;
+    tickGainTimers_.fill(0.0f);
+    litCount_ = CalcLitCount();
 
-    // ゲージは単色テクスチャを引き伸ばして作る。
-    // アンカーを左端中央にすることで、幅を変えても左端が動かず中心線もずれない
-    for (Sprite* sprite : {&frameSprite_, &ghostSprite_, &fillSprite_, &flashSprite_}) {
-        sprite->Initialize(WHITE_TEXTURE);
-        sprite->SetAnchorPoint({0.0f, 0.5f});
+    // 目盛りは単色テクスチャを回転させて作る。
+    // アンカーは中央（既定）のままにして、目盛りの中心を円周上へ置く
+    for (int32_t i = 0; i < tickCount_; ++i) {
+        tickSprites_[static_cast<size_t>(i)].Initialize(WHITE_TEXTURE);
     }
 
-    valueText_.Initialize(valueLabel_, valuePosition_.x, valuePosition_.y, valueFontSize_);
-    valueText_.SetColor(safeColor_);
+    valueText_.Initialize("", ringCenter_.x, ringCenter_.y + valueOffsetY_, valueFontSize_);
+    valueText_.SetColor(valueColor_);
 
-    // ポップアップは使い回すので、最初に全部初期化して非表示にしておく
-    for (auto& popup : popups_) {
-        popup.text.Initialize("", popupPosition_.x, popupPosition_.y, popupFontSize_);
-        popup.text.SetColor(popupColor_);
-        popup.text.SetVisible(false);
-        popup.active = false;
-        popup.elapsed = 0.0f;
-        popup.baseY = popupPosition_.y;
-    }
+    labelText_.Initialize(label_, ringCenter_.x, ringCenter_.y + labelOffsetY_, labelFontSize_);
+    labelText_.SetColor(labelColor_);
+    // ラベルは長さが変わらないので、位置は一度決めれば動かさなくてよい
+    labelText_.SetPosition(
+        ringCenter_.x - EstimateTextWidth(label_, labelFontSize_) * 0.5f,
+        ringCenter_.y + labelOffsetY_);
 
-    ApplyGaugeSprites();
+    ApplyTickSprites();
     RefreshValueText();
 }
 
-void TimeLimitManager::Update(float _deltaTime) {
-    if (countingDown_) {
-        remainingSeconds_ = std::max(remainingSeconds_ - _deltaTime, 0.0f);
+void SurvivalTimeManager::Update(float _deltaTime) {
+    if (counting_) {
+        elapsedSeconds_ += _deltaTime;
     }
 
-    UpdateGauge(_deltaTime);
-    UpdatePopups(_deltaTime);
-    ApplyGaugeSprites();
+    UpdateRing(_deltaTime);
+    ApplyTickSprites();
     RefreshValueText();
 }
 
-void TimeLimitManager::Draw() {
-    // 枠 → ゴースト → 本体 → フラッシュ の順に重ねる
-    frameSprite_.Draw();
-    ghostSprite_.Draw();
-    fillSprite_.Draw();
-    flashSprite_.Draw();
+void SurvivalTimeManager::Draw() {
+    if (!visible_) {
+        return;
+    }
+
+    for (int32_t i = 0; i < tickCount_; ++i) {
+        tickSprites_[static_cast<size_t>(i)].Draw();
+    }
 
     valueText_.Draw();
-    for (auto& popup : popups_) {
-        popup.text.Draw();
-    }
+    labelText_.Draw();
 }
 
-void TimeLimitManager::AddTime(float _seconds) {
-    if (_seconds <= 0.0f) {
-        return;
-    }
-
-    // 上限で頭打ちになった分は「増えていない」ので演出にも反映しない
-    const float before = remainingSeconds_;
-    remainingSeconds_ = std::min(remainingSeconds_ + _seconds, maxSeconds_);
-
-    const float gained = remainingSeconds_ - before;
-    if (gained <= 0.0f) {
-        return;
-    }
-
-    // 周辺視野へ届く演出をまとめて起動する
-    flashTimer_ = flashDuration_;   // 輝度の急変
-    punchTimer_ = punchDuration_;   // 動き（縦への膨らみ）
-    SpawnGainPopup(gained);         // 増えた秒数の明示
-
-    // 本体バーは今の位置から fillDuration_ 秒かけて新しい残量まで伸ばす。
-    // 伸びきるまでの差分がゴーストバーとして明るく見えるので「増えた」ことが分かる。
-    // 秒数ではなく時間で制御しているため、加算量が小さくても演出の長さは変わらない
-    fillStartRatio_ = displayRatio_;
-    fillTimer_ = fillDuration_;
-}
-
-void TimeLimitManager::Reset() {
-    remainingSeconds_ = startSeconds_;
-    displayRatio_ = GetRemainingRatio();
-    fillTimer_ = 0.0f;
-    flashTimer_ = 0.0f;
+void SurvivalTimeManager::Reset() {
+    elapsedSeconds_ = 0.0f;
+    lapCount_ = 0;
+    lapFlashTimer_ = 0.0f;
     punchTimer_ = 0.0f;
+    tickGainTimers_.fill(0.0f);
+    litCount_ = CalcLitCount();
 
-    for (auto& popup : popups_) {
-        popup.active = false;
-        popup.elapsed = 0.0f;
-        popup.text.SetVisible(false);
-    }
-
-    ApplyGaugeSprites();
+    ApplyTickSprites();
     RefreshValueText();
 }
 
-float TimeLimitManager::GetRemainingRatio() const {
-    if (maxSeconds_ <= 0.0f) {
-        return 0.0f;
-    }
-    return std::clamp(remainingSeconds_ / maxSeconds_, 0.0f, 1.0f);
-}
-
-void TimeLimitManager::SetVisible(bool _visible) {
+void SurvivalTimeManager::SetVisible(bool _visible) {
+    visible_ = _visible;
     valueText_.SetVisible(_visible);
-    for (auto& popup : popups_) {
-        popup.text.SetVisible(_visible && popup.active);
-    }
+    labelText_.SetVisible(_visible);
 }
 
-void TimeLimitManager::LoadConfig() {
+void SurvivalTimeManager::LoadConfig() {
     const auto json = Singleton<JsonParams>::GetInstance();
-    if (!json->Load("TimeLimit", "TimeLimit")) {
+    if (!json->Load("SurvivalTime", "SurvivalTime")) {
         return;
     }
 
-    const auto groups = json->GetGroups("TimeLimit");
+    const auto groups = json->GetGroups("SurvivalTime");
 
     // キーが存在し、かつ想定した型で入っている場合だけ値を取り出すヘルパー
     const auto read = []<typename T>(const auto& _group, const std::string& _key, const T& _fallback) {
@@ -170,239 +129,192 @@ void TimeLimitManager::LoadConfig() {
         return _fallback;
     };
 
-    if (const auto rule = groups.find("Rule"); rule != groups.end()) {
-        startSeconds_ = read(rule->second, "StartSeconds", startSeconds_);
-        maxSeconds_ = read(rule->second, "MaxSeconds", maxSeconds_);
+    if (const auto ring = groups.find("Ring"); ring != groups.end()) {
+        ringCenter_ = read(ring->second, "Center", ringCenter_);
+        ringRadius_ = read(ring->second, "Radius", ringRadius_);
+        tickSize_ = read(ring->second, "TickSize", tickSize_);
+        tickCount_ = read(ring->second, "TickCount", tickCount_);
+        secondsPerLap_ = read(ring->second, "SecondsPerLap", secondsPerLap_);
+        emptyColor_ = read(ring->second, "EmptyColor", emptyColor_);
+        gainColor_ = read(ring->second, "GainColor", gainColor_);
+
+        // 周回色は [[r,g,b], [r,g,b], ...] の形で持つ（不透明度は常に1）
+        if (const auto colors = read(ring->second, "LapColors", std::vector<Vector3>{});
+            !colors.empty()) {
+            lapColors_.clear();
+            for (const auto& color : colors) {
+                lapColors_.push_back({color.x, color.y, color.z, 1.0f});
+            }
+        }
+        gainFlashDuration_ = read(ring->second, "GainFlashDuration", gainFlashDuration_);
     }
 
-    if (const auto gauge = groups.find("Gauge"); gauge != groups.end()) {
-        gaugePosition_ = read(gauge->second, "Position", gaugePosition_);
-        gaugeSize_ = read(gauge->second, "Size", gaugeSize_);
-        frameThickness_ = read(gauge->second, "FrameThickness", frameThickness_);
-        frameColor_ = read(gauge->second, "FrameColor", frameColor_);
-        safeColor_ = read(gauge->second, "SafeColor", safeColor_);
-        warningColor_ = read(gauge->second, "WarningColor", warningColor_);
-        dangerColor_ = read(gauge->second, "DangerColor", dangerColor_);
-        ghostColor_ = read(gauge->second, "GhostColor", ghostColor_);
-        warningRatio_ = read(gauge->second, "WarningRatio", warningRatio_);
-        dangerRatio_ = read(gauge->second, "DangerRatio", dangerRatio_);
-        fillDuration_ = read(gauge->second, "FillDuration", fillDuration_);
-    }
-
-    if (const auto effect = groups.find("GainEffect"); effect != groups.end()) {
-        flashDuration_ = read(effect->second, "FlashDuration", flashDuration_);
-        flashStrength_ = read(effect->second, "FlashStrength", flashStrength_);
+    if (const auto effect = groups.find("LapEffect"); effect != groups.end()) {
+        lapFlashDuration_ = read(effect->second, "FlashDuration", lapFlashDuration_);
         punchDuration_ = read(effect->second, "PunchDuration", punchDuration_);
         punchScale_ = read(effect->second, "PunchScale", punchScale_);
-        blinkSpeed_ = read(effect->second, "DangerBlinkSpeed", blinkSpeed_);
-        blinkStrength_ = read(effect->second, "DangerBlinkStrength", blinkStrength_);
+        valuePunchScale_ = read(effect->second, "ValuePunchScale", valuePunchScale_);
     }
 
     if (const auto value = groups.find("Value"); value != groups.end()) {
-        valueLabel_ = read(value->second, "Label", valueLabel_);
-        valuePosition_ = read(value->second, "Position", valuePosition_);
         valueFontSize_ = read(value->second, "FontSize", valueFontSize_);
-        valuePunchScale_ = read(value->second, "PunchScale", valuePunchScale_);
+        minuteDigits_ = read(value->second, "MinuteDigits", minuteDigits_);
+        valueOffsetY_ = read(value->second, "OffsetY", valueOffsetY_);
+        valueColor_ = read(value->second, "Color", valueColor_);
+        charWidthRatio_ = read(value->second, "CharWidthRatio", charWidthRatio_);
     }
 
-    if (const auto popup = groups.find("Popup"); popup != groups.end()) {
-        popupPosition_ = read(popup->second, "Position", popupPosition_);
-        popupFontSize_ = read(popup->second, "FontSize", popupFontSize_);
-        popupColor_ = read(popup->second, "Color", popupColor_);
-        popupRiseDistance_ = read(popup->second, "RiseDistance", popupRiseDistance_);
-        popupDuration_ = read(popup->second, "DurationSeconds", popupDuration_);
-        popupStackOffset_ = read(popup->second, "StackOffset", popupStackOffset_);
+    if (const auto label = groups.find("Label"); label != groups.end()) {
+        label_ = read(label->second, "Text", label_);
+        labelFontSize_ = read(label->second, "FontSize", labelFontSize_);
+        labelOffsetY_ = read(label->second, "OffsetY", labelOffsetY_);
+        labelColor_ = read(label->second, "Color", labelColor_);
     }
 
     // 不正な値が入っていても破綻しないように補正する
-    maxSeconds_ = std::max(maxSeconds_, 1.0f);
-    startSeconds_ = std::clamp(startSeconds_, 0.0f, maxSeconds_);
-    gaugeSize_.x = std::max(gaugeSize_.x, 1.0f);
-    gaugeSize_.y = std::max(gaugeSize_.y, 1.0f);
-    frameThickness_ = std::max(frameThickness_, 0.0f);
-    dangerRatio_ = std::clamp(dangerRatio_, 0.0f, 1.0f);
-    warningRatio_ = std::clamp(warningRatio_, dangerRatio_, 1.0f);
-    fillDuration_ = std::max(fillDuration_, 0.0f);
-    flashDuration_ = std::max(flashDuration_, 0.0f);
-    flashStrength_ = std::clamp(flashStrength_, 0.0f, 1.0f);
+    tickCount_ = std::clamp(tickCount_, 4, static_cast<int32_t>(TICK_MAX));
+    secondsPerLap_ = std::max(secondsPerLap_, 1.0f);
+    ringRadius_ = std::max(ringRadius_, 1.0f);
+    tickSize_.x = std::max(tickSize_.x, 1.0f);
+    tickSize_.y = std::max(tickSize_.y, 1.0f);
+    gainFlashDuration_ = std::max(gainFlashDuration_, 0.0f);
+    lapFlashDuration_ = std::max(lapFlashDuration_, 0.0f);
     punchDuration_ = std::max(punchDuration_, 0.0f);
     punchScale_ = std::max(punchScale_, 1.0f);
-    blinkSpeed_ = std::max(blinkSpeed_, 0.0f);
-    blinkStrength_ = std::clamp(blinkStrength_, 0.0f, 1.0f);
-    valueFontSize_ = std::max(valueFontSize_, 1.0f);
     valuePunchScale_ = std::max(valuePunchScale_, 1.0f);
-    popupFontSize_ = std::max(popupFontSize_, 1.0f);
-    popupDuration_ = std::max(popupDuration_, 0.01f);
-    popupRiseDistance_ = std::max(popupRiseDistance_, 0.0f);
+    valueFontSize_ = std::max(valueFontSize_, 1.0f);
+    minuteDigits_ = std::clamp(minuteDigits_, 1, 4);
+    labelFontSize_ = std::max(labelFontSize_, 1.0f);
+    charWidthRatio_ = std::clamp(charWidthRatio_, 0.1f, 2.0f);
+    if (lapColors_.empty()) {
+        lapColors_.push_back({0.25f, 0.95f, 0.55f, 1.0f});
+    }
 }
 
-void TimeLimitManager::UpdateGauge(float _deltaTime) {
-    const float target = GetRemainingRatio();
+void SurvivalTimeManager::UpdateRing(float _deltaTime) {
+    // 何周したかは経過時間から直に求める。デルタの積み上げで数えると
+    // フレーム落ちで周回を取りこぼすことがある
+    const int32_t lap = static_cast<int32_t>(elapsedSeconds_ / secondsPerLap_);
+    const bool lapped = lap > lapCount_;
+    lapCount_ = lap;
 
-    if (fillTimer_ > 0.0f && fillDuration_ > 0.0f) {
-        // 増加したときだけ、開始位置から現在の残量まで一定時間かけて伸ばす。
-        // 伸びている間だけゴーストバーとの差が見えるので「増えた」と分かる
-        fillTimer_ = std::max(fillTimer_ - _deltaTime, 0.0f);
-        const float t = 1.0f - fillTimer_ / fillDuration_;
-        displayRatio_ = Lerp(fillStartRatio_, target, EaseOutCubic(t));
+    const int32_t before = litCount_;
+    litCount_ = CalcLitCount();
 
-        if (displayRatio_ >= target) {
-            displayRatio_ = target;
-            fillTimer_ = 0.0f;
-        }
+    if (lapped) {
+        // 1分耐えきった合図。リング全体を光らせて空へ戻す
+        lapFlashTimer_ = lapFlashDuration_;
+        punchTimer_ = punchDuration_;
+        tickGainTimers_.fill(0.0f);
     } else {
-        // 減少は残り時間をそのまま映す（ここを遅らせると残量が読めなくなる）
-        fillTimer_ = 0.0f;
-        displayRatio_ = target;
+        // 灯ったばかりの目盛りだけを白く光らせる。
+        // 3秒ごとに1つ光るので、視線を向けていなくても時間が進んでいるのが分かる
+        for (int32_t i = before; i < litCount_; ++i) {
+            tickGainTimers_[static_cast<size_t>(i)] = gainFlashDuration_;
+        }
     }
 
-    flashTimer_ = std::max(flashTimer_ - _deltaTime, 0.0f);
+    for (auto& timer : tickGainTimers_) {
+        timer = std::max(timer - _deltaTime, 0.0f);
+    }
+
+    lapFlashTimer_ = std::max(lapFlashTimer_ - _deltaTime, 0.0f);
     punchTimer_ = std::max(punchTimer_ - _deltaTime, 0.0f);
-    blinkTime_ += _deltaTime;
 }
 
-void TimeLimitManager::UpdatePopups(float _deltaTime) {
-    for (auto& popup : popups_) {
-        if (!popup.active) {
-            continue;
-        }
-
-        popup.elapsed += _deltaTime;
-
-        const float t = std::clamp(popup.elapsed / popupDuration_, 0.0f, 1.0f);
-        if (t >= 1.0f) {
-            popup.active = false;
-            popup.text.SetVisible(false);
-            continue;
-        }
-
-        // 出現位置から上へ浮かせる。動き出しを速くして目の端でも動きを捉えやすくする
-        popup.text.SetPosition(
-            popupPosition_.x,
-            popup.baseY - popupRiseDistance_ * EaseOutCubic(t));
-
-        // 後半に入ってから薄くしていく（前半はしっかり読ませる）
-        constexpr float FADE_START = 0.55f;
-        const float alpha = t < FADE_START
-            ? 1.0f
-            : 1.0f - (t - FADE_START) / (1.0f - FADE_START);
-        popup.text.SetColor({popupColor_.x, popupColor_.y, popupColor_.z, popupColor_.w * alpha});
-    }
-}
-
-void TimeLimitManager::ApplyGaugeSprites() {
+void SurvivalTimeManager::ApplyTickSprites() {
     const float punch = GetPunchScale();
-    const float ghostRatio = GetRemainingRatio();
-    const Vector4 gaugeColor = GetGaugeColor();
+    const float lapFlash = GetLapFlashAlpha();
+    const float step = TWO_PI / static_cast<float>(tickCount_);
 
-    // 枠は本体より frameThickness_ 分だけ外側へ広げる
-    const Vector2 framePosition{gaugePosition_.x - frameThickness_, gaugePosition_.y};
-    const Vector2 frameSize{
-        gaugeSize_.x + frameThickness_ * 2.0f,
-        (gaugeSize_.y + frameThickness_ * 2.0f) * punch};
+    for (int32_t i = 0; i < tickCount_; ++i) {
+        auto& sprite = tickSprites_[static_cast<size_t>(i)];
 
-    frameSprite_.SetPosition(framePosition);
-    frameSprite_.SetSize(frameSize);
-    frameSprite_.SetColor(frameColor_);
-    frameSprite_.Update();
+        // 12時の位置から時計回りに並べる。画面のY軸は下向きなので cos を引く
+        const float angle = step * static_cast<float>(i);
+        sprite.SetPosition({
+            ringCenter_.x + std::sin(angle) * ringRadius_,
+            ringCenter_.y - std::cos(angle) * ringRadius_});
+        // 目盛りの長辺が中心から外を向くように、並べた角度と同じだけ回す
+        sprite.SetRotation(angle);
 
-    // ゴーストバーは「増えた後の目標値」。本体が追いつくまでの差分が明るく見える
-    ghostSprite_.SetPosition(gaugePosition_);
-    ghostSprite_.SetSize({gaugeSize_.x * ghostRatio, gaugeSize_.y * punch});
-    ghostSprite_.SetColor(ghostColor_);
-    ghostSprite_.Update();
+        const bool lit = i < litCount_;
 
-    // 本体バーは実際に描いている割合
-    fillSprite_.SetPosition(gaugePosition_);
-    fillSprite_.SetSize({gaugeSize_.x * displayRatio_, gaugeSize_.y * punch});
-    fillSprite_.SetColor(gaugeColor);
-    fillSprite_.Update();
+        // 1周した瞬間は全部の目盛りが伸びる（点灯中はさらに強調される）
+        const float length = tickSize_.y * (lit || lapFlash > 0.0f ? punch : 1.0f);
+        sprite.SetSize({tickSize_.x, length});
 
-    // フラッシュはゲージ全体を覆う白。輝度の急変が周辺視野に一番効く
-    flashSprite_.SetPosition(framePosition);
-    flashSprite_.SetSize(frameSize);
-    flashSprite_.SetColor({1.0f, 1.0f, 1.0f, GetFlashAlpha()});
-    flashSprite_.Update();
+        // 今の周回の色を先頭から重ねていき、まだ届いていない部分には
+        // 1つ前の周回の色を残す。こうするとリングは空に戻らず満タンのまま色だけが変わる
+        const Vector4 filled = lapCount_ > 0 ? GetLapColor(lapCount_ - 1) : emptyColor_;
+        const Vector4 base = lit ? GetLapColor(lapCount_) : filled;
+
+        // 灯ったばかりの目盛り、および1周した瞬間の全目盛りを白く光らせる
+        const float gain = gainFlashDuration_ > 0.0f
+            ? tickGainTimers_[static_cast<size_t>(i)] / gainFlashDuration_
+            : 0.0f;
+        const float highlight = std::max(EaseOutCubic(std::clamp(gain, 0.0f, 1.0f)), lapFlash);
+        sprite.SetColor(LerpColor(base, gainColor_, highlight));
+
+        sprite.Update();
+    }
 }
 
-void TimeLimitManager::RefreshValueText() {
+void SurvivalTimeManager::RefreshValueText() {
+    // 通算の生存時間を "分:秒" で出す。リングが今の1分を表しているので、
+    // 数値と合わせて「何分何秒耐えたか」がひと目で読める
+    const int32_t total = static_cast<int32_t>(elapsedSeconds_);
     char buffer[32]{};
-    std::snprintf(buffer, sizeof(buffer), "%.1f", remainingSeconds_);
-    valueText_.SetText(valueLabel_ + buffer);
+    std::snprintf(buffer, sizeof(buffer), "%d:%02d", total / 60, total % 60);
+    const std::string text = buffer;
+    valueText_.SetText(text);
 
-    // 数値もゲージと同じ色にすることで、どちらを見ても同じ状態が読み取れる
-    valueText_.SetColor(GetGaugeColor());
+    // 1周した瞬間だけ数値を白く光らせて一回り大きくする
+    const float lapFlash = GetLapFlashAlpha();
+    valueText_.SetColor(LerpColor(valueColor_, gainColor_, lapFlash));
 
-    // 時間が増えた瞬間だけ数字を一回り大きくする
     const float punchT = punchDuration_ > 0.0f ? punchTimer_ / punchDuration_ : 0.0f;
-    valueText_.SetFontSize(valueFontSize_ * Lerp(1.0f, valuePunchScale_, EaseOutCubic(punchT)));
+    const float fontSize = valueFontSize_ * Lerp(1.0f, valuePunchScale_, EaseOutCubic(punchT));
+    valueText_.SetFontSize(fontSize);
+
+    // 分は minuteDigits_ 桁ぶんの場所を常に確保しておく。
+    // 1桁のうちは十の位のぶんだけ右へずらして描くので、10分になって桁が増えても
+    // ":" から右の位置が動かない。
+    // 空白文字を頭に足す方法だと、空白の送り幅が数字と違うぶんだけずれてしまうため、
+    // 文字を足すのではなく描き始めの位置でスペースを作っている
+    const float digitWidth = fontSize * charWidthRatio_;
+    const int32_t writtenDigits = static_cast<int32_t>(text.find(':'));
+    const float pad = static_cast<float>(std::max(minuteDigits_ - writtenDigits, 0)) * digitWidth;
+    // "MM:SS" のように、確保した分の桁 + ":" + 秒2桁ぶんを表示領域の幅とみなす
+    const float fieldWidth = static_cast<float>(minuteDigits_ + 3) * digitWidth;
+
+    valueText_.SetPosition(
+        ringCenter_.x - fieldWidth * 0.5f + pad,
+        ringCenter_.y + valueOffsetY_);
 }
 
-void TimeLimitManager::SpawnGainPopup(float _seconds) {
-    // 空いているポップアップを探す。全部使用中なら一番古いものを再利用する
-    GainPopup* target = nullptr;
-    for (auto& popup : popups_) {
-        if (!popup.active) {
-            target = &popup;
-            break;
-        }
-        if (!target || popup.elapsed > target->elapsed) {
-            target = &popup;
-        }
+int32_t SurvivalTimeManager::CalcLitCount() const {
+    // 1目盛り = secondsPerLap_ / tickCount_ 秒。
+    // 今の周回に入ってからの経過分だけを数えるので、1周ごとに空へ戻る
+    const float perTick = secondsPerLap_ / static_cast<float>(tickCount_);
+    if (perTick <= 0.0f) {
+        return 0;
     }
-    if (!target) {
-        return;
-    }
-
-    // 連続で倒したときに文字が完全に重ならないよう、表示中の数だけ下へずらす
-    int32_t activeCount = 0;
-    for (const auto& popup : popups_) {
-        if (popup.active && &popup != target) {
-            ++activeCount;
-        }
-    }
-    target->baseY = popupPosition_.y + static_cast<float>(activeCount) * popupStackOffset_;
-
-    char buffer[32]{};
-    std::snprintf(buffer, sizeof(buffer), "+%.1fs", _seconds);
-
-    target->text.SetText(buffer);
-    target->text.SetFontSize(popupFontSize_);
-    target->text.SetColor(popupColor_);
-    target->text.SetPosition(popupPosition_.x, target->baseY);
-    target->text.SetVisible(true);
-    target->elapsed = 0.0f;
-    target->active = true;
+    const float inLap = std::fmod(elapsedSeconds_, secondsPerLap_);
+    const int32_t lit = static_cast<int32_t>(inLap / perTick);
+    return std::clamp(lit, 0, tickCount_);
 }
 
-Vector4 TimeLimitManager::GetGaugeColor() const {
-    const float ratio = GetRemainingRatio();
-
-    // 残量に応じて 安全 → 警告 → 危険 と色を変える
-    Vector4 color = safeColor_;
-    if (ratio <= dangerRatio_) {
-        color = dangerColor_;
-    } else if (ratio <= warningRatio_) {
-        // 警告域では危険色へ寄せていき、境目が唐突にならないようにする
-        const float range = warningRatio_ - dangerRatio_;
-        const float t = range > 0.0f ? (warningRatio_ - ratio) / range : 1.0f;
-        color = LerpColor(warningColor_, dangerColor_, std::clamp(t, 0.0f, 1.0f));
+Vector4 SurvivalTimeManager::GetLapColor(int32_t _lap) const {
+    // 用意した色を使い切ったら先頭へ戻る。長く耐えるほど色が一巡していく
+    const int32_t count = static_cast<int32_t>(lapColors_.size());
+    if (count <= 0) {
+        return gainColor_;
     }
-
-    // 危険域では明滅させる。周辺視野は輝度の変化に反応するので、
-    // 視線をゲージへ向けていなくても「まずい」ことに気付ける
-    if (ratio <= dangerRatio_ && blinkStrength_ > 0.0f) {
-        const float pulse = (std::sin(blinkTime_ * blinkSpeed_) + 1.0f) * 0.5f;
-        const float brightness = 1.0f - blinkStrength_ * pulse;
-        color.x *= brightness;
-        color.y *= brightness;
-        color.z *= brightness;
-    }
-
-    return color;
+    return lapColors_[static_cast<size_t>(std::max(_lap, 0) % count)];
 }
 
-float TimeLimitManager::GetPunchScale() const {
+float SurvivalTimeManager::GetPunchScale() const {
     if (punchTimer_ <= 0.0f || punchDuration_ <= 0.0f) {
         return 1.0f;
     }
@@ -412,12 +324,18 @@ float TimeLimitManager::GetPunchScale() const {
     return Lerp(1.0f, punchScale_, EaseOutCubic(t));
 }
 
-float TimeLimitManager::GetFlashAlpha() const {
-    if (flashTimer_ <= 0.0f || flashDuration_ <= 0.0f) {
+float SurvivalTimeManager::GetLapFlashAlpha() const {
+    if (lapFlashTimer_ <= 0.0f || lapFlashDuration_ <= 0.0f) {
         return 0.0f;
     }
 
     // 消えるときはゆるやかにして残像感を出す
-    const float t = flashTimer_ / flashDuration_;
-    return flashStrength_ * EaseOutCubic(t);
+    const float t = lapFlashTimer_ / lapFlashDuration_;
+    return EaseOutCubic(t);
+}
+
+float SurvivalTimeManager::EstimateTextWidth(const std::string& _text, float _fontSize) const {
+    // Text クラスは描画幅を返してくれないので、
+    // 「フォントサイズ × 係数」を1文字分の幅とみなして概算する
+    return static_cast<float>(_text.size()) * _fontSize * charWidthRatio_;
 }

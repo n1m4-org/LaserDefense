@@ -10,7 +10,7 @@
 #include "Model.hpp"
 #include "Scene/Input/GameSceneInput.hpp"
 #include "Score/ScoreManager.hpp"
-#include "TimeLimit/TimeLimitManager.hpp"
+#include "SurvivalTime/SurvivalTimeManager.hpp"
 #include "Tower/TowerHpGauge.hpp"
 #include "Tower/TowerManager.hpp"
 
@@ -27,7 +27,7 @@ class PlayScene final : public IScene {
     std::unique_ptr<EnemyManager> enemyManager_;
     std::unique_ptr<TowerManager> towerManager_;
     std::unique_ptr<ScoreManager> scoreManager_;
-    std::unique_ptr<TimeLimitManager> timeLimitManager_;
+    std::unique_ptr<SurvivalTimeManager> survivalTimeManager_;
     std::unique_ptr<ComboManager> comboManager_;
     std::unique_ptr<TowerHpGauge> towerHpGauge_;
     std::unique_ptr<Model> floor_;
