@@ -29,7 +29,7 @@
             "HighColor": [1.0, 0.6, 0.2, 1.0],
             "RiseDistance": 46.0,
             "DurationSeconds": 0.85,
-            "StackOffset": 30.0,
+            "StackOffset": 26.0,
             "CharWidthRatio": 0.53
         }
     }

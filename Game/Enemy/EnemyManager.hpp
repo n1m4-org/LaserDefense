@@ -12,6 +12,7 @@
 class ScoreManager;
 class TimeLimitManager;
 class ComboManager;
+class MainTower;
 
 class EnemyManager final {
     std::vector<std::unique_ptr<Enemy>> enemies_;
@@ -42,6 +43,8 @@ class EnemyManager final {
     int32_t scoreValue_ = 100;
     /// 敵1体を倒したときの制限時間の加算秒数。同 "TimeBonus" / "Seconds" で変更できる
     float timeBonusSeconds_ = 3.0f;
+    /// 敵1体がタワーへ到達したときにタワーへ与えるダメージ。同 "TowerDamage" / "Value" で変更できる
+    float towerDamage_ = 10.0f;
     /// タワーに接触して消滅した敵にも報酬を与えるか。同 "Score" / "AwardOnTowerHit" で変更できる
     bool awardRewardOnTowerHit_ = false;
     /// スコアの加算先。未設定(nullptr)ならスコア加算は行われない
@@ -50,6 +53,8 @@ class EnemyManager final {
     TimeLimitManager* timeLimitManager_ = nullptr;
     /// コンボの加算先。未設定(nullptr)ならコンボは数えられず、倍率は常に1になる
     ComboManager* comboManager_ = nullptr;
+    /// ダメージを与えるメインタワー。未設定(nullptr)ならタワーHPは減らない
+    MainTower* mainTower_ = nullptr;
 
 public:
     ~EnemyManager();
@@ -73,6 +78,11 @@ public:
     /// @param _comboManager コンボを加算する ComboManager（所有権は持たない）
     /// @note 設定するとスコアにコンボ倍率が掛かるようになる
     void SetComboManager(ComboManager* _comboManager) { comboManager_ = _comboManager; }
+
+    /// @brief 敵に到達されたときダメージを受けるメインタワーを設定する
+    /// @param _mainTower ダメージを与えるタワー（所有権は持たない）
+    /// @note 設定すると、敵1体が到達するたびに Enemy::GetTowerDamage() 分の HP が減る
+    void SetMainTower(MainTower* _mainTower) { mainTower_ = _mainTower; }
 
     void Update(float _deltaTime);
     void Draw() const;
