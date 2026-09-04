@@ -11,7 +11,6 @@
 #include "Random/RandomEngine.hpp"
 #include "Score/ScoreManager.hpp"
 #include "Combo/ComboManager.hpp"
-#include "TimeLimit/TimeLimitManager.hpp"
 #include "Tower/MainTower.hpp"
 
 EnemyManager::~EnemyManager() = default;
@@ -98,10 +97,6 @@ void EnemyManager::LoadConfig() {
         awardRewardOnTowerHit_ = awardOnTowerHit != 0;
     }
 
-    // 敵1体あたりの制限時間の加算秒数。ここの値を変えるだけで難易度を調整できる
-    if (const auto timeBonus = groups.find("TimeBonus"); timeBonus != groups.end()) {
-        timeBonusSeconds_ = read(timeBonus->second, "Seconds", timeBonusSeconds_);
-    }
 
     // 敵1体がタワーへ到達したときのダメージ。ここの値を変えるだけで耐久バランスを調整できる
     if (const auto towerDamage = groups.find("TowerDamage"); towerDamage != groups.end()) {
@@ -126,7 +121,6 @@ void EnemyManager::LoadConfig() {
     spawnExcludeRange_.x = std::isfinite(spawnExcludeRange_.x) ? std::abs(spawnExcludeRange_.x) : 30.0f;
     spawnExcludeRange_.y = std::isfinite(spawnExcludeRange_.y) ? std::abs(spawnExcludeRange_.y) : 30.0f;
     scoreValue_ = std::max(scoreValue_, 0);
-    timeBonusSeconds_ = std::max(timeBonusSeconds_, 0.0f);
     towerDamage_ = std::max(towerDamage_, 0.0f);
 }
 
@@ -139,7 +133,7 @@ void EnemyManager::SpawnEnemy(const Vector3& _position) {
                              spawnRotations_, moveDuringSpawnAnimation_);
     enemy->SetDeathAnimation(deathAnimationDuration_, deathPeakScale_,
                              deathEndScale_, deathExpandRatio_);
-    enemy->SetDefeatReward(scoreValue_, timeBonusSeconds_, awardRewardOnTowerHit_);
+    enemy->SetDefeatReward(scoreValue_, awardRewardOnTowerHit_);
     enemy->SetTowerDamage(towerDamage_);
     enemy->Initialize();
     enemy->SetPosition(_position);
@@ -213,10 +207,6 @@ void EnemyManager::CollectDefeatRewards() {
             // ScoreManager 側の倍率（アイテム効果など）とは掛け合わせになる。
             // 第2引数はコンボ倍率で、加算演出をどれだけ派手にするかにだけ使われる
             scoreManager_->AddScore(enemy->GetScoreValue() * multiplier, multiplier);
-        }
-        if (timeLimitManager_) {
-            // 制限時間にはコンボ倍率を掛けない。掛けると上限に張り付いて緊張感が失われるため
-            timeLimitManager_->AddTime(enemy->GetTimeBonusSeconds());
         }
     }
 }

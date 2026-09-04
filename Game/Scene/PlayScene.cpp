@@ -92,8 +92,8 @@ void PlayScene::Initialize() {
     scoreManager_ = std::make_unique<ScoreManager>();
     scoreManager_->Initialize();
 
-    timeLimitManager_ = std::make_unique<TimeLimitManager>();
-    timeLimitManager_->Initialize();
+    survivalTimeManager_ = std::make_unique<SurvivalTimeManager>();
+    survivalTimeManager_->Initialize();
 
     comboManager_ = std::make_unique<ComboManager>();
     comboManager_->Initialize();
@@ -107,7 +107,6 @@ void PlayScene::Initialize() {
     enemyManager_->Initialize();
     enemyManager_->SetTargetPosition(mainTowerPosition.x, mainTowerPosition.z);
     enemyManager_->SetScoreManager(scoreManager_.get());
-    enemyManager_->SetTimeLimitManager(timeLimitManager_.get());
     enemyManager_->SetComboManager(comboManager_.get());
     // 敵に到達されたときダメージを受けるタワーを渡す
     enemyManager_->SetMainTower(mainTower);
@@ -168,7 +167,7 @@ void PlayScene::Update() {
     enemyManager_->Update(deltaTime);
     laser_->Update();
     scoreManager_->Update(deltaTime);
-    timeLimitManager_->Update(deltaTime);
+    survivalTimeManager_->Update(deltaTime);
     comboManager_->Update(deltaTime);
     towerHpGauge_->Update(deltaTime);
     floor_->Update();
@@ -251,6 +250,6 @@ void PlayScene::UpdateTowerSelection() {
 
     towerHpGauge_->Draw();
     scoreManager_->Draw();
-    timeLimitManager_->Draw();
+    survivalTimeManager_->Draw();
     comboManager_->Draw();
 }
