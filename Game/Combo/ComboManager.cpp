@@ -52,10 +52,11 @@ void ComboManager::Initialize() {
         sprite->SetAnchorPoint({0.0f, 0.5f});
     }
 
-    multiplierText_.Initialize("", multiplierPosition_.x, multiplierPosition_.y, multiplierFontSize_);
+    // 位置は RefreshTexts() が右揃えで毎フレーム設定するので、ここでは仮置きでよい
+    multiplierText_.Initialize("", multiplierRightX_, multiplierPositionY_, multiplierFontSize_);
     multiplierText_.SetColor(lowTierColor_);
 
-    countText_.Initialize("", countPosition_.x, countPosition_.y, countFontSize_);
+    countText_.Initialize("", countRightX_, countPositionY_, countFontSize_);
     countText_.SetColor(countColor_);
 
     ApplyGaugeSprites();
@@ -184,7 +185,8 @@ void ComboManager::LoadConfig() {
     }
 
     if (const auto multiplier = groups.find("Multiplier"); multiplier != groups.end()) {
-        multiplierPosition_ = read(multiplier->second, "Position", multiplierPosition_);
+        multiplierRightX_ = read(multiplier->second, "RightX", multiplierRightX_);
+        multiplierPositionY_ = read(multiplier->second, "PositionY", multiplierPositionY_);
         multiplierFontSize_ = read(multiplier->second, "FontSize", multiplierFontSize_);
         lowTierColor_ = read(multiplier->second, "LowColor", lowTierColor_);
         highTierColor_ = read(multiplier->second, "HighColor", highTierColor_);
@@ -192,9 +194,11 @@ void ComboManager::LoadConfig() {
 
     if (const auto count = groups.find("Count"); count != groups.end()) {
         countLabel_ = read(count->second, "Label", countLabel_);
-        countPosition_ = read(count->second, "Position", countPosition_);
+        countRightX_ = read(count->second, "RightX", countRightX_);
+        countPositionY_ = read(count->second, "PositionY", countPositionY_);
         countFontSize_ = read(count->second, "FontSize", countFontSize_);
         countColor_ = read(count->second, "Color", countColor_);
+        charWidthRatio_ = read(count->second, "CharWidthRatio", charWidthRatio_);
     }
 
     if (const auto gauge = groups.find("Gauge"); gauge != groups.end()) {
@@ -218,6 +222,7 @@ void ComboManager::LoadConfig() {
     blinkStrength_ = std::clamp(blinkStrength_, 0.0f, 1.0f);
     multiplierFontSize_ = std::max(multiplierFontSize_, 1.0f);
     countFontSize_ = std::max(countFontSize_, 1.0f);
+    charWidthRatio_ = std::clamp(charWidthRatio_, 0.1f, 2.0f);
     gaugeSize_.x = std::max(gaugeSize_.x, 1.0f);
     gaugeSize_.y = std::max(gaugeSize_.y, 1.0f);
     gaugeFrameThickness_ = std::max(gaugeFrameThickness_, 0.0f);
@@ -256,14 +261,27 @@ void ComboManager::RefreshTexts() {
 
     // 倍率は "x3" の形。フォントアトラスが ASCII のみなので '×' ではなく 'x' を使う
     std::snprintf(buffer, sizeof(buffer), "x%d", GetMultiplier());
-    multiplierText_.SetText(buffer);
+    const std::string multiplier = buffer;
+    multiplierText_.SetText(multiplier);
     multiplierText_.SetColor(GetTierColor());
 
     // 段が上がった瞬間だけ倍率の文字を大きく弾ませる
-    multiplierText_.SetFontSize(multiplierFontSize_ * GetPunchScale());
+    const float multiplierSize = multiplierFontSize_ * GetPunchScale();
+    multiplierText_.SetFontSize(multiplierSize);
 
-    countText_.SetText(countLabel_ + std::to_string(comboCount_));
+    // 拡大した分だけ左と上へ寄せて、右端と上下の中心が動かないようにする。
+    // 左上を固定したまま拡大すると、弾んだ瞬間だけ下の "COMBO n" にめり込んでしまう
+    multiplierText_.SetPosition(
+        multiplierRightX_ - EstimateTextWidth(multiplier, multiplierSize),
+        multiplierPositionY_ - (multiplierSize - multiplierFontSize_) * 0.5f);
+
+    // コンボ数は桁が増えても右端が動かないよう、同じく右揃えにする
+    const std::string count = countLabel_ + std::to_string(comboCount_);
+    countText_.SetText(count);
     countText_.SetColor(countColor_);
+    countText_.SetPosition(
+        countRightX_ - EstimateTextWidth(count, countFontSize_),
+        countPositionY_);
 }
 
 Vector4 ComboManager::GetTierColor() const {
@@ -304,4 +322,10 @@ float ComboManager::GetFlashAlpha() const {
     // 消えるときはゆるやかにして残像感を出す
     const float t = flashTimer_ / flashDuration_;
     return flashStrength_ * EaseOutCubic(t);
+}
+
+float ComboManager::EstimateTextWidth(const std::string& _text, float _fontSize) const {
+    // Text クラスは描画幅を返してくれないので、
+    // 「フォントサイズ × 係数」を1文字分の幅とみなして概算する
+    return static_cast<float>(_text.size()) * _fontSize * charWidthRatio_;
 }

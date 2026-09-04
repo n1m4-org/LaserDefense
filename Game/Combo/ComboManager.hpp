@@ -22,6 +22,12 @@
  *  - 倍率は killsPerStep_ キルごとに1段上がり、maxMultiplier_ で頭打ち
  *      COMBO  0-4  -> x1 /  5-9 -> x2 / 10-14 -> x3 / ... / 35+ -> x8
  *
+ *  ## 画面のどこに置いているか
+ *  スコアの下（画面右）に置いている。倍率はスコアに掛かる値なので、
+ *  掛けられる側のすぐ近くにあると意味が伝わりやすい。
+ *  また、撃破したときの反応（スコアの点滅・"+N"・コンボのパンチ）が
+ *  画面の一か所へ集まるので、「稼げた」という手応えが分散しない。
+ *
  *  ## 表示の狙い
  *  TimeLimitManager と同じ方針で、視線を向けなくても状態が分かるようにしている。
  *  - 倍率の段が上がった瞬間だけ大きめのパンチ＋ゲージのフラッシュ（＝「上がった」が分かる）
@@ -68,8 +74,11 @@ class ComboManager final {
     float blinkStrength_ = 0.5f;        //!< 警告の明滅の強さ（0で明滅なし）
 
     // ─── 倍率テキスト（"x3"）の設定 ────────────────────────────
+    // 画面右に置くので、スコアと同じく右端を揃える。
+    // Text は左揃えしかできないため、文字幅を見積もって左へ寄せている
     Text multiplierText_{};
-    Vector2 multiplierPosition_{32.0f, 170.0f};         //!< テキスト左上のピクセル座標
+    float multiplierRightX_ = 1248.0f;                  //!< 右揃えの基準になる右端 X 座標
+    float multiplierPositionY_ = 200.0f;                //!< テキスト上端の Y 座標
     float multiplierFontSize_ = 46.0f;                  //!< 通常時のフォントサイズ
     Vector4 lowTierColor_{0.85f, 0.95f, 1.0f, 1.0f};    //!< 倍率が低いときの色（寒色）
     Vector4 highTierColor_{1.0f, 0.45f, 0.15f, 1.0f};   //!< 倍率が上限のときの色（暖色）
@@ -77,15 +86,17 @@ class ComboManager final {
     // ─── コンボ数テキスト（"COMBO 12"）の設定 ──────────────────
     Text countText_{};
     std::string countLabel_{"COMBO "};                  //!< 数字の前に付ける文字列
-    Vector2 countPosition_{104.0f, 186.0f};             //!< テキスト左上のピクセル座標
+    float countRightX_ = 1248.0f;                       //!< 右揃えの基準になる右端 X 座標
+    float countPositionY_ = 252.0f;                     //!< テキスト上端の Y 座標
     float countFontSize_ = 28.0f;                       //!< フォントサイズ
     Vector4 countColor_{0.8f, 0.85f, 0.9f, 1.0f};       //!< 文字色
+    float charWidthRatio_ = 0.53f;                      //!< 右揃えに使う「1文字幅 ÷ フォントサイズ」の目安
 
     // ─── 継続ゲージの設定 ──────────────────────────────────────
     Sprite gaugeFrameSprite_{};     //!< 枠（＝減った部分の下地）
     Sprite gaugeFillSprite_{};      //!< 残り継続時間を表すバー
     Sprite gaugeFlashSprite_{};     //!< 段が上がった瞬間に光らせる白いオーバーレイ
-    Vector2 gaugePosition_{32.0f, 232.0f};              //!< ゲージ左端・中心のピクセル座標
+    Vector2 gaugePosition_{1028.0f, 292.0f};            //!< ゲージ左端・中心のピクセル座標
     Vector2 gaugeSize_{220.0f, 6.0f};                   //!< ゲージ本体のサイズ（満タン時）
     float gaugeFrameThickness_ = 2.0f;                  //!< ゲージを囲む枠の太さ
     Vector4 gaugeFrameColor_{0.04f, 0.04f, 0.07f, 0.85f};   //!< 枠の色
@@ -157,6 +168,9 @@ private:
 
     /// @brief フラッシュの現在の濃度を返す（演出中でなければ 0.0）
     float GetFlashAlpha() const;
+
+    /// @brief 文字列の描画幅を概算する（Text に右揃え機能が無いため自前で見積もる）
+    float EstimateTextWidth(const std::string& _text, float _fontSize) const;
 };
 
 #endif // COMBO_MANAGER_HPP_

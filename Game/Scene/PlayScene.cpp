@@ -20,6 +20,7 @@
 #include "Screen/Screen.hpp"
 #include "Texture/TextureManager.hpp"
 #include "Time/Time.hpp"
+#include "Tower/MainTower.hpp"
 
 #ifdef _DEBUG
 #include "imgui_internal.h"
@@ -71,7 +72,7 @@ void PlayScene::Initialize() {
 
     towerManager_ = std::make_unique<TowerManager>();
     towerManager_->Initialize();
-    towerManager_->AddMainTower(mainTowerPosition);
+    MainTower* mainTower = towerManager_->AddMainTower(mainTowerPosition);
     // 5×5の等間隔配置。中央はメインタワーなので通常タワーを重ねない。
     for (int row = 0; row < 5; ++row) {
         for (int column = 0; column < 5; ++column) {
@@ -97,12 +98,19 @@ void PlayScene::Initialize() {
     comboManager_ = std::make_unique<ComboManager>();
     comboManager_->Initialize();
 
+    // タワーHPゲージは MainTower の HP を読むだけなので、タワーを渡しておく
+    towerHpGauge_ = std::make_unique<TowerHpGauge>();
+    towerHpGauge_->Initialize();
+    towerHpGauge_->SetTarget(mainTower);
+
     enemyManager_ = std::make_unique<EnemyManager>();
     enemyManager_->Initialize();
     enemyManager_->SetTargetPosition(mainTowerPosition.x, mainTowerPosition.z);
     enemyManager_->SetScoreManager(scoreManager_.get());
     enemyManager_->SetTimeLimitManager(timeLimitManager_.get());
     enemyManager_->SetComboManager(comboManager_.get());
+    // 敵に到達されたときダメージを受けるタワーを渡す
+    enemyManager_->SetMainTower(mainTower);
 
     floor_ = std::make_unique<Model>();
     floor_->Initialize("plane");
@@ -159,6 +167,7 @@ void PlayScene::Update() {
     scoreManager_->Update(deltaTime);
     timeLimitManager_->Update(deltaTime);
     comboManager_->Update(deltaTime);
+    towerHpGauge_->Update(deltaTime);
     floor_->Update();
     for (const auto& fence : fences_) fence->Update();
 }
@@ -237,6 +246,7 @@ void PlayScene::UpdateTowerSelection() {
         else laser_->ClearTarget();
     }
 
+    towerHpGauge_->Draw();
     scoreManager_->Draw();
     timeLimitManager_->Draw();
     comboManager_->Draw();

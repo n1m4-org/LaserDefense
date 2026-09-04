@@ -12,6 +12,7 @@
 #include "Score/ScoreManager.hpp"
 #include "Combo/ComboManager.hpp"
 #include "TimeLimit/TimeLimitManager.hpp"
+#include "Tower/MainTower.hpp"
 
 EnemyManager::~EnemyManager() = default;
 
@@ -102,6 +103,11 @@ void EnemyManager::LoadConfig() {
         timeBonusSeconds_ = read(timeBonus->second, "Seconds", timeBonusSeconds_);
     }
 
+    // 敵1体がタワーへ到達したときのダメージ。ここの値を変えるだけで耐久バランスを調整できる
+    if (const auto towerDamage = groups.find("TowerDamage"); towerDamage != groups.end()) {
+        towerDamage_ = read(towerDamage->second, "Value", towerDamage_);
+    }
+
     if (spawnIntervalSeconds_ <= 0.0f) {
         spawnIntervalSeconds_ = 2.0f;
     }
@@ -121,6 +127,7 @@ void EnemyManager::LoadConfig() {
     spawnExcludeRange_.y = std::isfinite(spawnExcludeRange_.y) ? std::abs(spawnExcludeRange_.y) : 30.0f;
     scoreValue_ = std::max(scoreValue_, 0);
     timeBonusSeconds_ = std::max(timeBonusSeconds_, 0.0f);
+    towerDamage_ = std::max(towerDamage_, 0.0f);
 }
 
 void EnemyManager::SpawnEnemy(const Vector3& _position) {
@@ -133,6 +140,7 @@ void EnemyManager::SpawnEnemy(const Vector3& _position) {
     enemy->SetDeathAnimation(deathAnimationDuration_, deathPeakScale_,
                              deathEndScale_, deathExpandRatio_);
     enemy->SetDefeatReward(scoreValue_, timeBonusSeconds_, awardRewardOnTowerHit_);
+    enemy->SetTowerDamage(towerDamage_);
     enemy->Initialize();
     enemy->SetPosition(_position);
     enemies_.push_back(std::move(enemy));
@@ -181,6 +189,11 @@ void EnemyManager::CollectDefeatRewards() {
         if (enemy->ConsumeTowerReach()) {
             if (comboManager_ && comboManager_->IsBreakOnTowerReach()) {
                 comboManager_->Break();
+            }
+            // 到達を許した1体につき1回だけタワーの HP を削る。
+            // 1体あたりのダメージは Enemy が持っているので、敵の種類ごとに変えられる
+            if (mainTower_) {
+                mainTower_->TakeDamage(enemy->GetTowerDamage());
             }
         }
 

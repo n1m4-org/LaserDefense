@@ -11,6 +11,7 @@
 #include "Scene/Input/GameSceneInput.hpp"
 #include "Score/ScoreManager.hpp"
 #include "TimeLimit/TimeLimitManager.hpp"
+#include "Tower/TowerHpGauge.hpp"
 #include "Tower/TowerManager.hpp"
 
 class Player;
@@ -28,6 +29,7 @@ class PlayScene final : public IScene {
     std::unique_ptr<ScoreManager> scoreManager_;
     std::unique_ptr<TimeLimitManager> timeLimitManager_;
     std::unique_ptr<ComboManager> comboManager_;
+    std::unique_ptr<TowerHpGauge> towerHpGauge_;
     std::unique_ptr<Model> floor_;
     std::array<std::unique_ptr<Model>, 8> fences_;
     float stageSize_ = 200.0f;
