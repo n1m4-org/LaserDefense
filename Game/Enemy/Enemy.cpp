@@ -62,6 +62,15 @@ void Enemy::SetDeathAnimation(float _duration, float _peakScale,
     deathExpandRatio_ = _expandRatio;
 }
 
+bool Enemy::ConsumeTowerReach() {
+    if (!towerReachPending_) {
+        return false;
+    }
+    // 処理済みにしてから返すことで、同じ敵で何度もコンボが切られないようにする
+    towerReachPending_ = false;
+    return true;
+}
+
 bool Enemy::ConsumeDefeatReward() {
     if (!rewardPending_) {
         return false;
@@ -101,6 +110,7 @@ void Enemy::Initialize() {
     deathAnimationTime_ = 0.0f;
     deathAnimationFinished_ = false;
     rewardPending_ = false;
+    towerReachPending_ = false;
     SetModel(modelName_);
     SetPosition({ 0.0f, 0.0f, 0.0f });
     SetScale(modelScale_ * spawnStartScale_);
@@ -192,6 +202,11 @@ void Enemy::OnCollisionTrigger(const Collision::Collider* _other) {
         return;
     }
     if ((_other->GetAttribute() & CollisionAttribute::Tower) != 0u) {
+        // タワーへ到達されたのは「取り逃がし」なのでコンボを切る材料として記録する。
+        // Kill() の前に生存を確かめないと、同フレームの多重衝突で二重に記録されてしまう
+        if (IsAlive()) {
+            towerReachPending_ = true;
+        }
         Kill(awardsRewardOnTowerHit_);
     }
 }

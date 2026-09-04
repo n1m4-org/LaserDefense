@@ -37,6 +37,9 @@
         },
         "TimeBonus": {
             "Seconds": 3.0
+        },
+        "TowerDamage": {
+            "Value": 10.0
         }
     }
 }

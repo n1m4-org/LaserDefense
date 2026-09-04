@@ -45,6 +45,8 @@ private:
     float timeBonusSeconds_ = 3.0f;         //!< この敵を倒したときに加算される制限時間（秒）
     bool awardsRewardOnTowerHit_ = false;   //!< タワーに接触して消滅した場合も報酬を与えるか
     bool rewardPending_ = false;            //!< 撃破報酬が未回収か（二重加算を防ぐためのフラグ）
+    bool towerReachPending_ = false;        //!< タワーへ到達したことが未処理か（コンボを切るのに使う）
+    float towerDamage_ = 10.0f;             //!< タワーへ到達したときにタワーへ与えるダメージ
     std::unique_ptr<Collision::Collider> collider_;
     Vector3 colliderOffset_{};
 
@@ -84,6 +86,20 @@ public:
 
     /// @brief 1体あたりの制限時間の加算秒数を取得する
     float GetTimeBonusSeconds() const { return timeBonusSeconds_; }
+
+    /// @brief タワーへ到達したときに与えるダメージを設定する
+    /// @param _damage 1体あたりのダメージ量
+    /// @note 通常は EnemyManager が JSON の値を渡すので、ダメージを変えたい場合は
+    ///       Assets/Data/Enemy/Enemy.json の "TowerDamage" を書き換えるだけでよい
+    void SetTowerDamage(float _damage) { towerDamage_ = _damage; }
+
+    /// @brief タワーへ到達したときに与えるダメージを取得する
+    float GetTowerDamage() const { return towerDamage_; }
+
+    /// @brief タワーへ到達したことを受け取る（1体につき1回だけ true を返す）
+    /// @return タワーへ到達されていれば true。レーザーで倒した場合や処理済みなら false
+    /// @note コンボを途切れさせる「ミス」の判定に使う
+    bool ConsumeTowerReach();
 
     /// @brief 未回収の撃破報酬を持っているか
     bool IsRewardPending() const { return rewardPending_; }

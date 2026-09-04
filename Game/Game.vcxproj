@@ -142,6 +142,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Collision\CollisionAttribute.hpp" />
+    <ClInclude Include="Combo\ComboManager.hpp" />
     <ClInclude Include="Combat\AttackHit.hpp" />
     <ClInclude Include="Enemy\Enemy.hpp" />
     <ClInclude Include="Enemy\EnemyManager.hpp" />
@@ -162,10 +163,12 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="TimeLimit\TimeLimitManager.hpp" />
     <ClInclude Include="Tower\Tower.hpp" />
     <ClInclude Include="Tower\MainTower.hpp" />
+    <ClInclude Include="Tower\TowerHpGauge.hpp" />
     <ClInclude Include="Tower\TowerManager.hpp" />
 
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Combo\ComboManager.cpp" />
     <ClCompile Include="Enemy\Enemy.cpp" />
     <ClCompile Include="Enemy\EnemyManager.cpp" />
     <ClCompile Include="GameObject\GameObject.cpp" />
@@ -184,6 +187,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="TimeLimit\TimeLimitManager.cpp" />
     <ClCompile Include="Tower\Tower.cpp" />
     <ClCompile Include="Tower\MainTower.cpp" />
+    <ClCompile Include="Tower\TowerHpGauge.cpp" />
     <ClCompile Include="Tower\TowerManager.cpp" />
 
     <ClCompile Include="main.cpp" />
