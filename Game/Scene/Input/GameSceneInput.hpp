@@ -25,6 +25,7 @@ class GameSceneInput {
 
     /// このフレームでポーズが押されたか(トリガー)
     bool pause_{ false };
+    bool dash_{ false };
 
 public:
     /// 入力状態を更新する
@@ -37,10 +38,13 @@ public:
     /// ポーズが押されたか
     /// 押された瞬間のフレームのみtrue
     bool IsPause() const { return pause_; }
+    /// ダッシュが押された瞬間のフレームのみtrue
+    bool IsDash() const { return dash_; }
 
 private:
     /// キーボードからの入力を反映する
     void UpdateKeyboard();
+    void UpdateMouse();
 
     // TODO: パッド対応時に UpdatePad() を追加し、
     //       キーボードとの入力を合成する(絶対値の大きい方を採用するなど)

@@ -42,6 +42,7 @@ class Player : public GameObject {
     float swingBrake_ = 0.3f;
     float towerKeepDistance_ = 3.0f;
     float swingMaxSpeed_ = 35.0f;
+    float dashSpeed_ = 40.0f;
 
 public:
     Player() = default;

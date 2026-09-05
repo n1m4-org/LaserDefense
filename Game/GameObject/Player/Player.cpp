@@ -79,6 +79,7 @@ void Player::LoadConfig() {
         swingBrake_ = parameter("SwingBrake", swingBrake_);
         towerKeepDistance_ = std::max(parameter("TowerKeepDistance", towerKeepDistance_), 0.01f);
         swingMaxSpeed_ = parameter("SwingMaxSpeed", swingMaxSpeed_);
+        dashSpeed_ = parameter("DashSpeed", dashSpeed_);
     }
 
     modelScale_.x = std::max(std::abs(modelScale_.x), 0.0001f);
@@ -144,6 +145,16 @@ void Player::UpdateGrappleMovement(float _deltaTime) {
             // 中心一致でもゼロ除算せず、一定方向へ離れる。
             const Vector3 inward = distance > 0.0001f
                 ? toTarget * (1.0f / distance) : Vector3{1.0f, 0.0f, 0.0f};
+            // クリック1回につき1回だけ、タワーを中心とする接線方向へ加速する。
+            // 回転中はその向きを維持。静止時は移動入力、入力もなければ固定方向で始動。
+            if (i == 0 && input_ && input_->IsDash()) {
+                const Vector3 tangent{inward.z, 0.0f, -inward.x};
+                const float tangentSpeed = dotXZ(velocity_, tangent);
+                const float rotation = std::abs(tangentSpeed) > 0.01f
+                    ? tangentSpeed : dotXZ(direction, tangent);
+                const float sign = rotation < 0.0f ? -1.0f : 1.0f;
+                velocity_ += tangent * (sign * dashSpeed_);
+            }
             const Vector3 tangentInput = direction - inward * dotXZ(direction, inward);
             // ばね状の引力。半径内では押し戻し、横向きの慣性は保持する。
             const float pull = (distance - towerKeepDistance_) * towerPullPower_
