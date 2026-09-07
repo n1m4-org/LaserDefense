@@ -118,6 +118,10 @@ void PlayScene::Initialize() {
     // 敵に到達されたときダメージを受けるタワーを渡す
     enemyManager_->SetMainTower(mainTower_);
 
+    gimmickManager_ = std::make_unique<GimmickManager>();
+    gimmickManager_->Initialize(GimmickContext{
+        player_.get(), towerManager_.get(), enemyManager_.get()});
+
     floor_ = std::make_unique<Model>();
     floor_->Initialize("plane");
     floor_->SetTexture("white_x16.png");
@@ -209,6 +213,7 @@ void PlayScene::Update() {
     Singleton<LightManager>::GetInstance()->SetPosition(
         player_->GetPosition() + shadowLightOffset);
     enemyManager_->Update(gameDelta);
+    gimmickManager_->Update(gameDelta);
     laser_->Update();
     scoreManager_->Update(gameDelta);
     survivalTimeManager_->Update(gameDelta);
@@ -228,6 +233,7 @@ void PlayScene::Draw() {
     towerManager_->Draw();
     laser_->Draw();
     floor_->Draw();
+    gimmickManager_->Draw();
     for (const auto& fence : fences_) fence->Draw();
 
 

@@ -1,0 +1,12 @@
+{
+    "Gimmick": {
+        "Spawn": {
+            "IntervalSeconds": 30.0
+        },
+        "Lottery": {
+            "RouteWeight": 1.0,
+            "TowerDefenseWeight": 1.0,
+            "TowerOrbitWeight": 1.0
+        }
+    }
+}
