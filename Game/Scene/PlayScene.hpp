@@ -6,6 +6,7 @@
 
 #include "Combo/ComboManager.hpp"
 #include "Enemy/EnemyManager.hpp"
+#include "Gimmick/GimmickManager.hpp"
 #include "IScene.hpp"
 #include "Model.hpp"
 #include "Result/ResultOverlay.hpp"
@@ -28,6 +29,7 @@ class PlayScene final : public IScene {
     std::unique_ptr<PlayerCamera> playerCamera_;
     std::unique_ptr<Laser> laser_{nullptr};
     std::unique_ptr<EnemyManager> enemyManager_;
+    std::unique_ptr<GimmickManager> gimmickManager_;
     std::unique_ptr<TowerManager> towerManager_;
     std::unique_ptr<ScoreManager> scoreManager_;
     std::unique_ptr<SurvivalTimeManager> survivalTimeManager_;
