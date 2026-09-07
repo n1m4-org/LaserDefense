@@ -8,6 +8,7 @@
 #include "Combat/AttackHit.hpp"
 #include "Sprite.hpp"
 #include "ReferencePtr.hpp"
+#include "src/ParticleSystem/Emitter/Emitter.hpp"
 
 class ParticleSystem;
 
@@ -39,6 +40,7 @@ private:
     float spawnRotations_ = 2.0f;
     bool moveDuringSpawnAnimation_ = false;
     float deathAnimationTime_ = 0.0f;
+    float deathEffectTime_ = 0.0f;
     float deathAnimationDuration_ = 1.0f;
     float deathPeakScale_ = 1.3f;
     float deathEndScale_ = 0.01f;
@@ -52,6 +54,7 @@ private:
     std::unique_ptr<Collision::Collider> collider_;
     Vector3 colliderOffset_{};
     GESTD::ReferencePtr<ParticleSystem> particleSystem_;
+    EmitterHandle deathEffectHandle_;
 
 public:
     void SetHealth(float _maxHp, float _knockbackBrake);
@@ -121,6 +124,7 @@ public:
 
 private:
     void EmitHitEffect();
+    void EmitDeathEffect();
     void DrawHpBar();
     void UpdateMovement(float _deltaTime);
     void UpdateSpawnAnimation(float _deltaTime);

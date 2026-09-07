@@ -81,6 +81,7 @@ public:
 
 private:
     void InitializeHitEffect();
+    void InitializeDeathEffect();
     void LoadConfig();
     void SpawnEnemy(const Vector3& _position);
 

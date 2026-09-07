@@ -43,7 +43,8 @@ Vector3 Tower::GetSelectionSize() const {
 
 void Tower::Initialize() {
     SetModel("Cube");
-    SetScale({1.0f, 5.0f, 1.0f});
+    // メインタワーの土台と同じ、低く幅広い形状にする。
+    SetScale({2.5f, 1.0f, 2.5f});
     model_->SetColor(NORMAL_COLOR);
 
     selectionModel_ = std::make_unique<Model>();
