@@ -9,7 +9,7 @@ class Tower : public GameObject {
     Vector3 colliderOffset_{};
 
 protected:
-    Vector3 modelOffset_{0.0f, 5.0f, 0.0f};
+    Vector3 modelOffset_{0.0f, 1.0f, 0.0f};
     std::unique_ptr<Model> selectionModel_;
     bool hovered_ = false;
     bool connected_ = false;

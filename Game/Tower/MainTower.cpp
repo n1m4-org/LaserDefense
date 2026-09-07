@@ -35,18 +35,20 @@ namespace {
 
 void MainTower::Initialize() {
     Tower::Initialize();
+    // メインタワーの柱は、通常タワーが低い形状になっても従来の縦長を維持する。
+    SetScale({1.0f, 5.0f, 1.0f});
     LoadConfig();
     hp_ = maxHp_;
 
     // 通常タワーは敵を無視するが、メインタワーの柱は判定を有効にする。
     // 土台のコライダーも従来どおりEnemyを無視しない。
     SetEnemyCollisionEnabled(true);
-    // 土台は幅6・高さ2。通常タワーと同じ高さ10の柱をその上に置く。
+    // 土台は幅5・高さ2。高さ10の柱をその上に置く。
     modelOffset_ = {0.0f, 7.0f, 0.0f};
     baseModel_ = std::make_unique<Model>();
     baseModel_->Initialize("Cube");
     baseModel_->SetEnvironmentTexture("skybox.dds");
-    baseModel_->SetScale({3.0f, 1.0f, 3.0f});
+    baseModel_->SetScale({2.5f, 1.0f, 2.5f});
     baseModel_->SetColor(BASE_NORMAL_COLOR);
     baseSelectionModel_ = std::make_unique<Model>();
     baseSelectionModel_->Initialize("Cube");
@@ -58,7 +60,7 @@ void MainTower::Initialize() {
         ->SetOwner(static_cast<Tower*>(this))
         ->AddAttribute(CollisionAttribute::Tower)
         ->AddIgnore(CollisionAttribute::Tower)
-        ->SetSize(Vector3{6.0f, 2.0f, 6.0f})
+        ->SetSize(Vector3{5.0f, 2.0f, 5.0f})
         ->Enable();
     SetHovered(false);
 }
@@ -75,7 +77,7 @@ void MainTower::Update(float _deltaTime) {
     baseModel_->Update();
     if (hovered_) {
         baseSelectionModel_->SetTranslate(center);
-        baseSelectionModel_->SetScale(Vector3{3.0f, 1.0f, 3.0f} * GetSelectionScaleMultiplier());
+        baseSelectionModel_->SetScale(Vector3{2.5f, 1.0f, 2.5f} * GetSelectionScaleMultiplier());
         baseSelectionModel_->Update();
     }
     baseCollider_->SetTranslate(center + GetColliderOffset());
@@ -103,7 +105,7 @@ Vector3 MainTower::GetSelectionCenter() const {
 }
 
 Vector3 MainTower::GetSelectionSize() const {
-    return {6.0f, 12.0f, 6.0f};
+    return {5.0f, 12.0f, 5.0f};
 }
 
 void MainTower::TakeDamage(float _damage) {
