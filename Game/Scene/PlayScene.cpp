@@ -72,7 +72,7 @@ void PlayScene::Initialize() {
 
     towerManager_ = std::make_unique<TowerManager>();
     towerManager_->Initialize();
-    MainTower* mainTower = towerManager_->AddMainTower(mainTowerPosition);
+    mainTower_ = towerManager_->AddMainTower(mainTowerPosition);
     // 5×5の等間隔配置。中央はメインタワーなので通常タワーを重ねない。
     for (int row = 0; row < 5; ++row) {
         for (int column = 0; column < 5; ++column) {
@@ -101,7 +101,11 @@ void PlayScene::Initialize() {
     // タワーHPゲージは MainTower の HP を読むだけなので、タワーを渡しておく
     towerHpGauge_ = std::make_unique<TowerHpGauge>();
     towerHpGauge_->Initialize();
-    towerHpGauge_->SetTarget(mainTower);
+    towerHpGauge_->SetTarget(mainTower_);
+
+    // リザルトはシーンを跨がず、この画面の上に重ねて出す
+    resultOverlay_ = std::make_unique<ResultOverlay>();
+    resultOverlay_->Initialize();
 
     enemyManager_ = std::make_unique<EnemyManager>();
     enemyManager_->Initialize();
@@ -109,7 +113,7 @@ void PlayScene::Initialize() {
     enemyManager_->SetScoreManager(scoreManager_.get());
     enemyManager_->SetComboManager(comboManager_.get());
     // 敵に到達されたときダメージを受けるタワーを渡す
-    enemyManager_->SetMainTower(mainTower);
+    enemyManager_->SetMainTower(mainTower_);
 
     floor_ = std::make_unique<Model>();
     floor_->Initialize("plane");
@@ -153,25 +157,56 @@ void PlayScene::Update() {
     input_.Update();
 
     const float deltaTime = Time::GetDeltaTime();
+
+    // タワーが落ちたらリザルトへ。シーンは切り替えず画面の上へシートを重ねるだけなので、
+    // 負けた瞬間の状況がそのまま背景として残る
+    if (mainTower_ && mainTower_->IsDestroyed() && !resultOverlay_->IsActive()) {
+        survivalTimeManager_->SetCounting(false);
+        // ゲーム中の UI は畳む。文字はスプライトより手前に描かれる仕組みなので、
+        // 残すと暗幕が効かず、リザルトより明るいまま浮いてしまう
+        towerHpGauge_->SetVisible(false);
+        scoreManager_->SetVisible(false);
+        survivalTimeManager_->SetVisible(false);
+        comboManager_->SetVisible(false);
+        resultOverlay_->Show(survivalTimeManager_->GetElapsedSeconds(),
+                             scoreManager_->GetScore());
+    }
+
+    // リザルト中はゲーム側へ渡す経過時間を 0 にして進行だけを止める。
+    // Update 自体は呼び続けるので描画に必要な行列は保たれ、背景は静止画として残る
+    const bool playing = !resultOverlay_->IsActive();
+    const float gameDelta = playing ? deltaTime : 0.0f;
+
     // 選択判定・カーソル・描画に同じカメラ行列を使う。
-    playerCamera_->Update(*player_, deltaTime);
-    towerManager_->Update(deltaTime);
-    UpdateTowerSelection();
+    playerCamera_->Update(*player_, gameDelta);
+    towerManager_->Update(gameDelta);
+    if (playing) {
+        UpdateTowerSelection();
+    } else {
+        // リザルト中は操作を受け付けない。掴んでいたレーザーとカーソルを外しておく
+        laser_->ClearTarget();
+        towerManager_->SetHoveredTower(nullptr);
+        cursorVisible_ = false;
+    }
     player_->SetGrappleTarget(laser_->GetConnectedTarget());
-    player_->Update(deltaTime);
+    player_->Update(gameDelta);
     const Vector3& playerVelocity = player_->GetVelocity();
     const float playerSpeed = std::hypot(playerVelocity.x, playerVelocity.z);
     laser_->UpdateSpeedMultipliers(playerSpeed, player_->GetSwingMaxSpeed());
     Singleton<LightManager>::GetInstance()->SetPosition(
         player_->GetPosition() + shadowLightOffset);
-    enemyManager_->Update(deltaTime);
+    enemyManager_->Update(gameDelta);
     laser_->Update();
-    scoreManager_->Update(deltaTime);
-    survivalTimeManager_->Update(deltaTime);
-    comboManager_->Update(deltaTime);
-    towerHpGauge_->Update(deltaTime);
+    scoreManager_->Update(gameDelta);
+    survivalTimeManager_->Update(gameDelta);
+    comboManager_->Update(gameDelta);
+    towerHpGauge_->Update(gameDelta);
     floor_->Update();
     for (const auto& fence : fences_) fence->Update();
+
+    // リザルトだけは止めていない実時間で動かす
+    resultOverlay_->Update(deltaTime);
+    DrawHud();
 }
 
 void PlayScene::Draw() {
@@ -247,9 +282,14 @@ void PlayScene::UpdateTowerSelection() {
         if (hovered) laser_->SetTarget(hovered);
         else laser_->ClearTarget();
     }
+}
 
+void PlayScene::DrawHud() {
     towerHpGauge_->Draw();
     scoreManager_->Draw();
     survivalTimeManager_->Draw();
     comboManager_->Draw();
+
+    // 暗幕はいちばん最後。ここまでに積んだ UI ごと暗くして、シートを最前面に置く
+    resultOverlay_->Draw();
 }
