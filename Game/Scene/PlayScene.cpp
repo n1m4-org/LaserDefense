@@ -72,6 +72,7 @@ void PlayScene::Initialize() {
 
     towerManager_ = std::make_unique<TowerManager>();
     towerManager_->Initialize();
+    assistedTower_ = nullptr;
     MainTower* mainTower = towerManager_->AddMainTower(mainTowerPosition);
     // 5×5の等間隔配置。中央はメインタワーなので通常タワーを重ねない。
     for (int row = 0; row < 5; ++row) {
@@ -238,15 +239,21 @@ void PlayScene::UpdateTowerSelection() {
         mouseCursor_->Update();
     }
 
-    towerManager_->SetHoveredTower(hovered);
+    if (hovered) assistedTower_ = hovered;
     // カーソルがSceneやタワーから外れても保持。ボタン解放またはフォーカス喪失で解除。
     if (!hasFocus || !mouse->IsMousePress(0)) {
         laser_->ClearTarget();
     } else if (mouseAvailable && mouse->IsMouseTrigger(0)) {
         // 押し始めたTowerを保持。ドラッグで別Towerへ乗り換えない。
-        if (hovered) laser_->SetTarget(hovered);
+        if (assistedTower_) laser_->SetTarget(assistedTower_);
         else laser_->ClearTarget();
     }
+
+    // 接続中は選択オーバーレイを解除し、接続解除後に選択アシスト表示へ戻す。
+    towerManager_->SetHoveredTower(
+        laser_->GetConnectedTarget() ? nullptr : assistedTower_);
+    towerManager_->SetConnectedTower(
+        static_cast<const Tower*>(laser_->GetConnectedTarget()));
 
     towerHpGauge_->Draw();
     scoreManager_->Draw();

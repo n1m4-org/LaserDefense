@@ -10,10 +10,18 @@ class Tower : public GameObject {
 
 protected:
     Vector3 modelOffset_{0.0f, 5.0f, 0.0f};
+    std::unique_ptr<Model> selectionModel_;
+    bool hovered_ = false;
+    bool connected_ = false;
+    float selectionAnimationTime_ = 0.0f;
     void SetEnemyCollisionEnabled(bool _enabled);
+    float GetSelectionScaleMultiplier() const;
 
 public:
     virtual void SetHovered(bool _hovered);
+    virtual void SetConnected(bool _connected);
+    virtual Vector3 GetSelectionCenter() const;
+    virtual Vector3 GetSelectionSize() const;
     void SetColliderOffset(const Vector3& _offset) { colliderOffset_ = _offset; }
     const Vector3& GetColliderOffset() const { return colliderOffset_; }
 
@@ -23,6 +31,7 @@ public:
 
 private:
     void UpdateCollider();
+    void UpdateSelectionEffect(float _deltaTime);
 };
 
 #endif // TOWER_HPP_
