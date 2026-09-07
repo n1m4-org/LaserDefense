@@ -46,7 +46,7 @@ void EnemyManager::InitializeHitEffect() {
                 y,
                 std::sin(angle) * horizontal};
             _position = _center + direction * MathUtils::Random(0.0f, 0.15f);
-            _velocity = direction * MathUtils::Random(3.0f, 7.0f);
+            _velocity = direction * MathUtils::Random(6.0f, 14.0f);
         });
 
     const auto makeEmitter = [](const Vector4& _startColor, const Vector4& _endColor) {
@@ -56,7 +56,7 @@ void EnemyManager::InitializeHitEffect() {
         emitter.duration = 0.0f;
         emitter.spawnCount = 5;
         emitter.size = {0.44f, 0.44f, 0.44f};
-        emitter.particleLifetime = 1.2f;
+        emitter.particleLifetime = 0.8f;
         emitter.spawnFuncKey = HIT_EFFECT_SPAWN;
         emitter.colorKeys = {
             GradientKey<Vector4>{0.0f, _startColor},
