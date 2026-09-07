@@ -12,7 +12,7 @@
 #include "Random/RandomEngine.hpp"
 #include "Score/ScoreManager.hpp"
 #include "Combo/ComboManager.hpp"
-#include "Tower/MainTower.hpp"
+#include "Tower/TowerManager.hpp"
 #include "Math/MathUtils.hpp"
 #include "src/ParticleSystem/ParticleSystem.hpp"
 
@@ -330,8 +330,8 @@ void EnemyManager::CollectDefeatRewards() {
             }
             // 到達を許した1体につき1回だけタワーの HP を削る。
             // 1体あたりのダメージは Enemy が持っているので、敵の種類ごとに変えられる
-            if (mainTower_) {
-                mainTower_->TakeDamage(enemy->GetTowerDamage());
+            if (towerManager_) {
+                towerManager_->TakeDamage(enemy->GetTowerDamage());
             }
         }
 

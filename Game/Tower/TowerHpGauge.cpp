@@ -7,7 +7,7 @@
 #include <cstdio>
 
 #include "Json/JsonParams.hpp"
-#include "MainTower.hpp"
+#include "TowerManager.hpp"
 #include "Pattern/Singleton.hpp"
 #include "Screen/Screen.hpp"
 
@@ -74,7 +74,7 @@ void TowerHpGauge::Initialize() {
     Reset();
 }
 
-void TowerHpGauge::SetTarget(const MainTower* _tower) {
+void TowerHpGauge::SetTarget(const TowerManager* _tower) {
     target_ = _tower;
     // 対象が変わったら差分検知の基準も取り直す（初回にダメージと誤検知しないため）
     lastHp_ = target_ ? target_->GetHp() : -1.0f;
@@ -86,7 +86,7 @@ void TowerHpGauge::Update(float _deltaTime) {
         return;
     }
 
-    // HP の実データはタワーが持っている。ここでは前フレームとの差だけを見る
+    // HP の実データはTowerManagerが持っている。ここでは前フレームとの差だけを見る
     const float hp = target_->GetHp();
     if (lastHp_ >= 0.0f && hp < lastHp_) {
         OnDamaged(lastHp_ - hp);

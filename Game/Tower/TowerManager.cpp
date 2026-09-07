@@ -80,6 +80,7 @@ void TowerManager::Initialize() {
     switchWarningTower_ = nullptr;
     nextWarningTower_ = nullptr;
     LoadConfig();
+    ResetHp();
 }
 
 Tower* TowerManager::AddTower(const Vector3& _position) {
@@ -119,6 +120,13 @@ void TowerManager::LoadConfig() {
     const auto json = Singleton<JsonParams>::GetInstance();
     if (!json->Load("Tower", "MainTower")) return;
     const auto groups = json->GetGroups("MainTower");
+    if (const auto health = groups.find("Health"); health != groups.end()) {
+        if (const auto entry = health->second.find("MaxHp"); entry != health->second.end()) {
+            if (const auto value = std::get_if<float>(&entry->second)) maxHp_ = *value;
+            else if (const auto valueInt = std::get_if<int32_t>(&entry->second)) maxHp_ = static_cast<float>(*valueInt);
+        }
+    }
+    maxHp_ = std::isfinite(maxHp_) ? std::max(maxHp_, 1.0f) : 100.0f;
     const auto group = groups.find("Switch");
     if (group == groups.end()) return;
     const auto readNumber = [&](const char* _key, float _fallback) {
@@ -237,4 +245,15 @@ void TowerManager::Draw() const {
             tower->Draw();
         }
     }
+}
+
+void TowerManager::TakeDamage(float _damage) {
+    if (!std::isfinite(_damage) || _damage <= 0.0f) return;
+    hp_ = std::max(hp_ - _damage, 0.0f);
+    for (MainTower* tower : mainTowers_) tower->PlayDamageFlash();
+}
+
+void TowerManager::Heal(float _amount) {
+    if (!std::isfinite(_amount) || _amount <= 0.0f) return;
+    hp_ = std::min(hp_ + _amount, maxHp_);
 }

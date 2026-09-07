@@ -106,10 +106,10 @@ void PlayScene::Initialize() {
     comboManager_ = std::make_unique<ComboManager>();
     comboManager_->Initialize();
 
-    // タワーHPゲージは MainTower の HP を読むだけなので、タワーを渡しておく
+    // タワーHPゲージへ共有HPを所有するTowerManagerを渡す
     towerHpGauge_ = std::make_unique<TowerHpGauge>();
     towerHpGauge_->Initialize();
-    towerHpGauge_->SetTarget(mainTower_);
+    towerHpGauge_->SetTarget(towerManager_.get());
 
     // リザルトはシーンを跨がず、この画面の上に重ねて出す
     resultOverlay_ = std::make_unique<ResultOverlay>();
@@ -125,7 +125,7 @@ void PlayScene::Initialize() {
     enemyManager_->SetScoreManager(scoreManager_.get());
     enemyManager_->SetComboManager(comboManager_.get());
     // 敵に到達されたときダメージを受けるタワーを渡す
-    enemyManager_->SetMainTower(mainTower_);
+    enemyManager_->SetTowerManager(towerManager_.get());
 
     gimmickManager_ = std::make_unique<GimmickManager>();
     gimmickManager_->Initialize(GimmickContext{
@@ -182,7 +182,7 @@ void PlayScene::Update() {
 
     // タワーが落ちたらリザルトへ。シーンは切り替えず画面の上へシートを重ねるだけなので、
     // 負けた瞬間の状況がそのまま背景として残る
-    if (mainTower_ && mainTower_->IsDestroyed() && !resultOverlay_->IsActive()) {
+    if (towerManager_->IsDestroyed() && !resultOverlay_->IsActive()) {
         survivalTimeManager_->SetCounting(false);
         // ゲーム中の UI は畳む。文字はスプライトより手前に描かれる仕組みなので、
         // 残すと暗幕が効かず、リザルトより明るいまま浮いてしまう
@@ -213,7 +213,7 @@ void PlayScene::Update() {
     playerCamera_->Update(*player_, deltaTime);
     towerManager_->Update(deltaTime);
     if (MainTower* switchedMainTower = towerManager_->ConsumeMainTowerSwitch()) {
-        // ゲームオーバー判定も、切り替わった現在の防衛対象を見るようにする。
+        // 衝撃波と敵の移動先に使う、現在の防衛対象を更新する。
         mainTower_ = switchedMainTower;
         const Vector3& target = switchedMainTower->GetPosition();
         if (playing) {
@@ -222,8 +222,6 @@ void PlayScene::Update() {
             shockwave_->SetTranslate(target + Vector3{0.0f, 0.05f, 0.0f});
         }
         enemyManager_->SetTargetPosition(target.x, target.z);
-        enemyManager_->SetMainTower(switchedMainTower);
-        towerHpGauge_->SetTarget(switchedMainTower);
     }
     UpdateTowerSelection();
 
