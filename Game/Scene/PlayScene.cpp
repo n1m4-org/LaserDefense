@@ -74,7 +74,7 @@ void PlayScene::Initialize() {
     towerManager_->Initialize();
 
     assistedTower_ = nullptr;
-    MainTower* mainTower = towerManager_->AddMainTower(mainTowerPosition);
+    mainTower_ = towerManager_->AddMainTower(mainTowerPosition);
 
     // 5×5の等間隔配置。中央はメインタワーなので通常タワーを重ねない。
     for (int row = 0; row < 5; ++row) {

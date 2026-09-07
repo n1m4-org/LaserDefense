@@ -153,10 +153,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Laser\Laser.hpp" />
     <ClInclude Include="Camera\PlayerCamera.hpp" />
     <ClInclude Include="MyGame.hpp" />
-
     <ClInclude Include="Factory\PostEffectFactory.hpp" />
     <ClInclude Include="Result\ResultOverlay.hpp" />
-
     <ClInclude Include="Scene\GameSampleScene.hpp" />
     <ClInclude Include="Scene\Input\GameSceneInput.hpp" />
     <ClInclude Include="Scene\PlayScene.hpp" />
@@ -177,12 +175,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Laser\Laser.cpp" />
     <ClCompile Include="Camera\PlayerCamera.cpp" />
     <ClCompile Include="MyGame.cpp" />
-
-    <ClCompile Include="PostEffectFactory.cpp" />
-
     <ClCompile Include="Result\ResultOverlay.cpp" />
-
-
     <ClCompile Include="Scene\GameSampleScene.cpp" />
     <ClCompile Include="Scene\Input\GameSceneInput.cpp" />
     <ClCompile Include="Scene\PlayScene.cpp" />
