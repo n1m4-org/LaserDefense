@@ -33,12 +33,11 @@ EnemyManager::~EnemyManager() = default;
 void EnemyManager::Initialize(GESTD::ReferencePtr<ParticleSystem> _particleSystem) {
     particleSystem_ = _particleSystem;
     LoadConfig();
+    elapsedSeconds_ = 0.0f;
+    spawnElapsedSeconds_ = 0.0f;
     Model::Load(modelName_);
     InitializeHitEffect();
     InitializeDeathEffect();
-    spawnTimer_.SetDuration(std::chrono::milliseconds{
-        static_cast<int64_t>(spawnIntervalSeconds_ * 1000.0f)});
-    spawnTimer_.Start();
 }
 
 void EnemyManager::InitializeHitEffect() {
@@ -127,11 +126,21 @@ void EnemyManager::InitializeDeathEffect() {
     }
 }
 
+void EnemyManager::ApplyShockwave(const Vector3& _center, float _radius, float _speed) {
+    for (const auto& enemy : enemies_) {
+        enemy->ApplyShockwave(_center, _radius, _speed);
+    }
+}
+
 void EnemyManager::SetTargetPosition(float _x, float _z) {
     targetPosition_ = {_x, 0.0f, _z};
     for (const auto& enemy : enemies_) {
         enemy->SetMovement(targetPosition_, moveSpeed_);
     }
+}
+
+void EnemyManager::SetSpawnExclusionPositions(const std::vector<Vector3>& _positions) {
+    spawnExclusionPositions_ = _positions;
 }
 
 void EnemyManager::LoadConfig() {
@@ -159,10 +168,6 @@ void EnemyManager::LoadConfig() {
         modelOffset_ = read(appearance->second, "ModelOffset", modelOffset_);
     }
 
-    if (const auto movement = groups.find("Movement"); movement != groups.end()) {
-        moveSpeed_ = read(movement->second, "Speed", moveSpeed_);
-    }
-
     if (const auto health = groups.find("Health"); health != groups.end()) {
         maxHp_ = read(health->second, "MaxHp", maxHp_);
         knockbackBrake_ = read(health->second, "KnockbackBrake", knockbackBrake_);
@@ -186,10 +191,19 @@ void EnemyManager::LoadConfig() {
     }
 
     if (const auto spawn = groups.find("Spawn"); spawn != groups.end()) {
-        spawnIntervalSeconds_ = read(spawn->second, "IntervalSeconds", spawnIntervalSeconds_);
-        spawnCount_ = read(spawn->second, "Count", spawnCount_);
         spawnRange_ = read(spawn->second, "Range", spawnRange_);
         spawnExcludeRange_ = read(spawn->second, "ExcludeRange", spawnExcludeRange_);
+        maxEnemyCount_ = read(spawn->second, "MaxEnemyCount", maxEnemyCount_);
+        spawnIntervalSeconds_ = read(
+            spawn->second, "IntervalSeconds", spawnIntervalSeconds_);
+        initialSpawnCount_ = read(spawn->second, "InitialCount", initialSpawnCount_);
+        spawnCountIncreaseIntervalSeconds_ = read(
+            spawn->second, "CountIncreaseIntervalSeconds",
+            spawnCountIncreaseIntervalSeconds_);
+    }
+
+    if (const auto movement = groups.find("Movement"); movement != groups.end()) {
+        moveSpeed_ = read(movement->second, "Speed", moveSpeed_);
     }
 
     // 敵1体あたりの獲得スコア。ここの値を変えるだけで得点バランスを調整できる
@@ -207,13 +221,14 @@ void EnemyManager::LoadConfig() {
         towerDamage_ = read(towerDamage->second, "Value", towerDamage_);
     }
 
-    if (spawnIntervalSeconds_ <= 0.0f) {
-        spawnIntervalSeconds_ = 2.0f;
-    }
-    if (moveSpeed_ < 0.0f) {
-        moveSpeed_ = 0.0f;
-    }
-    spawnCount_ = std::clamp(spawnCount_, 0, 128);
+    maxEnemyCount_ = std::clamp(maxEnemyCount_, 0, 10000);
+    spawnIntervalSeconds_ = std::isfinite(spawnIntervalSeconds_)
+        ? std::max(spawnIntervalSeconds_, 0.01f) : 1.0f;
+    initialSpawnCount_ = std::clamp(initialSpawnCount_, 0, 128);
+    spawnCountIncreaseIntervalSeconds_ =
+        std::isfinite(spawnCountIncreaseIntervalSeconds_)
+        ? std::max(spawnCountIncreaseIntervalSeconds_, 0.01f) : 30.0f;
+    moveSpeed_ = std::isfinite(moveSpeed_) ? std::max(moveSpeed_, 0.0f) : 2.0f;
     spawnAnimationDuration_ = std::max(spawnAnimationDuration_, 0.0f);
     spawnStartScale_ = std::max(spawnStartScale_, 0.0001f);
     deathAnimationDuration_ = std::max(deathAnimationDuration_, 0.0f);
@@ -245,26 +260,50 @@ void EnemyManager::SpawnEnemy(const Vector3& _position) {
     enemies_.push_back(std::move(enemy));
 }
 
-void EnemyManager::Update(float _deltaTime) {
-    if (spawnTimer_.Check()) {
-        const auto random = Singleton<RandomEngine>::GetInstance();
-        const float halfWidth = spawnRange_.x * 0.5f;
-        const float halfDepth = spawnRange_.y * 0.5f;
-        // 目標のメインタワーを中心とした矩形内には出現させない。
-        // 設定で全域が除外されても無限ループしないよう上限を設ける。
-        int32_t spawned = 0;
-        for (int attempt = 0; attempt < 128 * spawnCount_ && spawned < spawnCount_; ++attempt) {
-            const Vector3 position{random->Get(-halfWidth, halfWidth), 0.0f,
-                                   random->Get(-halfDepth, halfDepth)};
-            const bool excluded = spawnExcludeRange_.x > 0.0f && spawnExcludeRange_.y > 0.0f
-                && std::abs(position.x - targetPosition_.x) <= spawnExcludeRange_.x * 0.5f
-                && std::abs(position.z - targetPosition_.z) <= spawnExcludeRange_.y * 0.5f;
-            if (!excluded) {
-                SpawnEnemy(position);
-                ++spawned;
-            }
+void EnemyManager::SpawnWave() {
+    if (maxEnemyCount_ <= 0
+        || enemies_.size() >= static_cast<std::size_t>(maxEnemyCount_)) return;
+
+    const auto random = Singleton<RandomEngine>::GetInstance();
+    const float halfWidth = spawnRange_.x * 0.5f;
+    const float halfDepth = spawnRange_.y * 0.5f;
+    const int32_t available = maxEnemyCount_ - static_cast<int32_t>(enemies_.size());
+    const float countIncrease = std::floor(
+        elapsedSeconds_ / spawnCountIncreaseIntervalSeconds_);
+    const int32_t requestedCount = initialSpawnCount_ + static_cast<int32_t>(
+        std::min(countIncrease, static_cast<float>(maxEnemyCount_)));
+    const int32_t spawnCount = std::min(requestedCount, available);
+
+    // マップ全域へ出し、各タワーを中心とする除外矩形は空ける。
+    int32_t spawned = 0;
+    for (int attempt = 0; attempt < 128 * spawnCount && spawned < spawnCount; ++attempt) {
+        const Vector3 position{
+            random->Get(-halfWidth, halfWidth),
+            0.0f,
+            random->Get(-halfDepth, halfDepth)};
+        const bool excluded = spawnExcludeRange_.x > 0.0f && spawnExcludeRange_.y > 0.0f
+            && std::any_of(spawnExclusionPositions_.begin(), spawnExclusionPositions_.end(),
+                [&](const Vector3& _towerPosition) {
+                    return std::abs(position.x - _towerPosition.x) <= spawnExcludeRange_.x * 0.5f
+                        && std::abs(position.z - _towerPosition.z) <= spawnExcludeRange_.y * 0.5f;
+                });
+        if (!excluded) {
+            SpawnEnemy(position);
+            ++spawned;
         }
-        spawnTimer_.Restart();
+    }
+}
+
+void EnemyManager::Update(float _deltaTime) {
+    // リザルト中は gameDelta=0 が渡るため、経過時間とスポーン時間は進まない。
+    if (std::isfinite(_deltaTime) && _deltaTime > 0.0f) {
+        elapsedSeconds_ += _deltaTime;
+
+        spawnElapsedSeconds_ += _deltaTime;
+        if (spawnElapsedSeconds_ >= spawnIntervalSeconds_) {
+            spawnElapsedSeconds_ = std::fmod(spawnElapsedSeconds_, spawnIntervalSeconds_);
+            SpawnWave();
+        }
     }
 
     for (const auto& enemy : enemies_) {

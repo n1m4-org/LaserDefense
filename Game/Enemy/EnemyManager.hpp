@@ -7,7 +7,6 @@
 
 #include "Enemy.hpp"
 #include "Math/Vector2.hpp"
-#include "Timer/Timer.hpp"
 #include "ReferencePtr.hpp"
 
 class ScoreManager;
@@ -17,14 +16,15 @@ class ParticleSystem;
 
 class EnemyManager final {
     std::vector<std::unique_ptr<Enemy>> enemies_;
-    Timer spawnTimer_{std::chrono::milliseconds{2000}};
+    float elapsedSeconds_ = 0.0f;
+    float spawnElapsedSeconds_ = 0.0f;
 
     std::string modelName_{"Cube"};
     Vector3 modelScale_{0.5f, 0.5f, 0.5f};
     Vector3 modelOffset_{0.0f, 0.5f, 0.0f};
     Vector4 modelColor_{1.0f, 0.0f, 0.0f, 1.0f};
     Vector3 targetPosition_{};
-    float moveSpeed_ = 1.0f;
+    float moveSpeed_ = 2.0f;
     float maxHp_ = 10.0f;
     float knockbackBrake_ = 5.0f;
     float spawnAnimationDuration_ = 1.0f;
@@ -35,10 +35,13 @@ class EnemyManager final {
     float deathPeakScale_ = 1.3f;
     float deathEndScale_ = 0.01f;
     float deathExpandRatio_ = 0.4f;
-    float spawnIntervalSeconds_ = 2.0f;
-    int32_t spawnCount_ = 4;
     Vector2 spawnRange_{150.0f, 150.0f};
     Vector2 spawnExcludeRange_{30.0f, 30.0f};
+    std::vector<Vector3> spawnExclusionPositions_;
+    int32_t maxEnemyCount_ = 100;
+    float spawnIntervalSeconds_ = 1.0f;
+    int32_t initialSpawnCount_ = 1;
+    float spawnCountIncreaseIntervalSeconds_ = 30.0f;
 
     /// 敵1体を倒したときの獲得スコア。Enemy.json の "Score" / "Value" で変更できる
     int32_t scoreValue_ = 100;
@@ -59,6 +62,8 @@ public:
 
     void Initialize(GESTD::ReferencePtr<ParticleSystem> _particleSystem);
     void SetTargetPosition(float _x, float _z);
+    void ApplyShockwave(const Vector3& _center, float _radius, float _speed);
+    void SetSpawnExclusionPositions(const std::vector<Vector3>& _positions);
 
     /// @brief 撃破スコアの加算先を設定する
     /// @param _scoreManager スコアを加算する ScoreManager（所有権は持たない）
@@ -83,6 +88,7 @@ private:
     void InitializeHitEffect();
     void InitializeDeathEffect();
     void LoadConfig();
+    void SpawnWave();
     void SpawnEnemy(const Vector3& _position);
 
     /// @brief 撃破された敵の報酬を回収し、スコアと制限時間へ加算する

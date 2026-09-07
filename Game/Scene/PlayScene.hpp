@@ -41,6 +41,11 @@ class PlayScene final : public IScene {
     /// HP が尽きたらリザルトを出す対象。所有者は towerManager_
     MainTower* mainTower_ = nullptr;
     std::unique_ptr<Model> floor_;
+    std::unique_ptr<Model> shockwave_;
+    float shockwaveTime_ = 0.5f;
+    static constexpr float SHOCKWAVE_DURATION = 0.5f;
+    static constexpr float SHOCKWAVE_RADIUS = 10.0f;
+    static constexpr float SHOCKWAVE_SPEED = 35.0f;
     std::array<std::unique_ptr<Model>, 8> fences_;
     float stageSize_ = 200.0f;
     float towerMargin_ = 20.0f;

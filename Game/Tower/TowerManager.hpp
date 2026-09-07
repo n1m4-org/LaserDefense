@@ -14,8 +14,12 @@ class TowerManager final {
     std::vector<MainTower*> mainTowers_;
     float mainTowerSwitchInterval_ = 30.0f;
     float mainTowerSwitchTime_ = 0.0f;
+    float switchWarningLeadSeconds_ = 2.0f;
+    float switchWarningBlinkInterval_ = 0.5f;
     std::size_t nextCandidateIndex_ = 0;
     bool mainTowerSwitched_ = false;
+    MainTower* switchWarningTower_ = nullptr;
+    MainTower* nextWarningTower_ = nullptr;
 
 public:
     void Initialize();
@@ -32,6 +36,7 @@ public:
 private:
     void LoadConfig();
     void UpdateMainTowerSwitch(float _deltaTime);
+    void UpdateSwitchWarning();
     MainTower* FindNextSubTower();
 };
 
