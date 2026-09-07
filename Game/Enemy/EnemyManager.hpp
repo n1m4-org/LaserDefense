@@ -11,7 +11,7 @@
 
 class ScoreManager;
 class ComboManager;
-class MainTower;
+class TowerManager;
 class ParticleSystem;
 
 class EnemyManager final {
@@ -54,7 +54,7 @@ class EnemyManager final {
     /// コンボの加算先。未設定(nullptr)ならコンボは数えられず、倍率は常に1になる
     ComboManager* comboManager_ = nullptr;
     /// ダメージを与えるメインタワー。未設定(nullptr)ならタワーHPは減らない
-    MainTower* mainTower_ = nullptr;
+    TowerManager* towerManager_ = nullptr;
     GESTD::ReferencePtr<ParticleSystem> particleSystem_;
 
 public:
@@ -77,9 +77,9 @@ public:
     void SetComboManager(ComboManager* _comboManager) { comboManager_ = _comboManager; }
 
     /// @brief 敵に到達されたときダメージを受けるメインタワーを設定する
-    /// @param _mainTower ダメージを与えるタワー（所有権は持たない）
+    /// @param _towerManager ダメージを与えるタワー（所有権は持たない）
     /// @note 設定すると、敵1体が到達するたびに Enemy::GetTowerDamage() 分の HP が減る
-    void SetMainTower(MainTower* _mainTower) { mainTower_ = _mainTower; }
+    void SetTowerManager(TowerManager* _towerManager) { towerManager_ = _towerManager; }
 
     void Update(float _deltaTime);
     void Draw() const;

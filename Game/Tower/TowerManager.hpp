@@ -21,7 +21,17 @@ class TowerManager final {
     MainTower* switchWarningTower_ = nullptr;
     MainTower* nextWarningTower_ = nullptr;
 
+    float maxHp_ = 100.0f;
+    float hp_ = 100.0f;
+
 public:
+    void TakeDamage(float _damage);
+    void Heal(float _amount);
+    void ResetHp() { hp_ = maxHp_; }
+    float GetHp() const { return hp_; }
+    float GetMaxHp() const { return maxHp_; }
+    float GetHpRatio() const { return hp_ / maxHp_; }
+    bool IsDestroyed() const { return hp_ <= 0.0f; }
     void Initialize();
     Tower* AddTower(const Vector3& _position);
     MainTower* AddMainTower(const Vector3& _position);

@@ -23,7 +23,7 @@
             "ExpandRatio": 0.4
         },
         "Spawn": {
-            "Range": [100.0, 100.0],
+            "Range": [150.0, 150.0],
             "ExcludeRange": [10.0, 10.0],
             "MaxEnemyCount": 100,
             "IntervalSeconds": 3.0,
@@ -31,7 +31,7 @@
             "CountIncreaseIntervalSeconds": 30.0
         },
         "Movement": {
-            "Speed": 2.0
+            "Speed": 3.0
         },
         "Score": {
             "Value": 100,

@@ -39,7 +39,6 @@ void MainTower::Initialize() {
     // メインタワーの柱は、通常タワーが低い形状になっても従来の縦長を維持する。
     SetScale({1.0f, 5.0f, 1.0f});
     LoadConfig();
-    hp_ = maxHp_;
 
     // 通常タワーは敵を無視するが、メインタワーの柱は判定を有効にする。
     // 土台のコライダーも従来どおりEnemyを無視しない。
@@ -152,35 +151,9 @@ Vector3 MainTower::GetSelectionSize() const {
     return defenseTarget_ ? Vector3{5.0f, 12.0f, 5.0f} : Vector3{5.0f, 2.0f, 5.0f};
 }
 
-void MainTower::TakeDamage(float _damage) {
-    if (!std::isfinite(_damage) || _damage <= 0.0f) {
-        return;
-    }
-
-    hp_ = std::max(hp_ - _damage, 0.0f);
-    // タワー本体も光らせる。UI を見ていなくても「拠点が殴られた」ことが分かるようにする
+void MainTower::PlayDamageFlash() {
     damageFlashTimer_ = damageFlashDuration_;
     ApplyModelColor();
-}
-
-void MainTower::Heal(float _amount) {
-    if (!std::isfinite(_amount) || _amount <= 0.0f) {
-        return;
-    }
-    hp_ = std::min(hp_ + _amount, maxHp_);
-}
-
-void MainTower::ResetHp() {
-    hp_ = maxHp_;
-    damageFlashTimer_ = 0.0f;
-    ApplyModelColor();
-}
-
-float MainTower::GetHpRatio() const {
-    if (maxHp_ <= 0.0f) {
-        return 0.0f;
-    }
-    return std::clamp(hp_ / maxHp_, 0.0f, 1.0f);
 }
 
 void MainTower::LoadConfig() {
@@ -204,7 +177,6 @@ void MainTower::LoadConfig() {
     };
 
     if (const auto health = groups.find("Health"); health != groups.end()) {
-        maxHp_ = read(health->second, "MaxHp", maxHp_);
         damageFlashDuration_ = read(health->second, "DamageFlashDuration", damageFlashDuration_);
         damageFlashColor_ = read(health->second, "DamageFlashColor", damageFlashColor_);
     }
@@ -225,7 +197,6 @@ void MainTower::LoadConfig() {
         ? std::max(disappearanceDuration_, 0.01f) : 0.2f;
     // 不正な値が入っていても破綻しないように補正する
     switchWarningAlpha_ = std::isfinite(switchWarningAlpha_) ? std::clamp(switchWarningAlpha_, 0.0f, 1.0f) : 0.0f;
-    maxHp_ = std::max(maxHp_, 1.0f);
     damageFlashDuration_ = std::max(damageFlashDuration_, 0.0f);
 }
 
@@ -246,8 +217,6 @@ void MainTower::ApplyModelColor() {
         model_->SetColor(pillarColor);
     }
     if (baseModel_) {
-        Vector4 baseColor = LerpColor(baseBaseColor, damageFlashColor_, flash);
-        baseColor.w *= warningOpacity_;
-        baseModel_->SetColor(baseColor);
+        baseModel_->SetColor(LerpColor(baseBaseColor, damageFlashColor_, flash));
     }
 }
