@@ -15,6 +15,7 @@
 #include "SurvivalTime/SurvivalTimeManager.hpp"
 #include "Tower/TowerHpGauge.hpp"
 #include "Tower/TowerManager.hpp"
+#include "UI/MainTowerIndicator.hpp"
 
 class MainTower;
 class Player;
@@ -36,6 +37,7 @@ class PlayScene final : public IScene {
     std::unique_ptr<ComboManager> comboManager_;
     std::unique_ptr<TowerHpGauge> towerHpGauge_;
     std::unique_ptr<ResultOverlay> resultOverlay_;
+    std::unique_ptr<MainTowerIndicator> mainTowerIndicator_;
     /// HP が尽きたらリザルトを出す対象。所有者は towerManager_
     MainTower* mainTower_ = nullptr;
     std::unique_ptr<Model> floor_;
