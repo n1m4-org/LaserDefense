@@ -20,6 +20,7 @@ class Player;
 class PlayerCamera;
 class Laser;
 class Line;
+class Tower;
 
 class PlayScene final : public IScene {
     GameSceneInput input_{};
@@ -43,6 +44,7 @@ class PlayScene final : public IScene {
     float wallBounce_ = 0.8f;
     std::unique_ptr<Line> mouseCursor_;
     bool cursorVisible_ = false;
+    Tower* assistedTower_ = nullptr;
 
 public:
     PlayScene();

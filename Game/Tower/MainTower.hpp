@@ -20,6 +20,7 @@
  */
 class MainTower final : public Tower {
     std::unique_ptr<Model> baseModel_;
+    std::unique_ptr<Model> baseSelectionModel_;
     std::unique_ptr<Collision::Collider> baseCollider_;
 
     // ─── HP ────────────────────────────────────────────────────
@@ -30,13 +31,18 @@ class MainTower final : public Tower {
     float damageFlashTimer_ = 0.0f;     //!< 被弾フラッシュの残り時間
     float damageFlashDuration_ = 0.3f;  //!< 被弾フラッシュの長さ（秒）
     Vector4 damageFlashColor_{1.0f, 0.3f, 0.25f, 1.0f}; //!< 被弾した瞬間に寄せる色
-    bool hovered_ = false;              //!< マウスで選択中か（色の決定に使う）
+    bool defenseTarget_ = true;         //!< 現在、防衛対象のメインタワーとして有効か
 
 public:
     void Initialize() override;
     void Update(float _deltaTime) override;
     void Draw() override;
     void SetHovered(bool _hovered) override;
+    void SetConnected(bool _connected) override;
+    void SetDefenseTarget(bool _enabled);
+    bool IsDefenseTarget() const { return defenseTarget_; }
+    Vector3 GetSelectionCenter() const override;
+    Vector3 GetSelectionSize() const override;
 
     /// @brief タワーにダメージを与える
     /// @param _damage 与えるダメージ量（0以下・不正値なら何もしない）

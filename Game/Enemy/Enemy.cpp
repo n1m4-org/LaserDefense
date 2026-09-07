@@ -3,6 +3,7 @@
 #include "Enemy.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <cmath>
 
 #include "Math/Easing.hpp"
@@ -12,9 +13,17 @@
 #include "Math/MathUtils.hpp"
 #include "Pattern/Singleton.hpp"
 #include "Screen/Screen.hpp"
+#include "src/ParticleSystem/ParticleSystem.hpp"
 
 namespace {
     constexpr float FULL_ROTATION = 6.2831853f;
+    constexpr float DEATH_EFFECT_DURATION = 1.5f;
+    constexpr const char* HIT_EFFECT_TEMPLATE = "EnemyHitEffect";
+    constexpr const char* DEATH_EFFECT_TEMPLATES[] = {
+        "EnemyDeathEffectSmall",
+        "EnemyDeathEffectMedium",
+        "EnemyDeathEffectLarge"
+    };
 }
 
 void Enemy::SetHealth(float _maxHp, float _knockbackBrake) {
@@ -26,11 +35,26 @@ void Enemy::SetHealth(float _maxHp, float _knockbackBrake) {
 void Enemy::TakeDamage(const AttackHit& _hit) {
     if (!active_ || !IsAlive() || !std::isfinite(_hit.damage) || _hit.damage <= 0.0f) return;
     hp_ = std::max(0.0f, hp_ - _hit.damage);
+    EmitHitEffect();
     if (std::isfinite(_hit.knockbackVelocity.x) && std::isfinite(_hit.knockbackVelocity.z)) {
         // 再ヒット時は今回の攻撃方向で上書きし、無制限な速度の蓄積を避ける。
         knockbackVelocity_ = {_hit.knockbackVelocity.x, 0.0f, _hit.knockbackVelocity.z};
     }
     if (hp_ <= 0.0f) Kill(true);
+}
+
+void Enemy::EmitHitEffect() {
+    if (!particleSystem_) return;
+    particleSystem_->Emit(HIT_EFFECT_TEMPLATE, position_ + modelOffset_);
+}
+
+void Enemy::EmitDeathEffect() {
+    if (!particleSystem_) return;
+    const float random = MathUtils::Random(0.0f, 1.0f);
+    const std::size_t variant = random < (1.0f / 3.0f) ? 0u
+        : random < (2.0f / 3.0f) ? 1u : 2u;
+    deathEffectHandle_ = particleSystem_->Emit(
+        DEATH_EFFECT_TEMPLATES[variant], position_ + modelOffset_);
 }
 
 void Enemy::SetAppearance(const std::string& _modelName, const Vector3& _scale,
@@ -89,7 +113,9 @@ void Enemy::Kill(bool _awardsReward) {
     // 報酬対象の撃破なら、回収待ち状態にする
     rewardPending_ = _awardsReward;
     deathAnimationTime_ = 0.0f;
+    deathEffectTime_ = 0.0f;
     deathAnimationFinished_ = false;
+    EmitDeathEffect();
     SetVelocity({});
     if (collider_) {
         collider_->Disable();
@@ -108,7 +134,9 @@ void Enemy::Initialize() {
     state_ = State::Spawn;
     spawnAnimationTime_ = 0.0f;
     deathAnimationTime_ = 0.0f;
+    deathEffectTime_ = 0.0f;
     deathAnimationFinished_ = false;
+    deathEffectHandle_ = {};
     rewardPending_ = false;
     towerReachPending_ = false;
     SetModel(modelName_);
@@ -161,6 +189,10 @@ void Enemy::Update(float _deltaTime) {
         const float travel = knockbackBrake_ > 0.0001f ? (1.0f - decay) / knockbackBrake_ : dt;
         position_ += knockbackVelocity_ * travel;
         knockbackVelocity_ = knockbackVelocity_ * decay;
+    }
+    if (state_ == State::Death && deathEffectHandle_.IsValid()) {
+        // 新しく発生する粒子だけを、ノックバック後の敵の中心へ追従させる。
+        deathEffectHandle_.SetPosition(position_ + modelOffset_);
     }
     UpdateCollider();
     UpdateModel();
@@ -243,10 +275,14 @@ bool Enemy::IsSpawnAnimationPlaying() const {
 }
 
 void Enemy::UpdateDeathAnimation(float _deltaTime) {
+    deathEffectTime_ = std::min(
+        deathEffectTime_ + std::max(_deltaTime, 0.0f),
+        DEATH_EFFECT_DURATION);
+
     if (deathAnimationDuration_ <= 0.0f) {
         SetScale(modelScale_ * deathEndScale_);
         offset_ = modelOffset_ * deathEndScale_;
-        deathAnimationFinished_ = true;
+        deathAnimationFinished_ = deathEffectTime_ >= DEATH_EFFECT_DURATION;
         return;
     }
 
@@ -273,8 +309,11 @@ void Enemy::UpdateDeathAnimation(float _deltaTime) {
     if (deathAnimationTime_ >= deathAnimationDuration_) {
         SetScale(endScale);
         offset_ = endOffset;
-        deathAnimationFinished_ = true;
     }
+
+    // モデルが消えた後も、エミッター追従が終わる1.5秒まではEnemyを内部的に保持する。
+    deathAnimationFinished_ = deathAnimationTime_ >= deathAnimationDuration_
+        && deathEffectTime_ >= DEATH_EFFECT_DURATION;
 }
 
 void Enemy::Draw() {

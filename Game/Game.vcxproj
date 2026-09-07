@@ -153,12 +153,12 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Laser\Laser.hpp" />
     <ClInclude Include="Camera\PlayerCamera.hpp" />
     <ClInclude Include="MyGame.hpp" />
+
     <ClInclude Include="Factory\PostEffectFactory.hpp" />
     <ClInclude Include="Result\ResultOverlay.hpp" />
+
     <ClInclude Include="Scene\GameSampleScene.hpp" />
-
     <ClInclude Include="Scene\Input\GameSceneInput.hpp" />
-
     <ClInclude Include="Scene\PlayScene.hpp" />
     <ClInclude Include="Score\ScoreManager.hpp" />
     <ClInclude Include="SurvivalTime\SurvivalTimeManager.hpp" />
@@ -166,7 +166,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Tower\MainTower.hpp" />
     <ClInclude Include="Tower\TowerHpGauge.hpp" />
     <ClInclude Include="Tower\TowerManager.hpp" />
-
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Combo\ComboManager.cpp" />
@@ -178,12 +177,14 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Laser\Laser.cpp" />
     <ClCompile Include="Camera\PlayerCamera.cpp" />
     <ClCompile Include="MyGame.cpp" />
+
     <ClCompile Include="PostEffectFactory.cpp" />
 
     <ClCompile Include="Result\ResultOverlay.cpp" />
+
+
     <ClCompile Include="Scene\GameSampleScene.cpp" />
     <ClCompile Include="Scene\Input\GameSceneInput.cpp" />
-
     <ClCompile Include="Scene\PlayScene.cpp" />
     <ClCompile Include="Score\ScoreManager.cpp" />
     <ClCompile Include="SurvivalTime\SurvivalTimeManager.cpp" />
@@ -191,7 +192,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Tower\MainTower.cpp" />
     <ClCompile Include="Tower\TowerHpGauge.cpp" />
     <ClCompile Include="Tower\TowerManager.cpp" />
-
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>

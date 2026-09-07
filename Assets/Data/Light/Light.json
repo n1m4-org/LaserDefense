@@ -24,6 +24,7 @@
                 1.0
             ],
             "decay": 3.0,
+            "followRef": 1,
             "intensity": 10.0,
             "position": [
                 -15.0,

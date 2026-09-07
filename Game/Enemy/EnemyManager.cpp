@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 
 #include "Enemy.hpp"
 #include "Json/JsonParams.hpp"
@@ -12,15 +13,118 @@
 #include "Score/ScoreManager.hpp"
 #include "Combo/ComboManager.hpp"
 #include "Tower/MainTower.hpp"
+#include "Math/MathUtils.hpp"
+#include "src/ParticleSystem/ParticleSystem.hpp"
+
+namespace {
+    constexpr const char* HIT_EFFECT_TEMPLATE = "EnemyHitEffect";
+    constexpr const char* HIT_EFFECT_SPAWN = "EnemyHitEffectSpawn";
+    constexpr const char* DEATH_EFFECT_SPAWN = "EnemyDeathEffectSpawn";
+    constexpr const char* DEATH_EFFECT_TEMPLATES[] = {
+        "EnemyDeathEffectSmall",
+        "EnemyDeathEffectMedium",
+        "EnemyDeathEffectLarge"
+    };
+    constexpr float DEATH_EFFECT_SIZES[] = {0.8f, 0.9f, 1.0f};
+}
 
 EnemyManager::~EnemyManager() = default;
 
-void EnemyManager::Initialize() {
+void EnemyManager::Initialize(GESTD::ReferencePtr<ParticleSystem> _particleSystem) {
+    particleSystem_ = _particleSystem;
     LoadConfig();
     Model::Load(modelName_);
+    InitializeHitEffect();
+    InitializeDeathEffect();
     spawnTimer_.SetDuration(std::chrono::milliseconds{
         static_cast<int64_t>(spawnIntervalSeconds_ * 1000.0f)});
     spawnTimer_.Start();
+}
+
+void EnemyManager::InitializeHitEffect() {
+    if (!particleSystem_) return;
+
+    particleSystem_->RegisterSpawnFunc(HIT_EFFECT_SPAWN,
+        [](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
+            // 方位角と上向き成分から、床側を含まない上半球方向を作る。
+            const float y = MathUtils::Random(0.15f, 1.0f);
+            const float angle = MathUtils::Random(0.0f, MathUtils::F_PI * 2.0f);
+            const float horizontal = std::sqrt(std::max(1.0f - y * y, 0.0f));
+            const Vector3 direction{
+                std::cos(angle) * horizontal,
+                y,
+                std::sin(angle) * horizontal};
+            _position = _center + direction * MathUtils::Random(0.0f, 0.15f);
+            _velocity = direction * MathUtils::Random(6.0f, 14.0f);
+        });
+
+    const auto makeEmitter = [](const Vector4& _startColor, const Vector4& _endColor) {
+        ParticleSystem::EmitterConfig emitter;
+        emitter.texture = "white_x16.png";
+        emitter.frequency = 0.0f;
+        emitter.duration = 0.0f;
+        emitter.spawnCount = 5;
+        emitter.size = {0.44f, 0.44f, 0.44f};
+        emitter.particleLifetime = 0.8f;
+        emitter.spawnFuncKey = HIT_EFFECT_SPAWN;
+        emitter.colorKeys = {
+            GradientKey<Vector4>{0.0f, _startColor},
+            GradientKey<Vector4>{1.0f, _endColor}
+        };
+        emitter.sizeKeys = {
+            GradientKey<Vector3>{0.0f, {0.44f, 0.44f, 0.44f}},
+            GradientKey<Vector3>{1.0f, {0.04f, 0.04f, 0.04f}}
+        };
+        return emitter;
+    };
+
+    ParticleSystem::Template hitEffect;
+    hitEffect.emitters.push_back(makeEmitter(
+        {1.0f, 0.05f, 0.02f, 1.0f}, {0.5f, 0.0f, 0.0f, 0.0f}));
+    hitEffect.emitters.push_back(makeEmitter(
+        {1.0f, 0.45f, 0.02f, 1.0f}, {1.0f, 0.1f, 0.0f, 0.0f}));
+    particleSystem_->Register(HIT_EFFECT_TEMPLATE, hitEffect, true);
+}
+
+void EnemyManager::InitializeDeathEffect() {
+    if (!particleSystem_) return;
+
+    particleSystem_->RegisterSpawnFunc(DEATH_EFFECT_SPAWN,
+        [](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
+            // 同じ場所から機械的に並ばないよう、敵の中心付近で少しだけ散らす。
+            _position = _center + Vector3{
+                MathUtils::Random(-0.15f, 0.15f),
+                MathUtils::Random(-0.05f, 0.15f),
+                MathUtils::Random(-0.15f, 0.15f)};
+            _velocity = {
+                MathUtils::Random(-0.4f, 0.4f),
+                MathUtils::Random(5.0f, 7.0f),
+                MathUtils::Random(-0.4f, 0.4f)};
+        });
+
+    for (std::size_t i = 0; i < std::size(DEATH_EFFECT_TEMPLATES); ++i) {
+        const float size = DEATH_EFFECT_SIZES[i];
+        ParticleSystem::EmitterConfig emitter;
+        emitter.texture = "white_x16.png";
+        emitter.frequency = 0.3f;
+        emitter.duration = 1.5f;
+        emitter.spawnCount = 1;
+        emitter.size = {size, size, size};
+        emitter.particleLifetime = 0.9f;
+        emitter.spawnFuncKey = DEATH_EFFECT_SPAWN;
+        emitter.colorKeys = {
+            GradientKey<Vector4>{0.0f, {1.0f, 0.72f, 0.08f, 1.0f}},
+            GradientKey<Vector4>{1.0f, {1.0f, 0.3f, 0.0f, 0.0f}}
+        };
+        emitter.sizeKeys = {
+            GradientKey<Vector3>{0.0f, {size, size, size}},
+            GradientKey<Vector3>{1.0f, {0.04f, 0.04f, 0.04f}}
+        };
+
+        ParticleSystem::Template deathEffect;
+        deathEffect.emitters.push_back(emitter);
+        particleSystem_->Register(DEATH_EFFECT_TEMPLATES[i], deathEffect, true);
+    }
 }
 
 void EnemyManager::SetTargetPosition(float _x, float _z) {
@@ -126,6 +230,7 @@ void EnemyManager::LoadConfig() {
 
 void EnemyManager::SpawnEnemy(const Vector3& _position) {
     auto enemy = std::make_unique<Enemy>();
+    enemy->SetParticleSystem(particleSystem_);
     enemy->SetHealth(maxHp_, knockbackBrake_);
     enemy->SetAppearance(modelName_, modelScale_, modelOffset_, modelColor_);
     enemy->SetMovement(targetPosition_, moveSpeed_);

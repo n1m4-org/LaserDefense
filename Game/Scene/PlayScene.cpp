@@ -72,7 +72,10 @@ void PlayScene::Initialize() {
 
     towerManager_ = std::make_unique<TowerManager>();
     towerManager_->Initialize();
-    mainTower_ = towerManager_->AddMainTower(mainTowerPosition);
+
+    assistedTower_ = nullptr;
+    MainTower* mainTower = towerManager_->AddMainTower(mainTowerPosition);
+
     // 5×5の等間隔配置。中央はメインタワーなので通常タワーを重ねない。
     for (int row = 0; row < 5; ++row) {
         for (int column = 0; column < 5; ++column) {
@@ -108,7 +111,7 @@ void PlayScene::Initialize() {
     resultOverlay_->Initialize();
 
     enemyManager_ = std::make_unique<EnemyManager>();
-    enemyManager_->Initialize();
+    enemyManager_->Initialize(Particle());
     enemyManager_->SetTargetPosition(mainTowerPosition.x, mainTowerPosition.z);
     enemyManager_->SetScoreManager(scoreManager_.get());
     enemyManager_->SetComboManager(comboManager_.get());
@@ -178,8 +181,7 @@ void PlayScene::Update() {
     const float gameDelta = playing ? deltaTime : 0.0f;
 
     // 選択判定・カーソル・描画に同じカメラ行列を使う。
-    playerCamera_->Update(*player_, gameDelta);
-    towerManager_->Update(gameDelta);
+
     if (playing) {
         UpdateTowerSelection();
     } else {
@@ -188,6 +190,17 @@ void PlayScene::Update() {
         towerManager_->SetHoveredTower(nullptr);
         cursorVisible_ = false;
     }
+
+    playerCamera_->Update(*player_, deltaTime);
+    towerManager_->Update(deltaTime);
+    if (MainTower* switchedMainTower = towerManager_->ConsumeMainTowerSwitch()) {
+        const Vector3& target = switchedMainTower->GetPosition();
+        enemyManager_->SetTargetPosition(target.x, target.z);
+        enemyManager_->SetMainTower(switchedMainTower);
+        towerHpGauge_->SetTarget(switchedMainTower);
+    }
+    UpdateTowerSelection();
+
     player_->SetGrappleTarget(laser_->GetConnectedTarget());
     player_->Update(gameDelta);
     const Vector3& playerVelocity = player_->GetVelocity();
@@ -273,18 +286,27 @@ void PlayScene::UpdateTowerSelection() {
         mouseCursor_->Update();
     }
 
-    towerManager_->SetHoveredTower(hovered);
+    if (hovered) assistedTower_ = hovered;
     // カーソルがSceneやタワーから外れても保持。ボタン解放またはフォーカス喪失で解除。
     if (!hasFocus || !mouse->IsMousePress(0)) {
         laser_->ClearTarget();
     } else if (mouseAvailable && mouse->IsMouseTrigger(0)) {
         // 押し始めたTowerを保持。ドラッグで別Towerへ乗り換えない。
-        if (hovered) laser_->SetTarget(hovered);
+        if (assistedTower_) laser_->SetTarget(assistedTower_);
         else laser_->ClearTarget();
     }
 }
 
+
 void PlayScene::DrawHud() {
+
+    // 接続中は選択オーバーレイを解除し、接続解除後に選択アシスト表示へ戻す。
+    towerManager_->SetHoveredTower(
+        laser_->GetConnectedTarget() ? nullptr : assistedTower_);
+    towerManager_->SetConnectedTower(
+        static_cast<const Tower*>(laser_->GetConnectedTarget()));
+
+
     towerHpGauge_->Draw();
     scoreManager_->Draw();
     survivalTimeManager_->Draw();

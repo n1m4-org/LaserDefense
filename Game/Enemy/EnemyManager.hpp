@@ -8,10 +8,12 @@
 #include "Enemy.hpp"
 #include "Math/Vector2.hpp"
 #include "Timer/Timer.hpp"
+#include "ReferencePtr.hpp"
 
 class ScoreManager;
 class ComboManager;
 class MainTower;
+class ParticleSystem;
 
 class EnemyManager final {
     std::vector<std::unique_ptr<Enemy>> enemies_;
@@ -50,11 +52,12 @@ class EnemyManager final {
     ComboManager* comboManager_ = nullptr;
     /// ダメージを与えるメインタワー。未設定(nullptr)ならタワーHPは減らない
     MainTower* mainTower_ = nullptr;
+    GESTD::ReferencePtr<ParticleSystem> particleSystem_;
 
 public:
     ~EnemyManager();
 
-    void Initialize();
+    void Initialize(GESTD::ReferencePtr<ParticleSystem> _particleSystem);
     void SetTargetPosition(float _x, float _z);
 
     /// @brief 撃破スコアの加算先を設定する
@@ -77,6 +80,8 @@ public:
     void Draw() const;
 
 private:
+    void InitializeHitEffect();
+    void InitializeDeathEffect();
     void LoadConfig();
     void SpawnEnemy(const Vector3& _position);
 
