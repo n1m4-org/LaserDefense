@@ -37,6 +37,9 @@ class Player : public GameObject {
     float moveAcceleration_ = 35.0f;
     float moveBrake_ = 1.5f;
     float towerPullPower_ = 8.0f;
+    float connectStartPullPower_ = 2.5f;
+    float connectPullRampSeconds_ = 1.0f;
+    float grappleConnectedTime_ = 0.0f;
     float towerApproachBrake_ = 4.0f;
     float swingAcceleration_ = 60.0f;
     float swingBrake_ = 0.3f;
@@ -62,7 +65,7 @@ public:
     void EnableGrappleMovement() { grappleMovement_ = true; }
     void SetStageBoundary(float _halfSize, float _bounce);
     // シーン所有の接続先。Update前に毎フレーム設定する。
-    void SetGrappleTarget(const GameObject* _target) { grappleTarget_ = _target; }
+    void SetGrappleTarget(const GameObject* _target);
 
 private:
     void LoadConfig();
