@@ -4,7 +4,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <limits>
+#include <variant>
+
+#include "Json/JsonParams.hpp"
+#include "Pattern/Singleton.hpp"
 
 namespace {
     constexpr float SELECTION_SCALE = 1.5f;
@@ -67,13 +72,22 @@ void TowerManager::SetConnectedTower(const Tower* _tower) {
 
 void TowerManager::Initialize() {
     towers_.clear();
+    towerCandidates_.clear();
+    mainTowers_.clear();
+    mainTowerSwitchTime_ = 0.0f;
+    nextCandidateIndex_ = 0;
+    mainTowerSwitched_ = false;
+    LoadConfig();
 }
 
 Tower* TowerManager::AddTower(const Vector3& _position) {
-    auto tower = std::make_unique<Tower>();
+    // すべての設置枠を将来メイン化できる候補として生成する。
+    auto tower = std::make_unique<MainTower>();
     tower->Initialize();
+    tower->SetDefenseTarget(false);
     tower->SetPosition(_position);
     Tower* addedTower = tower.get();
+    towerCandidates_.push_back(tower.get());
     towers_.push_back(std::move(tower));
     return addedTower;
 }
@@ -84,16 +98,74 @@ MainTower* TowerManager::AddMainTower(const Vector3& _position) {
     tower->SetPosition(_position);
     tower->Update(0.0f);
     MainTower* addedTower = tower.get();
+    towerCandidates_.push_back(addedTower);
+    mainTowers_.push_back(addedTower);
     towers_.push_back(std::move(tower));
     return addedTower;
 }
 
 void TowerManager::Update(float _deltaTime) {
+    UpdateMainTowerSwitch(_deltaTime);
     for (const auto& tower : towers_) {
         if (tower->IsActive()) {
             tower->Update(_deltaTime);
         }
     }
+}
+
+void TowerManager::LoadConfig() {
+    const auto json = Singleton<JsonParams>::GetInstance();
+    if (!json->Load("Tower", "MainTower")) return;
+    const auto groups = json->GetGroups("MainTower");
+    const auto group = groups.find("Switch");
+    if (group == groups.end()) return;
+    const auto entry = group->second.find("IntervalSeconds");
+    if (entry == group->second.end()) return;
+    if (const auto floatValue = std::get_if<float>(&entry->second)) {
+        mainTowerSwitchInterval_ = *floatValue;
+    } else if (const auto integerValue = std::get_if<int32_t>(&entry->second)) {
+        mainTowerSwitchInterval_ = static_cast<float>(*integerValue);
+    }
+    if (!std::isfinite(mainTowerSwitchInterval_) || mainTowerSwitchInterval_ <= 0.0f) {
+        mainTowerSwitchInterval_ = 30.0f;
+    }
+}
+
+MainTower* TowerManager::FindNextSubTower() {
+    if (towerCandidates_.empty()) return nullptr;
+    for (std::size_t count = 0; count < towerCandidates_.size(); ++count) {
+        MainTower* candidate = towerCandidates_[nextCandidateIndex_];
+        nextCandidateIndex_ = (nextCandidateIndex_ + 1) % towerCandidates_.size();
+        if (std::find(mainTowers_.begin(), mainTowers_.end(), candidate) == mainTowers_.end()) {
+            return candidate;
+        }
+    }
+    return nullptr;
+}
+
+void TowerManager::UpdateMainTowerSwitch(float _deltaTime) {
+    if (mainTowers_.empty() || towerCandidates_.size() <= mainTowers_.size()
+        || !std::isfinite(_deltaTime) || _deltaTime <= 0.0f) return;
+
+    mainTowerSwitchTime_ += _deltaTime;
+    if (mainTowerSwitchTime_ < mainTowerSwitchInterval_) return;
+    mainTowerSwitchTime_ = std::fmod(mainTowerSwitchTime_, mainTowerSwitchInterval_);
+
+    // 現在は1基だが、一覧で管理しているため将来は複数の防衛対象へ拡張できる。
+    for (MainTower*& current : mainTowers_) {
+        MainTower* next = FindNextSubTower();
+        if (!next) break;
+        current->SetDefenseTarget(false);
+        next->SetDefenseTarget(true);
+        current = next;
+        mainTowerSwitched_ = true;
+    }
+}
+
+MainTower* TowerManager::ConsumeMainTowerSwitch() {
+    if (!mainTowerSwitched_ || mainTowers_.empty()) return nullptr;
+    mainTowerSwitched_ = false;
+    return mainTowers_.front();
 }
 
 void TowerManager::Draw() const {

@@ -15,6 +15,7 @@ protected:
     bool connected_ = false;
     float selectionAnimationTime_ = 0.0f;
     void SetEnemyCollisionEnabled(bool _enabled);
+    void SetColliderEnabled(bool _enabled);
     float GetSelectionScaleMultiplier() const;
 
 public:
