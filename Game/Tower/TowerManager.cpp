@@ -1,30 +1,67 @@
+#define NOMINMAX
 #include "TowerManager.hpp"
 #include "MainTower.hpp"
 
-#include "Collision/CollisionAttribute.hpp"
-#include "Collision/CollisionManager.h"
-#include "Pattern/Singleton.hpp"
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
+namespace {
+    constexpr float SELECTION_SCALE = 1.5f;
+
+    bool RayIntersectsAabb(const Vector3& _origin, const Vector3& _direction,
+        const Vector3& _center, const Vector3& _size, float _length, float& _distance) {
+        const Vector3 half = _size * (SELECTION_SCALE * 0.5f);
+        const Vector3 minimum = _center - half;
+        const Vector3 maximum = _center + half;
+        float nearDistance = 0.0f;
+        float farDistance = _length;
+
+        const auto testAxis = [&](float _originValue, float _directionValue,
+            float _minimum, float _maximum) {
+            if (std::abs(_directionValue) <= 0.000001f) {
+                return _originValue >= _minimum && _originValue <= _maximum;
+            }
+            float first = (_minimum - _originValue) / _directionValue;
+            float second = (_maximum - _originValue) / _directionValue;
+            if (first > second) std::swap(first, second);
+            nearDistance = std::max(nearDistance, first);
+            farDistance = std::min(farDistance, second);
+            return nearDistance <= farDistance;
+        };
+
+        if (!testAxis(_origin.x, _direction.x, minimum.x, maximum.x)
+            || !testAxis(_origin.y, _direction.y, minimum.y, maximum.y)
+            || !testAxis(_origin.z, _direction.z, minimum.z, maximum.z)) return false;
+        _distance = nearDistance;
+        return nearDistance <= _length && farDistance >= 0.0f;
+    }
+}
 
 Tower* TowerManager::PickTower(const Vector3& _origin, const Vector3& _direction, float _length) const {
-    Collision::Ray ray(_origin, _direction, _length);
-    // EnemyやLaserではなく、Towerのみを選択する。
-    ray.AddIgnore(~CollisionAttribute::Tower);
-    const auto collision = Singleton<Collision::Manager>::GetInstance();
-    const auto hit = collision->RayCast(&ray);
-    if (hit.uuid.empty()) return nullptr;
-    const auto* collider = collision->Get(hit.uuid);
-    if (!collider) return nullptr;
+    Tower* closestTower = nullptr;
+    float closestDistance = std::numeric_limits<float>::max();
     for (const auto& tower : towers_) {
-        if (tower->IsActive() && collider->GetOwner() == tower.get()) {
-            return tower.get();
+        if (!tower->IsActive()) continue;
+        float distance = 0.0f;
+        if (RayIntersectsAabb(_origin, _direction, tower->GetSelectionCenter(),
+            tower->GetSelectionSize(), _length, distance) && distance < closestDistance) {
+            closestDistance = distance;
+            closestTower = tower.get();
         }
     }
-    return nullptr;
+    return closestTower;
 }
 
 void TowerManager::SetHoveredTower(const Tower* _tower) {
     for (const auto& tower : towers_) {
         tower->SetHovered(tower.get() == _tower);
+    }
+}
+
+void TowerManager::SetConnectedTower(const Tower* _tower) {
+    for (const auto& tower : towers_) {
+        tower->SetConnected(tower.get() == _tower);
     }
 }
 

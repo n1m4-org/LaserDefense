@@ -11,17 +11,70 @@
 #include "Random/RandomEngine.hpp"
 #include "Score/ScoreManager.hpp"
 #include "Combo/ComboManager.hpp"
-#include "TimeLimit/TimeLimitManager.hpp"
 #include "Tower/MainTower.hpp"
+#include "Math/MathUtils.hpp"
+#include "src/ParticleSystem/ParticleSystem.hpp"
+
+namespace {
+    constexpr const char* HIT_EFFECT_TEMPLATE = "EnemyHitEffect";
+    constexpr const char* HIT_EFFECT_SPAWN = "EnemyHitEffectSpawn";
+}
 
 EnemyManager::~EnemyManager() = default;
 
-void EnemyManager::Initialize() {
+void EnemyManager::Initialize(GESTD::ReferencePtr<ParticleSystem> _particleSystem) {
+    particleSystem_ = _particleSystem;
     LoadConfig();
     Model::Load(modelName_);
+    InitializeHitEffect();
     spawnTimer_.SetDuration(std::chrono::milliseconds{
         static_cast<int64_t>(spawnIntervalSeconds_ * 1000.0f)});
     spawnTimer_.Start();
+}
+
+void EnemyManager::InitializeHitEffect() {
+    if (!particleSystem_) return;
+
+    particleSystem_->RegisterSpawnFunc(HIT_EFFECT_SPAWN,
+        [](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
+            // 方位角と上向き成分から、床側を含まない上半球方向を作る。
+            const float y = MathUtils::Random(0.15f, 1.0f);
+            const float angle = MathUtils::Random(0.0f, MathUtils::F_PI * 2.0f);
+            const float horizontal = std::sqrt(std::max(1.0f - y * y, 0.0f));
+            const Vector3 direction{
+                std::cos(angle) * horizontal,
+                y,
+                std::sin(angle) * horizontal};
+            _position = _center + direction * MathUtils::Random(0.0f, 0.15f);
+            _velocity = direction * MathUtils::Random(6.0f, 14.0f);
+        });
+
+    const auto makeEmitter = [](const Vector4& _startColor, const Vector4& _endColor) {
+        ParticleSystem::EmitterConfig emitter;
+        emitter.texture = "white_x16.png";
+        emitter.frequency = 0.0f;
+        emitter.duration = 0.0f;
+        emitter.spawnCount = 5;
+        emitter.size = {0.44f, 0.44f, 0.44f};
+        emitter.particleLifetime = 0.8f;
+        emitter.spawnFuncKey = HIT_EFFECT_SPAWN;
+        emitter.colorKeys = {
+            GradientKey<Vector4>{0.0f, _startColor},
+            GradientKey<Vector4>{1.0f, _endColor}
+        };
+        emitter.sizeKeys = {
+            GradientKey<Vector3>{0.0f, {0.44f, 0.44f, 0.44f}},
+            GradientKey<Vector3>{1.0f, {0.04f, 0.04f, 0.04f}}
+        };
+        return emitter;
+    };
+
+    ParticleSystem::Template hitEffect;
+    hitEffect.emitters.push_back(makeEmitter(
+        {1.0f, 0.05f, 0.02f, 1.0f}, {0.5f, 0.0f, 0.0f, 0.0f}));
+    hitEffect.emitters.push_back(makeEmitter(
+        {1.0f, 0.45f, 0.02f, 1.0f}, {1.0f, 0.1f, 0.0f, 0.0f}));
+    particleSystem_->Register(HIT_EFFECT_TEMPLATE, hitEffect, true);
 }
 
 void EnemyManager::SetTargetPosition(float _x, float _z) {
@@ -98,10 +151,6 @@ void EnemyManager::LoadConfig() {
         awardRewardOnTowerHit_ = awardOnTowerHit != 0;
     }
 
-    // 敵1体あたりの制限時間の加算秒数。ここの値を変えるだけで難易度を調整できる
-    if (const auto timeBonus = groups.find("TimeBonus"); timeBonus != groups.end()) {
-        timeBonusSeconds_ = read(timeBonus->second, "Seconds", timeBonusSeconds_);
-    }
 
     // 敵1体がタワーへ到達したときのダメージ。ここの値を変えるだけで耐久バランスを調整できる
     if (const auto towerDamage = groups.find("TowerDamage"); towerDamage != groups.end()) {
@@ -126,12 +175,12 @@ void EnemyManager::LoadConfig() {
     spawnExcludeRange_.x = std::isfinite(spawnExcludeRange_.x) ? std::abs(spawnExcludeRange_.x) : 30.0f;
     spawnExcludeRange_.y = std::isfinite(spawnExcludeRange_.y) ? std::abs(spawnExcludeRange_.y) : 30.0f;
     scoreValue_ = std::max(scoreValue_, 0);
-    timeBonusSeconds_ = std::max(timeBonusSeconds_, 0.0f);
     towerDamage_ = std::max(towerDamage_, 0.0f);
 }
 
 void EnemyManager::SpawnEnemy(const Vector3& _position) {
     auto enemy = std::make_unique<Enemy>();
+    enemy->SetParticleSystem(particleSystem_);
     enemy->SetHealth(maxHp_, knockbackBrake_);
     enemy->SetAppearance(modelName_, modelScale_, modelOffset_, modelColor_);
     enemy->SetMovement(targetPosition_, moveSpeed_);
@@ -139,7 +188,7 @@ void EnemyManager::SpawnEnemy(const Vector3& _position) {
                              spawnRotations_, moveDuringSpawnAnimation_);
     enemy->SetDeathAnimation(deathAnimationDuration_, deathPeakScale_,
                              deathEndScale_, deathExpandRatio_);
-    enemy->SetDefeatReward(scoreValue_, timeBonusSeconds_, awardRewardOnTowerHit_);
+    enemy->SetDefeatReward(scoreValue_, awardRewardOnTowerHit_);
     enemy->SetTowerDamage(towerDamage_);
     enemy->Initialize();
     enemy->SetPosition(_position);
@@ -213,10 +262,6 @@ void EnemyManager::CollectDefeatRewards() {
             // ScoreManager 側の倍率（アイテム効果など）とは掛け合わせになる。
             // 第2引数はコンボ倍率で、加算演出をどれだけ派手にするかにだけ使われる
             scoreManager_->AddScore(enemy->GetScoreValue() * multiplier, multiplier);
-        }
-        if (timeLimitManager_) {
-            // 制限時間にはコンボ倍率を掛けない。掛けると上限に張り付いて緊張感が失われるため
-            timeLimitManager_->AddTime(enemy->GetTimeBonusSeconds());
         }
     }
 }

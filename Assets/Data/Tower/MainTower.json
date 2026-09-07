@@ -6,8 +6,8 @@
             "DamageFlashColor": [1.0, 0.3, 0.25, 1.0]
         },
         "Gauge": {
-            "Position": [420.0, 88.0],
-            "Size": [440.0, 22.0],
+            "Position": [380.0, 88.0],
+            "Size": [520.0, 22.0],
             "FrameThickness": 3.0,
             "FrameColor": [0.04, 0.04, 0.07, 0.85],
             "SafeColor": [0.35, 0.8, 1.0, 1.0],
@@ -34,13 +34,13 @@
         },
         "Label": {
             "Text": "TOWER",
-            "Position": [420.0, 38.0],
+            "Position": [380.0, 38.0],
             "FontSize": 22.0,
             "Color": [0.75, 0.8, 0.88, 1.0]
         },
         "Value": {
             "Separator": " / ",
-            "RightX": 860.0,
+            "RightX": 900.0,
             "PositionY": 36.0,
             "FontSize": 24.0,
             "PunchScale": 1.3,

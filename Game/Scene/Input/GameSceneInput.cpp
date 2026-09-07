@@ -8,8 +8,14 @@ void GameSceneInput::Update() {
     moveX_ = 0.0f;
     moveY_ = 0.0f;
     pause_ = false;
+    dash_ = false;
 
     UpdateKeyboard();
+    UpdateMouse();
+}
+
+void GameSceneInput::UpdateMouse() {
+    dash_ = Singleton<Input>::GetInstance()->IsMouseTrigger(1);
 }
 
 void GameSceneInput::UpdateKeyboard() {

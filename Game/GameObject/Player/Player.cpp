@@ -74,11 +74,14 @@ void Player::LoadConfig() {
         moveAcceleration_ = parameter("MoveAcceleration", moveAcceleration_);
         moveBrake_ = parameter("MoveBrake", moveBrake_);
         towerPullPower_ = parameter("TowerPullPower", towerPullPower_);
+        connectStartPullPower_ = parameter("ConnectStartPullPower", connectStartPullPower_);
+        connectPullRampSeconds_ = parameter("ConnectPullRampSeconds", connectPullRampSeconds_);
         towerApproachBrake_ = parameter("TowerApproachBrake", towerApproachBrake_);
         swingAcceleration_ = parameter("SwingAcceleration", swingAcceleration_);
         swingBrake_ = parameter("SwingBrake", swingBrake_);
         towerKeepDistance_ = std::max(parameter("TowerKeepDistance", towerKeepDistance_), 0.01f);
         swingMaxSpeed_ = parameter("SwingMaxSpeed", swingMaxSpeed_);
+        dashSpeed_ = parameter("DashSpeed", dashSpeed_);
     }
 
     modelScale_.x = std::max(std::abs(modelScale_.x), 0.0001f);
@@ -103,6 +106,14 @@ void Player::SetStageBoundary(float _halfSize, float _bounce) {
     stageBoundaryEnabled_ = true;
     stageHalfSize_ = std::max(_halfSize, 1.0f);
     wallBounce_ = std::clamp(_bounce, 0.0f, 1.0f);
+}
+
+void Player::SetGrappleTarget(const GameObject* _target) {
+    if (grappleTarget_ != _target) {
+        // 接続解除・別タワーへの接続のどちらでも立ち上がりをやり直す。
+        grappleConnectedTime_ = 0.0f;
+    }
+    grappleTarget_ = _target;
 }
 
 void Player::Update(float _deltaTime) {
@@ -144,9 +155,25 @@ void Player::UpdateGrappleMovement(float _deltaTime) {
             // 中心一致でもゼロ除算せず、一定方向へ離れる。
             const Vector3 inward = distance > 0.0001f
                 ? toTarget * (1.0f / distance) : Vector3{1.0f, 0.0f, 0.0f};
+            // クリック1回につき1回だけ、タワーを中心とする接線方向へ加速する。
+            // 回転中はその向きを維持。静止時は移動入力、入力もなければ固定方向で始動。
+            if (i == 0 && input_ && input_->IsDash()) {
+                const Vector3 tangent{inward.z, 0.0f, -inward.x};
+                const float tangentSpeed = dotXZ(velocity_, tangent);
+                const float rotation = std::abs(tangentSpeed) > 0.01f
+                    ? tangentSpeed : dotXZ(direction, tangent);
+                const float sign = rotation < 0.0f ? -1.0f : 1.0f;
+                velocity_ += tangent * (sign * dashSpeed_);
+            }
             const Vector3 tangentInput = direction - inward * dotXZ(direction, inward);
             // ばね状の引力。半径内では押し戻し、横向きの慣性は保持する。
-            const float pull = (distance - towerKeepDistance_) * towerPullPower_
+            const float ramp = connectPullRampSeconds_ > 0.0001f
+                ? std::clamp((grappleConnectedTime_ + static_cast<float>(i) * dt)
+                    / connectPullRampSeconds_, 0.0f, 1.0f)
+                : 1.0f;
+            const float currentPullPower = connectStartPullPower_
+                + (towerPullPower_ - connectStartPullPower_) * ramp;
+            const float pull = (distance - towerKeepDistance_) * currentPullPower
                 - dotXZ(velocity_, inward) * towerApproachBrake_;
             acceleration = inward * pull + tangentInput * swingAcceleration_;
         }
@@ -176,6 +203,8 @@ void Player::UpdateGrappleMovement(float _deltaTime) {
         reflectAxis(position_.x, velocity_.x, std::abs(scale_.x));
         reflectAxis(position_.z, velocity_.z, std::abs(scale_.z));
     }
+    if (connected) grappleConnectedTime_ += elapsed;
+    else grappleConnectedTime_ = 0.0f;
 }
 
 void Player::Draw() {

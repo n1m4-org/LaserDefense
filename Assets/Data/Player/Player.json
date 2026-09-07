@@ -18,11 +18,14 @@
             "MoveAcceleration": 40.0,
             "MoveBrake": 0.1,
             "TowerPullPower": 10.0,
+            "ConnectStartPullPower": 2.5,
+            "ConnectPullRampSeconds": 1.0,
             "TowerApproachBrake": 1.0,
             "SwingAcceleration": 10.0,
             "SwingBrake": 0.05,
             "TowerKeepDistance": 1.0,
-            "SwingMaxSpeed": 200.0
+            "SwingMaxSpeed": 200.0,
+            "DashSpeed": 40.0
         }
     }
 }
