@@ -4,8 +4,9 @@
 #include <array>
 #include <algorithm>
 #include <cstdint>
-#include <variant>
 #include <cmath>
+#include <variant>
+#include <vector>
 
 #include "Camera/Controller/CameraController.hpp"
 #include "Camera/PlayerCamera.hpp"
@@ -75,14 +76,18 @@ void PlayScene::Initialize() {
 
     assistedTower_ = nullptr;
     mainTower_ = towerManager_->AddMainTower(mainTowerPosition);
+    std::vector<Vector3> towerPositions{mainTowerPosition};
+    towerPositions.reserve(9);
 
-    // 5×5の等間隔配置。中央はメインタワーなので通常タワーを重ねない。
-    for (int row = 0; row < 5; ++row) {
-        for (int column = 0; column < 5; ++column) {
-            if (row == 2 && column == 2) continue;
-            const float x = -towerPosition + static_cast<float>(column) * towerPosition * 0.5f;
-            const float z = -towerPosition + static_cast<float>(row) * towerPosition * 0.5f;
-            towerManager_->AddTower({x, 0.0f, z});
+    // 3×3の等間隔配置。中央をメインタワーとし、合計9本にする。
+    for (int row = 0; row < 3; ++row) {
+        for (int column = 0; column < 3; ++column) {
+            if (row == 1 && column == 1) continue;
+            const float x = -towerPosition + static_cast<float>(column) * towerPosition;
+            const float z = -towerPosition + static_cast<float>(row) * towerPosition;
+            const Vector3 position{x, 0.0f, z};
+            towerManager_->AddTower(position);
+            towerPositions.push_back(position);
         }
     }
 
@@ -116,6 +121,7 @@ void PlayScene::Initialize() {
     enemyManager_ = std::make_unique<EnemyManager>();
     enemyManager_->Initialize(Particle());
     enemyManager_->SetTargetPosition(mainTowerPosition.x, mainTowerPosition.z);
+    enemyManager_->SetSpawnExclusionPositions(towerPositions);
     enemyManager_->SetScoreManager(scoreManager_.get());
     enemyManager_->SetComboManager(comboManager_.get());
     // 敵に到達されたときダメージを受けるタワーを渡す
@@ -124,6 +130,12 @@ void PlayScene::Initialize() {
     gimmickManager_ = std::make_unique<GimmickManager>();
     gimmickManager_->Initialize(GimmickContext{
         player_.get(), towerManager_.get(), enemyManager_.get()});
+
+    shockwave_ = std::make_unique<Model>();
+    shockwave_->Initialize("plane");
+    shockwave_->SetTexture("circle2.png");
+    shockwave_->SetRotate({-MathUtils::F_PI * 0.5f, 0.0f, 0.0f});
+    shockwaveTime_ = SHOCKWAVE_DURATION;
 
     floor_ = std::make_unique<Model>();
     floor_->Initialize("plane");
@@ -204,6 +216,11 @@ void PlayScene::Update() {
         // ゲームオーバー判定も、切り替わった現在の防衛対象を見るようにする。
         mainTower_ = switchedMainTower;
         const Vector3& target = switchedMainTower->GetPosition();
+        if (playing) {
+            enemyManager_->ApplyShockwave(target, SHOCKWAVE_RADIUS, SHOCKWAVE_SPEED);
+            shockwaveTime_ = 0.0f;
+            shockwave_->SetTranslate(target + Vector3{0.0f, 0.05f, 0.0f});
+        }
         enemyManager_->SetTargetPosition(target.x, target.z);
         enemyManager_->SetMainTower(switchedMainTower);
         towerHpGauge_->SetTarget(switchedMainTower);
@@ -227,6 +244,15 @@ void PlayScene::Update() {
     const auto& defenseTargets = towerManager_->GetMainTowers();
     mainTowerIndicator_->Update(
         playing && !defenseTargets.empty() ? defenseTargets.front() : nullptr);
+    if (shockwaveTime_ < SHOCKWAVE_DURATION) {
+        const float t = shockwaveTime_ / SHOCKWAVE_DURATION;
+        const float eased = 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t);
+        const float size = 0.1f + (SHOCKWAVE_RADIUS * 2.0f - 0.1f) * eased;
+        shockwave_->SetScale({size, size, 1.0f});
+        shockwave_->SetColor({1.0f, 0.5f, 0.0f, 1.0f - t});
+        shockwave_->Update();
+        shockwaveTime_ = std::min(shockwaveTime_ + gameDelta, SHOCKWAVE_DURATION);
+    }
     floor_->Update();
     for (const auto& fence : fences_) fence->Update();
 
@@ -241,6 +267,7 @@ void PlayScene::Draw() {
     towerManager_->Draw();
     laser_->Draw();
     floor_->Draw();
+    if (shockwaveTime_ < SHOCKWAVE_DURATION) shockwave_->Draw();
     gimmickManager_->Draw();
     for (const auto& fence : fences_) fence->Draw();
 

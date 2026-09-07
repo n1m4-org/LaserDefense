@@ -198,6 +198,20 @@ void Enemy::Update(float _deltaTime) {
     UpdateModel();
 }
 
+void Enemy::ApplyShockwave(const Vector3& _center, float _radius, float _speed) {
+    if (!IsActive() || !IsAlive()) return;
+    const Vector3 delta{position_.x - _center.x, 0.0f, position_.z - _center.z};
+    const float distance = delta.Length();
+    if (distance > _radius) return;
+    const Vector3 direction = distance > 0.0001f ? delta / distance : Vector3{1.0f, 0.0f, 0.0f};
+    // 切り替え時点で重なっている敵も、接触判定前に安全な距離へ押し出す。
+    position_.x = _center.x + direction.x * (_radius + 0.5f);
+    position_.z = _center.z + direction.z * (_radius + 0.5f);
+    knockbackVelocity_ = direction * _speed;
+    UpdateCollider();
+    UpdateModel();
+}
+
 void Enemy::UpdateCollider() {
     if (!collider_) {
         return;

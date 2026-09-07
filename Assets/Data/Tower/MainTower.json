@@ -1,7 +1,13 @@
 {
     "MainTower": {
         "Switch": {
-            "IntervalSeconds": 30.0
+            "IntervalSeconds": 15.0,
+            "WarningLeadSeconds": 2.0,
+            "WarningBlinkIntervalSeconds": 0.5,
+            "WarningAlpha": 0.0,
+            "WarningMaxAlpha": 0.5,
+            "TransitionSeconds": 0.2,
+            "AppearanceSeconds": 0.5
         },
         "Health": {
             "MaxHp": 100.0,
