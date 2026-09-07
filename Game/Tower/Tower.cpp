@@ -67,6 +67,12 @@ void Tower::SetEnemyCollisionEnabled(bool _enabled) {
     else collider_->AddIgnore(CollisionAttribute::Enemy);
 }
 
+void Tower::SetColliderEnabled(bool _enabled) {
+    if (!collider_) return;
+    if (_enabled) collider_->Enable();
+    else collider_->Disable();
+}
+
 void Tower::Update(float _deltaTime) {
     offset_ = modelOffset_;
     UpdateCollider();

@@ -31,6 +31,7 @@ class MainTower final : public Tower {
     float damageFlashTimer_ = 0.0f;     //!< 被弾フラッシュの残り時間
     float damageFlashDuration_ = 0.3f;  //!< 被弾フラッシュの長さ（秒）
     Vector4 damageFlashColor_{1.0f, 0.3f, 0.25f, 1.0f}; //!< 被弾した瞬間に寄せる色
+    bool defenseTarget_ = true;         //!< 現在、防衛対象のメインタワーとして有効か
 
 public:
     void Initialize() override;
@@ -38,6 +39,8 @@ public:
     void Draw() override;
     void SetHovered(bool _hovered) override;
     void SetConnected(bool _connected) override;
+    void SetDefenseTarget(bool _enabled);
+    bool IsDefenseTarget() const { return defenseTarget_; }
     Vector3 GetSelectionCenter() const override;
     Vector3 GetSelectionSize() const override;
 

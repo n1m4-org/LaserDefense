@@ -1,5 +1,8 @@
 {
     "MainTower": {
+        "Switch": {
+            "IntervalSeconds": 30.0
+        },
         "Health": {
             "MaxHp": 100.0,
             "DamageFlashDuration": 0.3,

@@ -157,6 +157,12 @@ void PlayScene::Update() {
     // 選択判定・カーソル・描画に同じカメラ行列を使う。
     playerCamera_->Update(*player_, deltaTime);
     towerManager_->Update(deltaTime);
+    if (MainTower* switchedMainTower = towerManager_->ConsumeMainTowerSwitch()) {
+        const Vector3& target = switchedMainTower->GetPosition();
+        enemyManager_->SetTargetPosition(target.x, target.z);
+        enemyManager_->SetMainTower(switchedMainTower);
+        towerHpGauge_->SetTarget(switchedMainTower);
+    }
     UpdateTowerSelection();
     player_->SetGrappleTarget(laser_->GetConnectedTarget());
     player_->Update(deltaTime);
