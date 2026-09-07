@@ -104,7 +104,7 @@ void PlayScene::Initialize() {
     towerHpGauge_->SetTarget(mainTower);
 
     enemyManager_ = std::make_unique<EnemyManager>();
-    enemyManager_->Initialize();
+    enemyManager_->Initialize(Particle());
     enemyManager_->SetTargetPosition(mainTowerPosition.x, mainTowerPosition.z);
     enemyManager_->SetScoreManager(scoreManager_.get());
     enemyManager_->SetComboManager(comboManager_.get());

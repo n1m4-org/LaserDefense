@@ -12,9 +12,11 @@
 #include "Math/MathUtils.hpp"
 #include "Pattern/Singleton.hpp"
 #include "Screen/Screen.hpp"
+#include "src/ParticleSystem/ParticleSystem.hpp"
 
 namespace {
     constexpr float FULL_ROTATION = 6.2831853f;
+    constexpr const char* HIT_EFFECT_TEMPLATE = "EnemyHitEffect";
 }
 
 void Enemy::SetHealth(float _maxHp, float _knockbackBrake) {
@@ -26,11 +28,17 @@ void Enemy::SetHealth(float _maxHp, float _knockbackBrake) {
 void Enemy::TakeDamage(const AttackHit& _hit) {
     if (!active_ || !IsAlive() || !std::isfinite(_hit.damage) || _hit.damage <= 0.0f) return;
     hp_ = std::max(0.0f, hp_ - _hit.damage);
+    EmitHitEffect();
     if (std::isfinite(_hit.knockbackVelocity.x) && std::isfinite(_hit.knockbackVelocity.z)) {
         // 再ヒット時は今回の攻撃方向で上書きし、無制限な速度の蓄積を避ける。
         knockbackVelocity_ = {_hit.knockbackVelocity.x, 0.0f, _hit.knockbackVelocity.z};
     }
     if (hp_ <= 0.0f) Kill(true);
+}
+
+void Enemy::EmitHitEffect() {
+    if (!particleSystem_) return;
+    particleSystem_->Emit(HIT_EFFECT_TEMPLATE, position_ + modelOffset_);
 }
 
 void Enemy::SetAppearance(const std::string& _modelName, const Vector3& _scale,

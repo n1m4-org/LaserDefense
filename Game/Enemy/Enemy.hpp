@@ -7,6 +7,9 @@
 #include "Collision/Collider.h"
 #include "Combat/AttackHit.hpp"
 #include "Sprite.hpp"
+#include "ReferencePtr.hpp"
+
+class ParticleSystem;
 
 class Enemy final : public GameObject {
 public:
@@ -48,12 +51,16 @@ private:
     float towerDamage_ = 10.0f;             //!< タワーへ到達したときにタワーへ与えるダメージ
     std::unique_ptr<Collision::Collider> collider_;
     Vector3 colliderOffset_{};
+    GESTD::ReferencePtr<ParticleSystem> particleSystem_;
 
 public:
     void SetHealth(float _maxHp, float _knockbackBrake);
     float GetHp() const { return hp_; }
     float GetMaxHp() const { return maxHp_; }
     void TakeDamage(const AttackHit& _hit);
+    void SetParticleSystem(GESTD::ReferencePtr<ParticleSystem> _particleSystem) {
+        particleSystem_ = _particleSystem;
+    }
     void SetAppearance(const std::string& _modelName, const Vector3& _scale,
                        const Vector3& _offset, const Vector4& _color);
     void SetMovement(const Vector3& _targetPosition, float _moveSpeed);
@@ -113,6 +120,7 @@ public:
     void Draw() override;
 
 private:
+    void EmitHitEffect();
     void DrawHpBar();
     void UpdateMovement(float _deltaTime);
     void UpdateSpawnAnimation(float _deltaTime);
