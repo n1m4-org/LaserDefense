@@ -169,6 +169,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Tower\MainTower.hpp" />
     <ClInclude Include="Tower\TowerHpGauge.hpp" />
     <ClInclude Include="Tower\TowerManager.hpp" />
+    <ClInclude Include="UI\MainTowerIndicator.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Combo\ComboManager.cpp" />
@@ -194,6 +195,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Tower\MainTower.cpp" />
     <ClCompile Include="Tower\TowerHpGauge.cpp" />
     <ClCompile Include="Tower\TowerManager.cpp" />
+    <ClCompile Include="UI\MainTowerIndicator.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -110,6 +110,9 @@ void PlayScene::Initialize() {
     resultOverlay_ = std::make_unique<ResultOverlay>();
     resultOverlay_->Initialize();
 
+    mainTowerIndicator_ = std::make_unique<MainTowerIndicator>();
+    mainTowerIndicator_->Initialize();
+
     enemyManager_ = std::make_unique<EnemyManager>();
     enemyManager_->Initialize(Particle());
     enemyManager_->SetTargetPosition(mainTowerPosition.x, mainTowerPosition.z);
@@ -198,6 +201,8 @@ void PlayScene::Update() {
     playerCamera_->Update(*player_, deltaTime);
     towerManager_->Update(deltaTime);
     if (MainTower* switchedMainTower = towerManager_->ConsumeMainTowerSwitch()) {
+        // ゲームオーバー判定も、切り替わった現在の防衛対象を見るようにする。
+        mainTower_ = switchedMainTower;
         const Vector3& target = switchedMainTower->GetPosition();
         enemyManager_->SetTargetPosition(target.x, target.z);
         enemyManager_->SetMainTower(switchedMainTower);
@@ -219,6 +224,9 @@ void PlayScene::Update() {
     survivalTimeManager_->Update(gameDelta);
     comboManager_->Update(gameDelta);
     towerHpGauge_->Update(gameDelta);
+    const auto& defenseTargets = towerManager_->GetMainTowers();
+    mainTowerIndicator_->Update(
+        playing && !defenseTargets.empty() ? defenseTargets.front() : nullptr);
     floor_->Update();
     for (const auto& fence : fences_) fence->Update();
 
@@ -317,6 +325,7 @@ void PlayScene::DrawHud() {
     scoreManager_->Draw();
     survivalTimeManager_->Draw();
     comboManager_->Draw();
+    mainTowerIndicator_->Draw();
 
     // 暗幕はいちばん最後。ここまでに積んだ UI ごと暗くして、シートを最前面に置く
     resultOverlay_->Draw();
