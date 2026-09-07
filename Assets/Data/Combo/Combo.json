@@ -1,0 +1,41 @@
+{
+    "Combo": {
+        "Rule": {
+            "DurationSeconds": 4.0,
+            "KillsPerStep": 5,
+            "MaxMultiplier": 8,
+            "BreakOnTowerReach": 1
+        },
+        "Effect": {
+            "PunchDuration": 0.28,
+            "PunchScale": 1.35,
+            "TierUpPunchScale": 1.9,
+            "FlashDuration": 0.3,
+            "FlashStrength": 0.9,
+            "WarningRatio": 0.3,
+            "BlinkSpeed": 12.0,
+            "BlinkStrength": 0.5
+        },
+        "Multiplier": {
+            "RightX": 1248.0,
+            "PositionY": 220.0,
+            "FontSize": 46.0,
+            "LowColor": [0.85, 0.95, 1.0, 1.0],
+            "HighColor": [1.0, 0.45, 0.15, 1.0]
+        },
+        "Count": {
+            "Label": "COMBO ",
+            "RightX": 1248.0,
+            "PositionY": 278.0,
+            "FontSize": 28.0,
+            "Color": [0.8, 0.85, 0.9, 1.0],
+            "CharWidthRatio": 0.53
+        },
+        "Gauge": {
+            "Position": [1028.0, 320.0],
+            "Size": [220.0, 6.0],
+            "FrameThickness": 2.0,
+            "FrameColor": [0.04, 0.04, 0.07, 0.85]
+        }
+    }
+}

@@ -1,0 +1,17 @@
+{
+    "effects": [
+        {
+            "baseParameters": {
+                "color": [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "radius": 5.050000190734863,
+                "strength": 0.6700000166893005
+            },
+            "type": "BoxBlur"
+        }
+    ]
+}

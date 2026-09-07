@@ -1,0 +1,10 @@
+{
+    "BattleStage": {
+        "Layout": {
+            "Size": 200.0,
+            "TowerMargin": 20.0,
+            "FenceHeight": 2.0,
+            "WallBounce": 0.8
+        }
+    }
+}
