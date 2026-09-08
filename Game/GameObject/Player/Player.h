@@ -1,6 +1,7 @@
 #ifndef Player_H_
 #define Player_H_
 #include "GameObject/GameObject.hpp"
+#include "Collision/Collider.h"
 
 class GameSceneInput;
 class MoveComponent;
@@ -47,6 +48,9 @@ class Player : public GameObject {
     float swingMaxSpeed_ = 35.0f;
     float dashSpeed_ = 40.0f;
 
+    std::unique_ptr<Collision::Collider> collider_;
+    float colliderRadius_ = 1.0f;
+
 public:
     Player() = default;
     ~Player() override = default;
@@ -70,6 +74,7 @@ public:
 private:
     void LoadConfig();
     void UpdateGrappleMovement(float _deltaTime);
+    void UpdateCollider();
 
     /// 入力を自分の動きへ反映する
     /// アクションを増やすときはここに解釈を足していく

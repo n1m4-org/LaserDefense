@@ -5,6 +5,7 @@
 #include "PostProcess/Grayscale/Grayscale.hpp"
 #include "PostProcess/Vignette/Vignette.hpp"
 #include "Scene/GameSampleScene.hpp"
+#include "Scene/GimmickTuningScene.hpp"
 #include "Scene/PlayScene.hpp"
 #include "Scene/TitleScene.hpp"
 
@@ -29,4 +30,5 @@ void MyGame::Register() {
     RegisterScene<TitleScene>("Title");
     RegisterScene<PlayScene>("Play");
     RegisterScene<GameSampleScene>("GameSample");
+    RegisterScene<GimmickTuningScene>("GimmickTuning");
 }

@@ -141,7 +141,7 @@ void PlayScene::Initialize() {
 
     gimmickManager_ = std::make_unique<GimmickManager>();
     gimmickManager_->Initialize(GimmickContext{
-        player_.get(), towerManager_.get(), enemyManager_.get()});
+        player_.get(), towerManager_.get(), enemyManager_.get(), Particle()});
 
     shockwave_ = std::make_unique<Model>();
     shockwave_->Initialize("plane");
@@ -284,6 +284,12 @@ void PlayScene::Draw() {
     // UI は 3D の描画がすべて終わったあとに重ねる
 
     if (cursorVisible_) mouseCursor_->Draw();
+}
+
+void PlayScene::Debug() {
+#ifdef _DEBUG
+    gimmickManager_->Debug();
+#endif
 }
 
 void PlayScene::UpdateTowerSelection() {
