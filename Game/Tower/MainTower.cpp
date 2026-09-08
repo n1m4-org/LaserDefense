@@ -39,7 +39,6 @@ void MainTower::Initialize() {
     // メインタワーの柱は、通常タワーが低い形状になっても従来の縦長を維持する。
     SetScale({1.0f, 5.0f, 1.0f});
     LoadConfig();
-    hp_ = maxHp_;
 
     // 通常タワーは敵を無視するが、メインタワーの柱は判定を有効にする。
     // 土台のコライダーも従来どおりEnemyを無視しない。
@@ -67,11 +66,23 @@ void MainTower::Initialize() {
 }
 
 void MainTower::Update(float _deltaTime) {
+    if (std::isfinite(_deltaTime) && _deltaTime > 0.0f) {
+        transitionTime_ = std::min(transitionTime_ + _deltaTime, transitionDuration_);
+    }
+    const float t = std::clamp(transitionTime_ / transitionDuration_, 0.0f, 1.0f);
+    const float eased = defenseTarget_ ? EaseOutCubic(t) : t * t * t;
+    const float targetRatio = defenseTarget_ ? 1.0f : 0.0f;
+    pillarHeightRatio_ = transitionStartRatio_ + (targetRatio - transitionStartRatio_) * eased;
+
     Tower::Update(_deltaTime);
+    // 見た目だけを上下させ、当たり判定と接続先の座標は変えない。
+    model_->SetTranslate(GetPosition() + modelOffset_
+        + Vector3{0.0f, -12.0f * (1.0f - (warningActive_ && !defenseTarget_ ? 1.0f : pillarHeightRatio_)), 0.0f});
 
     // 被弾フラッシュを減衰させ、色へ反映する
     damageFlashTimer_ = std::max(damageFlashTimer_ - _deltaTime, 0.0f);
     ApplyModelColor();
+    model_->Update();
 
     const Vector3 center = GetPosition() + Vector3{0.0f, 1.0f, 0.0f};
     baseModel_->SetTranslate(center);
@@ -88,7 +99,10 @@ void MainTower::Draw() {
     baseModel_->Draw();
     if (hovered_ && baseSelectionModel_) baseSelectionModel_->Draw();
     // サブタワー時は土台だけを表示し、メイン化したときだけ柱を追加する。
-    if (defenseTarget_) Tower::Draw();
+    if (pillarHeightRatio_ > 0.0f || warningActive_) model_->Draw();
+    if (defenseTarget_ && transitionTime_ >= transitionDuration_ && hovered_ && selectionModel_) {
+        selectionModel_->Draw();
+    }
 }
 
 void MainTower::SetHovered(bool _hovered) {
@@ -101,7 +115,13 @@ void MainTower::SetConnected(bool _connected) {
     ApplyModelColor();
 }
 
-void MainTower::SetDefenseTarget(bool _enabled) {
+void MainTower::SetDefenseTarget(bool _enabled, bool _animate) {
+    if (defenseTarget_ != _enabled) {
+        transitionDuration_ = _enabled ? appearanceDuration_ : disappearanceDuration_;
+        transitionStartRatio_ = pillarHeightRatio_;
+        transitionTime_ = _animate ? 0.0f : transitionDuration_;
+        if (!_animate) pillarHeightRatio_ = _enabled ? 1.0f : 0.0f;
+    }
     defenseTarget_ = _enabled;
     SetColliderEnabled(_enabled);
     SetEnemyCollisionEnabled(_enabled);
@@ -109,6 +129,13 @@ void MainTower::SetDefenseTarget(bool _enabled) {
         if (_enabled) baseCollider_->RemoveIgnore(CollisionAttribute::Enemy);
         else baseCollider_->AddIgnore(CollisionAttribute::Enemy);
     }
+    ApplyModelColor();
+}
+
+void MainTower::SetSwitchWarningProgress(float _progress) {
+    warningActive_ = _progress >= 0.0f;
+    warningOpacity_ = _progress < 0.0f ? 1.0f
+        : switchWarningAlpha_ + (switchWarningMaxAlpha_ - switchWarningAlpha_) * _progress;
     ApplyModelColor();
 }
 
@@ -124,35 +151,9 @@ Vector3 MainTower::GetSelectionSize() const {
     return defenseTarget_ ? Vector3{5.0f, 12.0f, 5.0f} : Vector3{5.0f, 2.0f, 5.0f};
 }
 
-void MainTower::TakeDamage(float _damage) {
-    if (!std::isfinite(_damage) || _damage <= 0.0f) {
-        return;
-    }
-
-    hp_ = std::max(hp_ - _damage, 0.0f);
-    // タワー本体も光らせる。UI を見ていなくても「拠点が殴られた」ことが分かるようにする
+void MainTower::PlayDamageFlash() {
     damageFlashTimer_ = damageFlashDuration_;
     ApplyModelColor();
-}
-
-void MainTower::Heal(float _amount) {
-    if (!std::isfinite(_amount) || _amount <= 0.0f) {
-        return;
-    }
-    hp_ = std::min(hp_ + _amount, maxHp_);
-}
-
-void MainTower::ResetHp() {
-    hp_ = maxHp_;
-    damageFlashTimer_ = 0.0f;
-    ApplyModelColor();
-}
-
-float MainTower::GetHpRatio() const {
-    if (maxHp_ <= 0.0f) {
-        return 0.0f;
-    }
-    return std::clamp(hp_ / maxHp_, 0.0f, 1.0f);
 }
 
 void MainTower::LoadConfig() {
@@ -176,13 +177,26 @@ void MainTower::LoadConfig() {
     };
 
     if (const auto health = groups.find("Health"); health != groups.end()) {
-        maxHp_ = read(health->second, "MaxHp", maxHp_);
         damageFlashDuration_ = read(health->second, "DamageFlashDuration", damageFlashDuration_);
         damageFlashColor_ = read(health->second, "DamageFlashColor", damageFlashColor_);
     }
 
+    if (const auto switchConfig = groups.find("Switch"); switchConfig != groups.end()) {
+        switchWarningAlpha_ = read(
+            switchConfig->second, "WarningAlpha", switchWarningAlpha_);
+        switchWarningMaxAlpha_ = read(switchConfig->second, "WarningMaxAlpha", switchWarningMaxAlpha_);
+        appearanceDuration_ = read(switchConfig->second, "AppearanceSeconds", appearanceDuration_);
+        disappearanceDuration_ = read(switchConfig->second, "TransitionSeconds", disappearanceDuration_);
+    }
+
+    switchWarningMaxAlpha_ = std::isfinite(switchWarningMaxAlpha_)
+        ? std::clamp(switchWarningMaxAlpha_, 0.0f, 1.0f) : 0.5f;
+    appearanceDuration_ = std::isfinite(appearanceDuration_)
+        ? std::max(appearanceDuration_, 0.01f) : 0.5f;
+    disappearanceDuration_ = std::isfinite(disappearanceDuration_)
+        ? std::max(disappearanceDuration_, 0.01f) : 0.2f;
     // 不正な値が入っていても破綻しないように補正する
-    maxHp_ = std::max(maxHp_, 1.0f);
+    switchWarningAlpha_ = std::isfinite(switchWarningAlpha_) ? std::clamp(switchWarningAlpha_, 0.0f, 1.0f) : 0.0f;
     damageFlashDuration_ = std::max(damageFlashDuration_, 0.0f);
 }
 
@@ -198,7 +212,9 @@ void MainTower::ApplyModelColor() {
     const Vector4 baseBaseColor = connected_ ? CONNECTED_COLOR : normalBaseColor;
     // 選択表現は半透明モデルへ分離し、本体色は接続状態と被弾フラッシュを扱う。
     if (model_) {
-        model_->SetColor(LerpColor(pillarBaseColor, damageFlashColor_, flash));
+        Vector4 pillarColor = LerpColor(pillarBaseColor, damageFlashColor_, flash);
+        pillarColor.w *= warningOpacity_;
+        model_->SetColor(pillarColor);
     }
     if (baseModel_) {
         baseModel_->SetColor(LerpColor(baseBaseColor, damageFlashColor_, flash));

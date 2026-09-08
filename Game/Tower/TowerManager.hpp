@@ -14,10 +14,24 @@ class TowerManager final {
     std::vector<MainTower*> mainTowers_;
     float mainTowerSwitchInterval_ = 30.0f;
     float mainTowerSwitchTime_ = 0.0f;
+    float switchWarningLeadSeconds_ = 2.0f;
+    float switchWarningBlinkInterval_ = 0.5f;
     std::size_t nextCandidateIndex_ = 0;
     bool mainTowerSwitched_ = false;
+    MainTower* switchWarningTower_ = nullptr;
+    MainTower* nextWarningTower_ = nullptr;
+
+    float maxHp_ = 100.0f;
+    float hp_ = 100.0f;
 
 public:
+    void TakeDamage(float _damage);
+    void Heal(float _amount);
+    void ResetHp() { hp_ = maxHp_; }
+    float GetHp() const { return hp_; }
+    float GetMaxHp() const { return maxHp_; }
+    float GetHpRatio() const { return hp_ / maxHp_; }
+    bool IsDestroyed() const { return hp_ <= 0.0f; }
     void Initialize();
     Tower* AddTower(const Vector3& _position);
     MainTower* AddMainTower(const Vector3& _position);
@@ -32,6 +46,7 @@ public:
 private:
     void LoadConfig();
     void UpdateMainTowerSwitch(float _deltaTime);
+    void UpdateSwitchWarning();
     MainTower* FindNextSubTower();
 };
 

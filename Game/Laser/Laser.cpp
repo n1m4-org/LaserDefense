@@ -141,7 +141,6 @@ void Laser::InitializeBeamEffect() {
         GradientKey<Vector3>{0.2f, {0.35f, 0.35f, 0.35f}},
         GradientKey<Vector3>{1.0f, {0.02f, 0.02f, 0.02f}}
     };
-    config.canvasName = "Particles";
 
     ParticleSystem::Template beamTemplate;
     beamTemplate.emitters.push_back(config);

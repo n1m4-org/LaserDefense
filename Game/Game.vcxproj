@@ -146,6 +146,11 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Combat\AttackHit.hpp" />
     <ClInclude Include="Enemy\Enemy.hpp" />
     <ClInclude Include="Enemy\EnemyManager.hpp" />
+    <ClInclude Include="Gimmick\GimmickManager.hpp" />
+    <ClInclude Include="Gimmick\IGimmick.hpp" />
+    <ClInclude Include="Gimmick\RouteGimmick.hpp" />
+    <ClInclude Include="Gimmick\TowerDefenseGimmick.hpp" />
+    <ClInclude Include="Gimmick\TowerOrbitGimmick.hpp" />
     <ClInclude Include="GameObject\GameObject.hpp" />
     <ClInclude Include="GameObject\Component\Component.hpp" />
     <ClInclude Include="GameObject\Component\MoveComponent.hpp" />
@@ -167,11 +172,16 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Tower\TowerHpGauge.hpp" />
     <ClInclude Include="Tower\TowerManager.hpp" />
     <ClInclude Include="Ui\UiAnimPresets.hpp" />
+    <ClInclude Include="UI\MainTowerIndicator.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Combo\ComboManager.cpp" />
     <ClCompile Include="Enemy\Enemy.cpp" />
     <ClCompile Include="Enemy\EnemyManager.cpp" />
+    <ClCompile Include="Gimmick\GimmickManager.cpp" />
+    <ClCompile Include="Gimmick\RouteGimmick.cpp" />
+    <ClCompile Include="Gimmick\TowerDefenseGimmick.cpp" />
+    <ClCompile Include="Gimmick\TowerOrbitGimmick.cpp" />
     <ClCompile Include="GameObject\GameObject.cpp" />
     <ClCompile Include="GameObject\Component\MoveComponent.cpp" />
     <ClCompile Include="GameObject\Player\Player.cpp" />
@@ -191,6 +201,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Tower\TowerHpGauge.cpp" />
     <ClCompile Include="Tower\TowerManager.cpp" />
     <ClCompile Include="Ui\UiAnimPresets.cpp" />
+    <ClCompile Include="UI\MainTowerIndicator.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>

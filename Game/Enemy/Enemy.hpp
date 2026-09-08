@@ -61,6 +61,7 @@ public:
     float GetHp() const { return hp_; }
     float GetMaxHp() const { return maxHp_; }
     void TakeDamage(const AttackHit& _hit);
+    void ApplyShockwave(const Vector3& _center, float _radius, float _speed);
     void SetParticleSystem(GESTD::ReferencePtr<ParticleSystem> _particleSystem) {
         particleSystem_ = _particleSystem;
     }

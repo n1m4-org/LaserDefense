@@ -77,14 +77,17 @@ void TowerManager::Initialize() {
     mainTowerSwitchTime_ = 0.0f;
     nextCandidateIndex_ = 0;
     mainTowerSwitched_ = false;
+    switchWarningTower_ = nullptr;
+    nextWarningTower_ = nullptr;
     LoadConfig();
+    ResetHp();
 }
 
 Tower* TowerManager::AddTower(const Vector3& _position) {
     // すべての設置枠を将来メイン化できる候補として生成する。
     auto tower = std::make_unique<MainTower>();
     tower->Initialize();
-    tower->SetDefenseTarget(false);
+    tower->SetDefenseTarget(false, false);
     tower->SetPosition(_position);
     Tower* addedTower = tower.get();
     towerCandidates_.push_back(tower.get());
@@ -117,18 +120,38 @@ void TowerManager::LoadConfig() {
     const auto json = Singleton<JsonParams>::GetInstance();
     if (!json->Load("Tower", "MainTower")) return;
     const auto groups = json->GetGroups("MainTower");
+    if (const auto health = groups.find("Health"); health != groups.end()) {
+        if (const auto entry = health->second.find("MaxHp"); entry != health->second.end()) {
+            if (const auto value = std::get_if<float>(&entry->second)) maxHp_ = *value;
+            else if (const auto valueInt = std::get_if<int32_t>(&entry->second)) maxHp_ = static_cast<float>(*valueInt);
+        }
+    }
+    maxHp_ = std::isfinite(maxHp_) ? std::max(maxHp_, 1.0f) : 100.0f;
     const auto group = groups.find("Switch");
     if (group == groups.end()) return;
-    const auto entry = group->second.find("IntervalSeconds");
-    if (entry == group->second.end()) return;
-    if (const auto floatValue = std::get_if<float>(&entry->second)) {
-        mainTowerSwitchInterval_ = *floatValue;
-    } else if (const auto integerValue = std::get_if<int32_t>(&entry->second)) {
-        mainTowerSwitchInterval_ = static_cast<float>(*integerValue);
-    }
+    const auto readNumber = [&](const char* _key, float _fallback) {
+        const auto entry = group->second.find(_key);
+        if (entry == group->second.end()) return _fallback;
+        if (const auto value = std::get_if<float>(&entry->second)) return *value;
+        if (const auto value = std::get_if<int32_t>(&entry->second)) {
+            return static_cast<float>(*value);
+        }
+        return _fallback;
+    };
+    mainTowerSwitchInterval_ = readNumber("IntervalSeconds", mainTowerSwitchInterval_);
+    switchWarningLeadSeconds_ = readNumber(
+        "WarningLeadSeconds", switchWarningLeadSeconds_);
+    switchWarningBlinkInterval_ = readNumber(
+        "WarningBlinkIntervalSeconds", switchWarningBlinkInterval_);
     if (!std::isfinite(mainTowerSwitchInterval_) || mainTowerSwitchInterval_ <= 0.0f) {
         mainTowerSwitchInterval_ = 30.0f;
     }
+    switchWarningLeadSeconds_ = std::isfinite(switchWarningLeadSeconds_)
+        ? std::clamp(switchWarningLeadSeconds_, 0.0f, mainTowerSwitchInterval_)
+        : 2.0f;
+    switchWarningBlinkInterval_ = std::isfinite(switchWarningBlinkInterval_)
+        ? std::max(switchWarningBlinkInterval_, 0.01f)
+        : 0.5f;
 }
 
 MainTower* TowerManager::FindNextSubTower() {
@@ -148,8 +171,20 @@ void TowerManager::UpdateMainTowerSwitch(float _deltaTime) {
         || !std::isfinite(_deltaTime) || _deltaTime <= 0.0f) return;
 
     mainTowerSwitchTime_ += _deltaTime;
-    if (mainTowerSwitchTime_ < mainTowerSwitchInterval_) return;
+    if (mainTowerSwitchTime_ < mainTowerSwitchInterval_) {
+        UpdateSwitchWarning();
+        return;
+    }
     mainTowerSwitchTime_ = std::fmod(mainTowerSwitchTime_, mainTowerSwitchInterval_);
+    if (switchWarningTower_) {
+        switchWarningTower_->SetSwitchWarningProgress(-1.0f);
+        switchWarningTower_ = nullptr;
+    }
+
+    if (nextWarningTower_) {
+        nextWarningTower_->SetSwitchWarningProgress(-1.0f);
+        nextWarningTower_ = nullptr;
+    }
 
     // 現在は1基だが、一覧で管理しているため将来は複数の防衛対象へ拡張できる。
     for (MainTower*& current : mainTowers_) {
@@ -160,6 +195,42 @@ void TowerManager::UpdateMainTowerSwitch(float _deltaTime) {
         current = next;
         mainTowerSwitched_ = true;
     }
+    UpdateSwitchWarning();
+}
+
+void TowerManager::UpdateSwitchWarning() {
+    const float warningStart = mainTowerSwitchInterval_ - switchWarningLeadSeconds_;
+    MainTower* currentTower = !mainTowers_.empty() && mainTowerSwitchTime_ >= warningStart
+        ? mainTowers_.front()
+        : nullptr;
+
+    if (switchWarningTower_ != currentTower) {
+        if (switchWarningTower_) switchWarningTower_->SetSwitchWarningProgress(-1.0f);
+        switchWarningTower_ = currentTower;
+    }
+    MainTower* nextTower = nullptr;
+    if (currentTower) {
+        for (std::size_t count = 0; count < towerCandidates_.size(); ++count) {
+            MainTower* candidate = towerCandidates_[(nextCandidateIndex_ + count) % towerCandidates_.size()];
+            if (std::find(mainTowers_.begin(), mainTowers_.end(), candidate) == mainTowers_.end()) {
+                nextTower = candidate;
+                break;
+            }
+        }
+    }
+    if (nextWarningTower_ != nextTower) {
+        if (nextWarningTower_) nextWarningTower_->SetSwitchWarningProgress(-1.0f);
+        nextWarningTower_ = nextTower;
+    }
+    if (!switchWarningTower_) return;
+
+    const float warningElapsed = mainTowerSwitchTime_ - warningStart;
+    // 0.5秒で透明から半透明へ、その後0.5秒で透明へ戻る。
+    const float phase = std::fmod(warningElapsed, switchWarningBlinkInterval_ * 2.0f)
+        / switchWarningBlinkInterval_;
+    const float opacityProgress = 0.5f - 0.5f * std::cos(phase * 3.14159265358979323846f);
+    switchWarningTower_->SetSwitchWarningProgress(opacityProgress);
+    if (nextWarningTower_) nextWarningTower_->SetSwitchWarningProgress(opacityProgress);
 }
 
 MainTower* TowerManager::ConsumeMainTowerSwitch() {
@@ -174,4 +245,15 @@ void TowerManager::Draw() const {
             tower->Draw();
         }
     }
+}
+
+void TowerManager::TakeDamage(float _damage) {
+    if (!std::isfinite(_damage) || _damage <= 0.0f) return;
+    hp_ = std::max(hp_ - _damage, 0.0f);
+    for (MainTower* tower : mainTowers_) tower->PlayDamageFlash();
+}
+
+void TowerManager::Heal(float _amount) {
+    if (!std::isfinite(_amount) || _amount <= 0.0f) return;
+    hp_ = std::min(hp_ + _amount, maxHp_);
 }

@@ -6,6 +6,7 @@
 
 #include "Combo/ComboManager.hpp"
 #include "Enemy/EnemyManager.hpp"
+#include "Gimmick/GimmickManager.hpp"
 #include "IScene.hpp"
 #include "Model.hpp"
 #include "Result/ResultOverlay.hpp"
@@ -15,6 +16,7 @@
 #include "Tower/TowerHpGauge.hpp"
 #include "Tower/TowerManager.hpp"
 #include "Ui/UserInterface.hpp"
+#include "UI/MainTowerIndicator.hpp"
 
 class MainTower;
 class Player;
@@ -29,6 +31,7 @@ class PlayScene final : public IScene {
     std::unique_ptr<PlayerCamera> playerCamera_;
     std::unique_ptr<Laser> laser_{nullptr};
     std::unique_ptr<EnemyManager> enemyManager_;
+    std::unique_ptr<GimmickManager> gimmickManager_;
     std::unique_ptr<TowerManager> towerManager_;
     std::unique_ptr<ScoreManager> scoreManager_;
     std::unique_ptr<SurvivalTimeManager> survivalTimeManager_;
@@ -42,9 +45,15 @@ class PlayScene final : public IScene {
     float resultElapsed_ = 0.0f;
     /// タイトルへ戻る操作を受け付け始めたか
     bool returnAccepting_ = false;
+    std::unique_ptr<MainTowerIndicator> mainTowerIndicator_;
     /// HP が尽きたらリザルトを出す対象。所有者は towerManager_
     MainTower* mainTower_ = nullptr;
     std::unique_ptr<Model> floor_;
+    std::unique_ptr<Model> shockwave_;
+    float shockwaveTime_ = 0.5f;
+    static constexpr float SHOCKWAVE_DURATION = 0.5f;
+    static constexpr float SHOCKWAVE_RADIUS = 10.0f;
+    static constexpr float SHOCKWAVE_SPEED = 35.0f;
     std::array<std::unique_ptr<Model>, 8> fences_;
     float stageSize_ = 200.0f;
     float towerMargin_ = 20.0f;

@@ -10,13 +10,13 @@
 #include "Sprite.hpp"
 #include "Text/Text.hpp"
 
-class MainTower;
+class TowerManager;
 
 /** メインタワーの HP を常時表示するゲージ UI
  *
- *  HP の実データは MainTower が持っており、このクラスは毎フレームそれを読むだけ。
+ *  HP の実データは TowerManager が持っており、このクラスは毎フレームそれを読むだけ。
  *  HP が減ったことは「前フレームとの差」で検知するので、
- *  MainTower 側に UI への通知を書く必要がない（＝タワーは UI を知らない）。
+ *  TowerManager 側に UI への通知を書く必要がない（＝タワーは UI を知らない）。
  *
  *  ## 画面のどこに置いているか
  *  画面上端の中央に横長で置いている。理由は次のとおり。
@@ -43,7 +43,7 @@ class MainTower;
  *  @code
  *      towerHpGauge_ = std::make_unique<TowerHpGauge>();
  *      towerHpGauge_->Initialize();
- *      towerHpGauge_->SetTarget(mainTower);    // 表示したいタワーを渡す
+ *      towerHpGauge_->SetTarget(towerManager);    // 表示したいタワーを渡す
  *
  *      towerHpGauge_->Update(deltaTime);       // 毎フレーム
  *      towerHpGauge_->Draw();                  // 毎フレーム（3D描画のあとに呼ぶ）
@@ -63,7 +63,7 @@ class TowerHpGauge final {
     };
 
     // ─── 表示対象 ──────────────────────────────────────────────
-    const MainTower* target_ = nullptr; //!< HP を読むタワー（所有権は持たない）
+    const TowerManager* target_ = nullptr; //!< HP を読むタワー（所有権は持たない）
     float lastHp_ = -1.0f;              //!< 前フレームの HP。差分でダメージを検知する
 
     // ─── ゲージの表示状態 ──────────────────────────────────────
@@ -153,7 +153,7 @@ public:
     /// @brief 表示するタワーを設定する
     /// @param _tower HP を読むメインタワー（所有権は持たない）
     /// @note 未設定（nullptr）の間はゲージを描画しない
-    void SetTarget(const MainTower* _tower);
+    void SetTarget(const TowerManager* _tower);
 
     /// @brief タワーの HP を読み取り、UI と演出を更新する
     /// @param _deltaTime 前フレームからの経過秒数
