@@ -141,8 +141,6 @@ void PlayScene::Initialize() {
     enemyManager_->SetSpawnExclusionPositions(towerPositions);
     enemyManager_->SetScoreManager(scoreManager_.get());
     enemyManager_->SetComboManager(comboManager_.get());
-    // 敵に到達されたときダメージを受けるタワーを渡すs
-    enemyManager_->SetMainTower(mainTower_);
     // 敵に到達されたときダメージを受けるタワーを渡す
     enemyManager_->SetTowerManager(towerManager_.get());
 
