@@ -25,6 +25,9 @@ void Player::Initialize() {
 
     velocity_ = {};
     active_ = true;
+    dashCooldownRemaining_ = 0.0f;
+    dashCooldownCompleted_ = false;
+    dashTriggered_ = false;
 
     // 機能はコンポーネントとして持たせる
     move_ = AddComponent<MoveComponent>(moveSpeed_);
@@ -82,6 +85,7 @@ void Player::LoadConfig() {
         towerKeepDistance_ = std::max(parameter("TowerKeepDistance", towerKeepDistance_), 0.01f);
         swingMaxSpeed_ = parameter("SwingMaxSpeed", swingMaxSpeed_);
         dashSpeed_ = parameter("DashSpeed", dashSpeed_);
+        dashCooldownSeconds_ = parameter("DashCooldownSeconds", dashCooldownSeconds_);
     }
 
     modelScale_.x = std::max(std::abs(modelScale_.x), 0.0001f);
@@ -118,6 +122,14 @@ void Player::SetGrappleTarget(const GameObject* _target) {
 
 void Player::Update(float _deltaTime) {
     if (!active_) return;
+
+    if (std::isfinite(_deltaTime) && _deltaTime > 0.0f && dashCooldownRemaining_ > 0.0f) {
+        const float previousCooldown = dashCooldownRemaining_;
+        dashCooldownRemaining_ = std::max(dashCooldownRemaining_ - _deltaTime, 0.0f);
+        if (previousCooldown > 0.0f && dashCooldownRemaining_ <= 0.0f) {
+            dashCooldownCompleted_ = true;
+        }
+    }
 
     move_->SetEnabled(!grappleMovement_);
     if (grappleMovement_) UpdateGrappleMovement(_deltaTime);
@@ -157,13 +169,16 @@ void Player::UpdateGrappleMovement(float _deltaTime) {
                 ? toTarget * (1.0f / distance) : Vector3{1.0f, 0.0f, 0.0f};
             // クリック1回につき1回だけ、タワーを中心とする接線方向へ加速する。
             // 回転中はその向きを維持。静止時は移動入力、入力もなければ固定方向で始動。
-            if (i == 0 && input_ && input_->IsDash()) {
+            if (i == 0 && input_ && input_->IsDash() && dashCooldownRemaining_ <= 0.0f) {
                 const Vector3 tangent{inward.z, 0.0f, -inward.x};
                 const float tangentSpeed = dotXZ(velocity_, tangent);
                 const float rotation = std::abs(tangentSpeed) > 0.01f
                     ? tangentSpeed : dotXZ(direction, tangent);
                 const float sign = rotation < 0.0f ? -1.0f : 1.0f;
                 velocity_ += tangent * (sign * dashSpeed_);
+                dashCooldownRemaining_ = dashCooldownSeconds_;
+                dashCooldownCompleted_ = false;
+                dashTriggered_ = true;
             }
             const Vector3 tangentInput = direction - inward * dotXZ(direction, inward);
             // ばね状の引力。半径内では押し戻し、横向きの慣性は保持する。
@@ -205,6 +220,24 @@ void Player::UpdateGrappleMovement(float _deltaTime) {
     }
     if (connected) grappleConnectedTime_ += elapsed;
     else grappleConnectedTime_ = 0.0f;
+}
+
+float Player::GetDashCooldownRatio() const {
+    if (dashCooldownSeconds_ <= 0.0001f) return 1.0f;
+    return std::clamp(
+        1.0f - dashCooldownRemaining_ / dashCooldownSeconds_, 0.0f, 1.0f);
+}
+
+bool Player::ConsumeDashCooldownCompleted() {
+    const bool completed = dashCooldownCompleted_;
+    dashCooldownCompleted_ = false;
+    return completed;
+}
+
+bool Player::ConsumeDashTriggered() {
+    const bool triggered = dashTriggered_;
+    dashTriggered_ = false;
+    return triggered;
 }
 
 void Player::Draw() {

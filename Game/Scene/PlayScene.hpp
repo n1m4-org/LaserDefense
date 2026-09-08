@@ -18,6 +18,7 @@
 #include "Tower/TowerHpGauge.hpp"
 #include "Tower/TowerManager.hpp"
 #include "UI/MainTowerIndicator.hpp"
+#include "src/ParticleSystem/Emitter/Emitter.hpp"
 
 class MainTower;
 class Player;
@@ -26,6 +27,10 @@ class Laser;
 class Tower;
 
 class PlayScene final : public IScene {
+    struct PlayerSpeedParticleState {
+        Vector3 direction{1.0f, 0.0f, 0.0f};
+    };
+
     GameSceneInput input_{};
     std::unique_ptr<Player> player_{nullptr};
     std::unique_ptr<PlayerCamera> playerCamera_;
@@ -46,7 +51,7 @@ class PlayScene final : public IScene {
     std::unique_ptr<Model> shockwave_;
     float shockwaveTime_ = 0.5f;
     static constexpr float SHOCKWAVE_DURATION = 0.5f;
-    static constexpr float SHOCKWAVE_RADIUS = 10.0f;
+    static constexpr float SHOCKWAVE_RADIUS = 20.0f;
     static constexpr float SHOCKWAVE_SPEED = 35.0f;
     std::array<std::unique_ptr<Model>, 8> fences_;
     float stageSize_ = 200.0f;
@@ -64,11 +69,16 @@ class PlayScene final : public IScene {
     bool clickTowerGuideVisible_ = false;
     Text dashInputGuide_{};
     Text dashActionGuide_{};
+    Sprite dashCooldownGaugeFrame_{};
     Sprite dashCooldownGauge_{};
     float dashCooldownRatio_ = 1.0f;
+    float dashCooldownFlashTime_ = 0.0f;
+    std::shared_ptr<PlayerSpeedParticleState> playerSpeedParticleState_;
+    EmitterHandle playerSpeedEffectHandle_;
     static constexpr float CLICK_TOWER_GUIDE_DURATION = 10.0f;
     static constexpr float RETICLE_FOLLOW_SPEED = 18.0f;
     static constexpr float RETICLE_HOVER_DURATION = 0.1f;
+    static constexpr float DASH_COOLDOWN_FLASH_DURATION = 0.2f;
     Tower* assistedTower_ = nullptr;
 
 public:
@@ -82,6 +92,10 @@ public:
 private:
     void LoadStageConfig();
     void UpdateTowerSelection(float _deltaTime);
+    void InitializePlayerSpeedEffect();
+    void InitializePlayerDashEffect();
+    void UpdatePlayerSpeedEffect(float _speed, float _maxSpeed, float _deltaTime);
+    void EmitPlayerDashEffect();
 
     /// @brief タイトルシーンへ戻る
     /// @note UI のボタンからもキー入力からも呼ばれる。二重に呼んでも SceneSwitcher 側で弾かれる

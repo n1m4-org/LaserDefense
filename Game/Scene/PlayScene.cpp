@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cmath>
+#include <limits>
 #include <variant>
 #include <vector>
 
@@ -21,13 +22,141 @@
 #include "Texture/TextureManager.hpp"
 #include "Time/Time.hpp"
 #include "Tower/MainTower.hpp"
+#include "Ui/UiAnimPresets.hpp"
+#include "src/ParticleSystem/ParticleSystem.hpp"
 
 #ifdef _DEBUG
 #include "imgui_internal.h"
 #endif
 
+namespace {
+    /// リザルトのUIで使うキャンバス名(Assets/Data/UI/Result.json)
+    constexpr const char* RESULT_CANVAS_NAME = "Result";
+    /// 「タイトルへ戻る」ボタンに割り当てるアクションキー
+    constexpr const char* ACTION_TO_TITLE = "Result.ToTitle";
+    constexpr const char* PLAYER_SPEED_EFFECT_TEMPLATE = "PlayerSpeedEffect";
+    constexpr const char* PLAYER_SPEED_EFFECT_SPAWN = "PlayerSpeedEffectSpawn";
+    constexpr const char* PLAYER_DASH_EFFECT_TEMPLATE = "PlayerDashEffect";
+    constexpr const char* PLAYER_DASH_EFFECT_SPAWN = "PlayerDashEffectSpawn";
+
+    /// リザルトが出てから戻る操作を受け付けるまでの秒数
+    /// @note タワーが落ちた瞬間はレーザーのために左クリックを押していることが多く、
+    ///       すぐ受け付けると成績を見る前にタイトルへ飛んでしまう
+    constexpr float RESULT_RETURN_DELAY = 1.2f;
+} // namespace
+
 PlayScene::PlayScene() = default;
-PlayScene::~PlayScene() = default;
+PlayScene::~PlayScene() {
+    playerSpeedEffectHandle_.Stop();
+}
+
+void PlayScene::InitializePlayerSpeedEffect() {
+    const auto particleSystem = Particle();
+    if (!particleSystem) return;
+
+    playerSpeedParticleState_ = std::make_shared<PlayerSpeedParticleState>();
+    const std::weak_ptr<PlayerSpeedParticleState> state = playerSpeedParticleState_;
+    particleSystem->RegisterSpawnFunc(PLAYER_SPEED_EFFECT_SPAWN,
+        [state](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
+            const auto effectState = state.lock();
+            if (!effectState) {
+                _position = _center;
+                _velocity = {};
+                return;
+            }
+            const Vector3 direction = effectState->direction;
+            const Vector3 side{-direction.z, 0.0f, direction.x};
+            _position = _center - direction * MathUtils::Random(0.35f, 0.75f)
+                + side * MathUtils::Random(-0.2f, 0.2f)
+                + Vector3{0.0f, MathUtils::Random(-0.12f, 0.12f), 0.0f};
+            _velocity = direction * MathUtils::Random(-3.0f, -1.0f)
+                + side * MathUtils::Random(-0.6f, 0.6f);
+        });
+
+    ParticleSystem::EmitterConfig emitter;
+    emitter.texture = "white_x16.png";
+    emitter.frequency = 0.025f;
+    emitter.duration = std::numeric_limits<float>::max();
+    emitter.spawnCount = 1;
+    emitter.size = {0.14f, 0.14f, 0.14f};
+    emitter.particleLifetime = 0.2f;
+    emitter.spawnFuncKey = PLAYER_SPEED_EFFECT_SPAWN;
+    emitter.colorKeys = {
+        GradientKey<Vector4>{0.0f, {0.7f, 0.9f, 1.0f, 0.9f}},
+        GradientKey<Vector4>{1.0f, {0.2f, 0.55f, 1.0f, 0.0f}}
+    };
+    emitter.sizeKeys = {
+        GradientKey<Vector3>{0.0f, {0.14f, 0.14f, 0.14f}},
+        GradientKey<Vector3>{1.0f, {0.03f, 0.03f, 0.03f}}
+    };
+
+    ParticleSystem::Template speedEffect;
+    speedEffect.emitters.push_back(emitter);
+    particleSystem->Register(PLAYER_SPEED_EFFECT_TEMPLATE, speedEffect, true);
+}
+
+void PlayScene::InitializePlayerDashEffect() {
+    const auto particleSystem = Particle();
+    if (!particleSystem) return;
+
+    particleSystem->RegisterSpawnFunc(PLAYER_DASH_EFFECT_SPAWN,
+        [](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
+            const float angle = MathUtils::Random(0.0f, 6.2831853f);
+            const Vector3 direction{std::cos(angle), 0.0f, std::sin(angle)};
+            _position = _center + direction * MathUtils::Random(0.0f, 0.18f)
+                + Vector3{0.0f, MathUtils::Random(-0.1f, 0.1f), 0.0f};
+            _velocity = direction * MathUtils::Random(5.0f, 10.0f)
+                + Vector3{0.0f, MathUtils::Random(0.5f, 2.0f), 0.0f};
+        });
+
+    ParticleSystem::EmitterConfig emitter;
+    emitter.texture = "white_x16.png";
+    emitter.frequency = 0.0f;
+    emitter.duration = 0.0f;
+    emitter.spawnCount = 18;
+    emitter.size = {0.4f, 0.4f, 0.4f};
+    emitter.particleLifetime = 0.8f;
+    emitter.spawnFuncKey = PLAYER_DASH_EFFECT_SPAWN;
+    emitter.colorKeys = {
+        GradientKey<Vector4>{0.0f, {1.0f, 0.95f, 0.15f, 1.0f}},
+        GradientKey<Vector4>{1.0f, {1.0f, 0.95f, 0.15f, 0.0f}}
+    };
+
+    ParticleSystem::Template dashEffect;
+    dashEffect.emitters.push_back(emitter);
+    particleSystem->Register(PLAYER_DASH_EFFECT_TEMPLATE, dashEffect, true);
+}
+
+void PlayScene::EmitPlayerDashEffect() {
+    const auto particleSystem = Particle();
+    if (!particleSystem) return;
+    particleSystem->Emit(
+        PLAYER_DASH_EFFECT_TEMPLATE, player_->GetPosition() + player_->GetModelOffset());
+}
+
+void PlayScene::UpdatePlayerSpeedEffect(float _speed, float _maxSpeed, float _deltaTime) {
+    const auto particleSystem = Particle();
+    const Vector3 velocity = player_->GetVelocity();
+    const float horizontalSpeed = std::hypot(velocity.x, velocity.z);
+    const bool emit = particleSystem && playerSpeedParticleState_
+        && std::isfinite(_deltaTime) && _deltaTime > 0.0f
+        && std::isfinite(_speed) && std::isfinite(_maxSpeed) && _maxSpeed > 0.0001f
+        && _speed > _maxSpeed * 0.3f && horizontalSpeed > 0.0001f;
+    if (!emit) {
+        playerSpeedEffectHandle_.Stop();
+        playerSpeedEffectHandle_ = {};
+        return;
+    }
+
+    playerSpeedParticleState_->direction = {
+        velocity.x / horizontalSpeed, 0.0f, velocity.z / horizontalSpeed};
+    const Vector3 emitterPosition = player_->GetPosition() + player_->GetModelOffset();
+    if (!playerSpeedEffectHandle_.IsValid()) {
+        playerSpeedEffectHandle_ = particleSystem->Emit(
+            PLAYER_SPEED_EFFECT_TEMPLATE, emitterPosition);
+    }
+    playerSpeedEffectHandle_.SetPosition(emitterPosition);
+}
 
 void PlayScene::LoadStageConfig() {
     const auto json = Singleton<JsonParams>::GetInstance();
@@ -68,6 +197,8 @@ void PlayScene::Initialize() {
     player_->SetInput(input_);
     player_->EnableGrappleMovement();
     player_->SetStageBoundary(halfSize, wallBounce_);
+    InitializePlayerSpeedEffect();
+    InitializePlayerDashEffect();
     playerCamera_ = std::make_unique<PlayerCamera>();
     playerCamera_->Initialize(*player_);
     Singleton<LightManager>::GetInstance()->SetPosition(
@@ -195,10 +326,14 @@ void PlayScene::Initialize() {
     dashInputGuide_.SetColor({1.0f, 1.0f, 1.0f, 1.0f});
     dashActionGuide_.Initialize("Dash", 32.0f, 0.0f, 38.0f);
     dashActionGuide_.SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+    dashCooldownGaugeFrame_.Initialize("white_x16.png");
+    dashCooldownGaugeFrame_.SetAnchorPoint({0.0f, 0.0f});
+    dashCooldownGaugeFrame_.SetColor({0.0f, 0.0f, 0.0f, 0.62f});
     dashCooldownGauge_.Initialize("white_x16.png");
     dashCooldownGauge_.SetAnchorPoint({0.0f, 0.0f});
     dashCooldownGauge_.SetColor({0.05f, 0.35f, 1.0f, 0.72f});
     dashCooldownRatio_ = 1.0f;
+    dashCooldownFlashTime_ = 0.0f;
 }
 
 void PlayScene::Update() {
@@ -271,8 +406,17 @@ void PlayScene::Update() {
 
     player_->SetGrappleTarget(laser_->GetConnectedTarget());
     player_->Update(gameDelta);
+    if (player_->ConsumeDashTriggered()) {
+        EmitPlayerDashEffect();
+    }
+    dashCooldownRatio_ = player_->GetDashCooldownRatio();
+    dashCooldownFlashTime_ = std::max(dashCooldownFlashTime_ - gameDelta, 0.0f);
+    if (player_->ConsumeDashCooldownCompleted()) {
+        dashCooldownFlashTime_ = DASH_COOLDOWN_FLASH_DURATION;
+    }
     const Vector3& playerVelocity = player_->GetVelocity();
     const float playerSpeed = std::hypot(playerVelocity.x, playerVelocity.z);
+    UpdatePlayerSpeedEffect(playerSpeed, player_->GetSwingMaxSpeed(), gameDelta);
     laser_->UpdateSpeedMultipliers(playerSpeed, player_->GetSwingMaxSpeed());
     enemyManager_->Update(gameDelta);
     gimmickManager_->Update(gameDelta);
@@ -324,7 +468,10 @@ void PlayScene::Draw() {
         for (auto& outline : reticleOutlines_) outline.Draw();
         for (auto& fill : reticleFills_) fill.Draw();
     }
-    if (!resultOverlay_->IsActive()) dashCooldownGauge_.Draw();
+    if (!resultOverlay_->IsActive()) {
+        dashCooldownGaugeFrame_.Draw();
+        dashCooldownGauge_.Draw();
+    }
 }
 
 void PlayScene::UpdateTowerSelection(float _deltaTime) {
@@ -443,9 +590,21 @@ void PlayScene::DrawHud() {
     dashActionGuide_.SetPosition(32.0f, screenHeight - 68.0f);
     dashActionGuide_.SetVisible(showControlGuide);
     dashActionGuide_.Draw();
-    // 将来はdashCooldownRatio_へ残りクールタイムの割合を渡せば、そのまま横幅へ反映できる。
+    dashCooldownGaugeFrame_.SetPosition({18.0f, screenHeight - 114.0f});
+    dashCooldownGaugeFrame_.SetSize({164.0f, 100.0f});
+    dashCooldownGaugeFrame_.Update();
+
     dashCooldownGauge_.SetPosition({20.0f, screenHeight - 112.0f});
     dashCooldownGauge_.SetSize({160.0f * std::clamp(dashCooldownRatio_, 0.0f, 1.0f), 96.0f});
+    const float flashRatio = DASH_COOLDOWN_FLASH_DURATION > 0.0f
+        ? std::clamp(dashCooldownFlashTime_ / DASH_COOLDOWN_FLASH_DURATION, 0.0f, 1.0f)
+        : 0.0f;
+    dashCooldownGauge_.SetColor({
+        0.05f + 0.95f * flashRatio,
+        0.35f + 0.65f * flashRatio,
+        1.0f,
+        0.72f + 0.28f * flashRatio
+    });
     dashCooldownGauge_.Update();
 
     // リザルトの暗幕とシートは Canvas として Ui::Manager がこの後に描く。
