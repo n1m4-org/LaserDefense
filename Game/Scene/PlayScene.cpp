@@ -226,11 +226,12 @@ void PlayScene::Update() {
         // リザルト中は操作を受け付けない。掴んでいたレーザーとカーソルを外しておく
         laser_->ClearTarget();
         towerManager_->SetHoveredTower(nullptr);
+        assistedTower_ = nullptr;
         cursorVisible_ = false;
     }
 
     playerCamera_->Update(*player_, deltaTime);
-    towerManager_->Update(deltaTime);
+    towerManager_->Update(gameDelta);
     if (MainTower* switchedMainTower = towerManager_->ConsumeMainTowerSwitch()) {
         // 衝撃波と敵の移動先に使う、現在の防衛対象を更新する。
         mainTower_ = switchedMainTower;
@@ -242,7 +243,7 @@ void PlayScene::Update() {
         }
         enemyManager_->SetTargetPosition(target.x, target.z);
     }
-    UpdateTowerSelection();
+    if (playing) UpdateTowerSelection();
 
     player_->SetGrappleTarget(laser_->GetConnectedTarget());
     player_->Update(gameDelta);
