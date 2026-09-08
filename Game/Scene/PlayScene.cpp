@@ -18,6 +18,7 @@
 #include "Math/MathUtils.hpp"
 #include "Pattern/Singleton.hpp"
 #include "Screen/Screen.hpp"
+#include "Sound/GameSound.hpp"
 #include "Texture/TextureManager.hpp"
 #include "Time/Time.hpp"
 #include "Tower/MainTower.hpp"
@@ -52,6 +53,10 @@ void PlayScene::LoadStageConfig() {
 void PlayScene::Initialize() {
     // リザルトから戻る先。Change()を呼んだタイミングで切り替わる
     next_ = "Title";
+
+    // 通常はタイトルで読み込み済み。デバッグでこのシーンから直接始めた場合の保険
+    GameSound::Load();
+    GameSound::StartLoop(GameSound::Se::PlayBgm);
 
     LoadStageConfig();
     const float halfSize = stageSize_ * 0.5f;
@@ -206,6 +211,8 @@ void PlayScene::Update() {
 
     input_.Update();
 
+    GameSound::Update();
+
     const float deltaTime = Time::GetDeltaTime();
 
     // タワーが落ちたらリザルトへ。シーンは切り替えず画面の上へシートを重ねるだけなので、
@@ -220,6 +227,9 @@ void PlayScene::Update() {
         comboManager_->SetVisible(false);
         resultOverlay_->Show(survivalTimeManager_->GetElapsedSeconds(),
                              scoreManager_->GetScore());
+        // BGM を止めて、遷移音とリザルトを静かに聞かせる
+        GameSound::StopLoop(GameSound::Se::PlayBgm);
+        GameSound::Play(GameSound::Se::ResultTransition);
     }
 
     // リザルト中はゲーム側へ渡す経過時間を 0 にして進行だけを止める。
@@ -264,12 +274,19 @@ void PlayScene::Update() {
             enemyManager_->ApplyShockwave(target, SHOCKWAVE_RADIUS, SHOCKWAVE_SPEED);
             shockwaveTime_ = 0.0f;
             shockwave_->SetTranslate(target + Vector3{0.0f, 0.05f, 0.0f});
+            GameSound::Play(GameSound::Se::TowerSwitch);
         }
         enemyManager_->SetTargetPosition(target.x, target.z);
     }
     if (playing) UpdateTowerSelection(gameDelta);
 
     player_->SetGrappleTarget(laser_->GetConnectedTarget());
+
+    // 接続中だけ鳴らし続ける。StartLoop / StopLoop が二重呼び出しを弾くので、
+    // 前フレームの状態を持たずに毎フレームの接続状態をそのまま渡せる
+    if (laser_->GetConnectedTarget()) GameSound::StartLoop(GameSound::Se::LaserLoop);
+    else                              GameSound::StopLoop(GameSound::Se::LaserLoop);
+
     player_->Update(gameDelta);
     const Vector3& playerVelocity = player_->GetVelocity();
     const float playerSpeed = std::hypot(playerVelocity.x, playerVelocity.z);
@@ -407,13 +424,24 @@ void PlayScene::UpdateTowerSelection(float _deltaTime) {
         laser_->ClearTarget();
     } else if (mouseAvailable && mouse->IsMouseTrigger(0)) {
         // 押し始めたTowerを保持。ドラッグで別Towerへ乗り換えない。
-        if (assistedTower_) laser_->SetTarget(assistedTower_);
+        if (assistedTower_) {
+            laser_->SetTarget(assistedTower_);
+            GameSound::Play(GameSound::Se::LaserConnect);
+        }
         else laser_->ClearTarget();
     }
 }
 
 
+void PlayScene::Finalize() {
+    // シーンを抜けるときに鳴り続けているものを止める
+    GameSound::StopLoop(GameSound::Se::LaserLoop);
+    GameSound::StopLoop(GameSound::Se::PlayBgm);
+}
+
 void PlayScene::RequestReturnToTitle() {
+    // タイトルの決定音を流用する。UI のボタンからもキー入力からもここへ合流する
+    GameSound::Play(GameSound::Se::Decide);
     resultOverlay_->Hide();
     Change();
 }

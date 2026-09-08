@@ -3,6 +3,7 @@
 
 #include <algorithm>
 
+#include "Sound/GameSound.hpp"
 #include "Time/Time.hpp"
 #include "Ui/UiAnimPresets.hpp"
 
@@ -27,6 +28,10 @@ TitleScene::~TitleScene() = default;
 void TitleScene::Initialize() {
     // 決定時の遷移先。Change()を呼んだタイミングで切り替わる
     next_ = "Play";
+
+    // 効果音はゲーム全体で1度だけ読み込み、以降のシーンでも読み直さずに使う
+    GameSound::Load();
+    GameSound::StartLoop(GameSound::Se::TitleBgm);
 
     SetupCanvas();
 }
@@ -61,6 +66,8 @@ void TitleScene::SetupCanvas() {
 void TitleScene::Update() {
     // 入力の読み取りはシーンで1回だけ
     input_.Update();
+
+    GameSound::Update();
 
     UpdateUnderline(Time::GetDeltaTime());
 
@@ -100,12 +107,18 @@ void TitleScene::UpdateUnderline(float _deltaTime) {
 }
 
 void TitleScene::RequestStart() {
+    // UI のボタンからもキー入力からもここへ合流するので、決定音はこの1箇所でよい
+    GameSound::Play(GameSound::Se::Decide);
     canvas_.SetActive(false);
     Change();
 }
 
 void TitleScene::Draw() {
     // UI の描画は Ui::Manager が行うため、シーン側から積むものはない
+}
+
+void TitleScene::Finalize() {
+    GameSound::StopLoop(GameSound::Se::TitleBgm);
 }
 
 void TitleScene::Debug() {

@@ -8,6 +8,7 @@
 #include "Json/JsonParams.hpp"
 #include "Pattern/Singleton.hpp"
 #include "Scene/Input/GameSceneInput.hpp"
+#include "Sound/GameSound.hpp"
 #ifdef _DEBUG
 #include "imgui.h"
 #endif
@@ -164,6 +165,8 @@ void Player::UpdateGrappleMovement(float _deltaTime) {
                     ? tangentSpeed : dotXZ(direction, tangent);
                 const float sign = rotation < 0.0f ? -1.0f : 1.0f;
                 velocity_ += tangent * (sign * dashSpeed_);
+                // 実際に加速したときだけ鳴らす。接続していない空振りでは鳴らない
+                GameSound::Play(GameSound::Se::Dash);
             }
             const Vector3 tangentInput = direction - inward * dotXZ(direction, inward);
             // ばね状の引力。半径内では押し戻し、横向きの慣性は保持する。

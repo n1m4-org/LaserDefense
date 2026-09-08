@@ -10,9 +10,13 @@
 
 #include "Json/JsonParams.hpp"
 #include "Pattern/Singleton.hpp"
+#include "Sound/GameSound.hpp"
 
 namespace {
     constexpr float SELECTION_SCALE = 1.5f;
+
+    /// 切替予告で警告音を鳴らす回数。点滅もこの回数に合わせる
+    constexpr int WARNING_BEEP_COUNT = 3;
 
     bool RayIntersectsAabb(const Vector3& _origin, const Vector3& _direction,
         const Vector3& _center, const Vector3& _size, float _length, float& _distance) {
@@ -79,6 +83,7 @@ void TowerManager::Initialize() {
     mainTowerSwitched_ = false;
     switchWarningTower_ = nullptr;
     nextWarningTower_ = nullptr;
+    switchWarningBeepsPlayed_ = 0;
     LoadConfig();
     ResetHp();
 }
@@ -222,15 +227,31 @@ void TowerManager::UpdateSwitchWarning() {
         if (nextWarningTower_) nextWarningTower_->SetSwitchWarningProgress(-1.0f);
         nextWarningTower_ = nextTower;
     }
-    if (!switchWarningTower_) return;
+    if (!switchWarningTower_) {
+        // 予告が終わったので、次の予告に備えて鳴らした回数を戻す
+        switchWarningBeepsPlayed_ = 0;
+        return;
+    }
 
     const float warningElapsed = mainTowerSwitchTime_ - warningStart;
-    // 0.5秒で透明から半透明へ、その後0.5秒で透明へ戻る。
-    const float phase = std::fmod(warningElapsed, switchWarningBlinkInterval_ * 2.0f)
-        / switchWarningBlinkInterval_;
+    // 予告の間に必ず WARNING_BEEP_COUNT 回ぶんの点滅が収まるよう、半周期に上限をかける。
+    // JSON の値がもともと十分速ければ、その値をそのまま使う
+    const float halfCycle = std::max(
+        std::min(switchWarningBlinkInterval_,
+                 switchWarningLeadSeconds_ / (2.0f * static_cast<float>(WARNING_BEEP_COUNT))),
+        0.01f);
+    // 半周期で透明から半透明へ、次の半周期で透明へ戻る。
+    const float phase = std::fmod(warningElapsed, halfCycle * 2.0f) / halfCycle;
     const float opacityProgress = 0.5f - 0.5f * std::cos(phase * 3.14159265358979323846f);
     switchWarningTower_->SetSwitchWarningProgress(opacityProgress);
     if (nextWarningTower_) nextWarningTower_->SetSwitchWarningProgress(opacityProgress);
+
+    // 点滅1回につき1度、光り始めるタイミングで鳴らす
+    const int cycleIndex = static_cast<int>(warningElapsed / (halfCycle * 2.0f));
+    if (switchWarningBeepsPlayed_ <= cycleIndex && switchWarningBeepsPlayed_ < WARNING_BEEP_COUNT) {
+        GameSound::Play(GameSound::Se::SwitchWarning);
+        ++switchWarningBeepsPlayed_;
+    }
 }
 
 MainTower* TowerManager::ConsumeMainTowerSwitch() {
@@ -251,6 +272,7 @@ void TowerManager::TakeDamage(float _damage) {
     if (!std::isfinite(_damage) || _damage <= 0.0f) return;
     hp_ = std::max(hp_ - _damage, 0.0f);
     for (MainTower* tower : mainTowers_) tower->PlayDamageFlash();
+    GameSound::Play(GameSound::Se::TowerDamage);
 }
 
 void TowerManager::Heal(float _amount) {
