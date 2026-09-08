@@ -12,7 +12,6 @@
 #include "Camera/PlayerCamera.hpp"
 #include "GameObject/Player/Player.h"
 #include "Laser/Laser.hpp"
-#include "Light/LightManager.hpp"
 #include "Input.hpp"
 #include "Json/JsonParams.hpp"
 #include "Line.hpp"
@@ -68,9 +67,6 @@ void PlayScene::Initialize() {
     player_->SetStageBoundary(halfSize, wallBounce_);
     playerCamera_ = std::make_unique<PlayerCamera>();
     playerCamera_->Initialize(*player_);
-    Singleton<LightManager>::GetInstance()->SetPosition(
-        player_->GetPosition() + shadowLightOffset);
-
     towerManager_ = std::make_unique<TowerManager>();
     towerManager_->Initialize();
 
