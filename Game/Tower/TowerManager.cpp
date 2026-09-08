@@ -77,6 +77,7 @@ void TowerManager::Initialize() {
     mainTowerSwitchTime_ = 0.0f;
     nextCandidateIndex_ = 0;
     mainTowerSwitched_ = false;
+    mainTowerSwitchSuspended_ = false;
     switchWarningTower_ = nullptr;
     nextWarningTower_ = nullptr;
     LoadConfig();
@@ -167,6 +168,7 @@ MainTower* TowerManager::FindNextSubTower() {
 }
 
 void TowerManager::UpdateMainTowerSwitch(float _deltaTime) {
+    if (mainTowerSwitchSuspended_) return;
     if (mainTowers_.empty() || towerCandidates_.size() <= mainTowers_.size()
         || !std::isfinite(_deltaTime) || _deltaTime <= 0.0f) return;
 
