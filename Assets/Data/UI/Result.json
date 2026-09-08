@@ -12,8 +12,8 @@
                 585.0
             ],
             "Size": [
-                420.0,
-                64.0
+                360.0,
+                72.0
             ],
             "Color": [
                 0.12,
@@ -26,14 +26,15 @@
             "Events": {
                 "Execute": "Result.ToTitle"
             },
-            "ShowAnim": "FadeIn"
+            "ShowAnim": "FadeIn",
+            "IdleAnim": "Blink"
         },
         {
             "Type": "Text",
             "Name": "ReturnLabel",
             "Position": [
-                549.0,
-                569.0
+                533.0,
+                567.0
             ],
             "Color": [
                 1.0,
@@ -42,25 +43,7 @@
                 1.0
             ],
             "Text": "BACK TO TITLE",
-            "FontSize": 30.0,
-            "ShowAnim": "FadeIn",
-            "IdleAnim": "Blink"
-        },
-        {
-            "Type": "Text",
-            "Name": "ReturnHint",
-            "Position": [
-                564.0,
-                629.0
-            ],
-            "Color": [
-                1.0,
-                1.0,
-                1.0,
-                0.55
-            ],
-            "Text": "PRESS SPACE OR CLICK",
-            "FontSize": 16.0,
+            "FontSize": 34.0,
             "ShowAnim": "FadeIn"
         }
     ],

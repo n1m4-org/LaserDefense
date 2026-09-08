@@ -11,7 +11,10 @@
 #endif
 
 namespace {
-    /// 下線が中央から伸びきるまでの秒数
+    /// タイトルが出てから下線が伸び始めるまでの秒数
+    constexpr float UNDERLINE_START_DELAY = 0.8f;
+
+    /// 下線が伸び始めてから伸びきるまでの秒数
     constexpr float UNDERLINE_GROW_DURATION = 1.6f;
 
     /// 1フレームで進める経過時間の上限(秒)
@@ -79,9 +82,13 @@ void TitleScene::UpdateUnderline(float _deltaTime) {
     // そのまま足すと演出が一瞬で終わってしまうので上限を設ける
     underlineElapsed_ += std::clamp(_deltaTime, 0.0f, MAX_STEP_SECONDS);
 
+    // 伸び始めるまでは幅0のまま待つ(SetupCanvas で縮めてある)
+    if (underlineElapsed_ < UNDERLINE_START_DELAY) return;
+
     // 終わり際がゆっくりになる補間。スプライトは中心が基準なので、
     // 幅を変えるだけで中央から左右へ均等に伸びる
-    const float t = std::clamp(underlineElapsed_ / UNDERLINE_GROW_DURATION, 0.0f, 1.0f);
+    const float t = std::clamp(
+        (underlineElapsed_ - UNDERLINE_START_DELAY) / UNDERLINE_GROW_DURATION, 0.0f, 1.0f);
     const float inv = 1.0f - t;
     underline->SetSize({underlineFullSize_.x * (1.0f - inv * inv * inv), underlineFullSize_.y});
 
