@@ -27,6 +27,10 @@ class GameSceneInput {
     bool pause_{ false };
     bool dash_{ false };
 
+    /// このフレームで決定が押されたか(トリガー)
+    /// リザルト表示中にタイトルへ戻る操作として使う
+    bool decide_{ false };
+
 public:
     /// 入力状態を更新する
     /// シーンのUpdateの先頭で1回だけ呼ぶ
@@ -40,6 +44,9 @@ public:
     bool IsPause() const { return pause_; }
     /// ダッシュが押された瞬間のフレームのみtrue
     bool IsDash() const { return dash_; }
+    /// 決定(スペース or 左クリック)が押されたか
+    /// 押された瞬間のフレームのみtrue
+    bool IsDecide() const { return decide_; }
 
 private:
     /// キーボードからの入力を反映する

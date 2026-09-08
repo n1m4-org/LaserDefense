@@ -6,11 +6,12 @@
 #include "PostProcess/Vignette/Vignette.hpp"
 #include "Scene/GameSampleScene.hpp"
 #include "Scene/PlayScene.hpp"
+#include "Scene/TitleScene.hpp"
 
 void MyGame::Initialize(GameEngine::Config& _config) {
     // ゲーム固有の設定（Assets/Config/App.cnf に含まれないもの）
 
-    _config.defaultScene = "Play";
+    _config.defaultScene = "Title";
 
 
     // cnf の値をゲーム側で強制上書きしたい場合はここで設定する
@@ -25,6 +26,7 @@ void MyGame::Initialize(GameEngine::Config& _config) {
 }
 
 void MyGame::Register() {
+    RegisterScene<TitleScene>("Title");
     RegisterScene<PlayScene>("Play");
     RegisterScene<GameSampleScene>("GameSample");
 }

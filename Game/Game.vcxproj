@@ -157,13 +157,16 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Result\ResultOverlay.hpp" />
     <ClInclude Include="Scene\GameSampleScene.hpp" />
     <ClInclude Include="Scene\Input\GameSceneInput.hpp" />
+    <ClInclude Include="Scene\Input\TitleSceneInput.hpp" />
     <ClInclude Include="Scene\PlayScene.hpp" />
+    <ClInclude Include="Scene\TitleScene.hpp" />
     <ClInclude Include="Score\ScoreManager.hpp" />
     <ClInclude Include="SurvivalTime\SurvivalTimeManager.hpp" />
     <ClInclude Include="Tower\Tower.hpp" />
     <ClInclude Include="Tower\MainTower.hpp" />
     <ClInclude Include="Tower\TowerHpGauge.hpp" />
     <ClInclude Include="Tower\TowerManager.hpp" />
+    <ClInclude Include="Ui\UiAnimPresets.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Combo\ComboManager.cpp" />
@@ -178,13 +181,16 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Result\ResultOverlay.cpp" />
     <ClCompile Include="Scene\GameSampleScene.cpp" />
     <ClCompile Include="Scene\Input\GameSceneInput.cpp" />
+    <ClCompile Include="Scene\Input\TitleSceneInput.cpp" />
     <ClCompile Include="Scene\PlayScene.cpp" />
+    <ClCompile Include="Scene\TitleScene.cpp" />
     <ClCompile Include="Score\ScoreManager.cpp" />
     <ClCompile Include="SurvivalTime\SurvivalTimeManager.cpp" />
     <ClCompile Include="Tower\Tower.cpp" />
     <ClCompile Include="Tower\MainTower.cpp" />
     <ClCompile Include="Tower\TowerHpGauge.cpp" />
     <ClCompile Include="Tower\TowerManager.cpp" />
+    <ClCompile Include="Ui\UiAnimPresets.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
