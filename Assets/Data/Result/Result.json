@@ -1,46 +1,21 @@
 {
     "Result": {
         "Dim": {
-            "Color": [0.0, 0.0, 0.02, 1.0],
             "Strength": 0.28,
             "FadeDuration": 0.45
         },
         "Panel": {
-            "Center": [640.0, 360.0],
-            "Size": [520.0, 320.0],
-            "Color": [0.06, 0.07, 0.1, 1.0],
-            "BorderThickness": 3.0,
-            "BorderColor": [0.25, 0.95, 0.55, 0.9],
-            "AccentHeight": 6.0,
-            "AccentColor": [0.25, 0.95, 0.55, 1.0],
             "AppearDelay": 0.15,
             "AppearDuration": 0.45,
             "StartScale": 1.12
         },
-        "Title": {
-            "Text": "RESULT",
-            "FontSize": 52.0,
-            "OffsetY": -132.0,
-            "Color": [1.0, 1.0, 1.0, 1.0]
-        },
-        "Divider": {
-            "OffsetY": -50.0,
-            "Size": [400.0, 2.0],
-            "Color": [1.0, 1.0, 1.0, 0.25]
+        "Total": {
+            "ScoreWeight": 1.0,
+            "TimeBonusPerSecond": 100,
+            "Digits": 7
         },
         "Row": {
-            "FirstOffsetY": 0.0,
-            "Spacing": 78.0,
-            "LabelOffsetX": -200.0,
-            "ValueOffsetX": 20.0,
-            "LabelFontSize": 26.0,
-            "LabelColor": [0.72, 0.78, 0.88, 1.0],
-            "ValueFontSize": 46.0,
-            "ValueColor": [1.0, 1.0, 1.0, 1.0],
-            "TimeLabel": "TIME",
-            "ScoreLabel": "SCORE",
-            "ScoreDigits": 6,
-            "CharWidthRatio": 0.53
+            "ScoreDigits": 6
         },
         "RowEffect": {
             "Delay": 0.5,
@@ -48,6 +23,13 @@
             "FadeDuration": 0.3,
             "RiseDistance": 16.0,
             "CountUpDuration": 0.7
+        },
+        "Ranking": {
+            "Interval": 0.09
+        },
+        "Return": {
+            "Delay": 2.0,
+            "FadeDuration": 0.3
         }
     }
 }

@@ -12,20 +12,25 @@
 #include "Result/ResultOverlay.hpp"
 #include "Scene/Input/GameSceneInput.hpp"
 #include "Score/ScoreManager.hpp"
+#include "Sprite.hpp"
 #include "SurvivalTime/SurvivalTimeManager.hpp"
+#include "Text/Text.hpp"
 #include "Tower/TowerHpGauge.hpp"
 #include "Tower/TowerManager.hpp"
-#include "Ui/UserInterface.hpp"
 #include "UI/MainTowerIndicator.hpp"
+#include "src/ParticleSystem/Emitter/Emitter.hpp"
 
 class MainTower;
 class Player;
 class PlayerCamera;
 class Laser;
-class Line;
 class Tower;
 
 class PlayScene final : public IScene {
+    struct PlayerSpeedParticleState {
+        Vector3 direction{1.0f, 0.0f, 0.0f};
+    };
+
     GameSceneInput input_{};
     std::unique_ptr<Player> player_{nullptr};
     std::unique_ptr<PlayerCamera> playerCamera_;
@@ -37,14 +42,8 @@ class PlayScene final : public IScene {
     std::unique_ptr<SurvivalTimeManager> survivalTimeManager_;
     std::unique_ptr<ComboManager> comboManager_;
     std::unique_ptr<TowerHpGauge> towerHpGauge_;
+    /// リザルト。見た目と配置は Assets/Data/UI/Result.json が持ち、UIエディタから編集できる
     std::unique_ptr<ResultOverlay> resultOverlay_;
-    /// リザルトの「タイトルへ戻る」UI。
-    /// 見た目と配置は Assets/Data/UI/Result.json が持ち、UIエディタから編集できる
-    Ui::Canvas resultCanvas_{};
-    /// リザルトが出てからの経過秒数
-    float resultElapsed_ = 0.0f;
-    /// タイトルへ戻る操作を受け付け始めたか
-    bool returnAccepting_ = false;
     std::unique_ptr<MainTowerIndicator> mainTowerIndicator_;
     /// HP が尽きたらリザルトを出す対象。所有者は towerManager_
     MainTower* mainTower_ = nullptr;
@@ -52,15 +51,34 @@ class PlayScene final : public IScene {
     std::unique_ptr<Model> shockwave_;
     float shockwaveTime_ = 0.5f;
     static constexpr float SHOCKWAVE_DURATION = 0.5f;
-    static constexpr float SHOCKWAVE_RADIUS = 10.0f;
+    static constexpr float SHOCKWAVE_RADIUS = 20.0f;
     static constexpr float SHOCKWAVE_SPEED = 35.0f;
     std::array<std::unique_ptr<Model>, 8> fences_;
     float stageSize_ = 200.0f;
     float towerMargin_ = 20.0f;
     float fenceHeight_ = 2.0f;
     float wallBounce_ = 0.8f;
-    std::unique_ptr<Line> mouseCursor_;
+    std::array<Sprite, 4> reticleOutlines_{};
+    std::array<Sprite, 4> reticleFills_{};
+    Vector2 reticlePosition_{};
+    bool reticlePositionInitialized_ = false;
+    float reticleHoverProgress_ = 0.0f;
     bool cursorVisible_ = false;
+    Text clickTowerGuide_{};
+    float clickTowerGuideElapsed_ = 0.0f;
+    bool clickTowerGuideVisible_ = false;
+    Text dashInputGuide_{};
+    Text dashActionGuide_{};
+    Sprite dashCooldownGaugeFrame_{};
+    Sprite dashCooldownGauge_{};
+    float dashCooldownRatio_ = 1.0f;
+    float dashCooldownFlashTime_ = 0.0f;
+    std::shared_ptr<PlayerSpeedParticleState> playerSpeedParticleState_;
+    EmitterHandle playerSpeedEffectHandle_;
+    static constexpr float CLICK_TOWER_GUIDE_DURATION = 10.0f;
+    static constexpr float RETICLE_FOLLOW_SPEED = 18.0f;
+    static constexpr float RETICLE_HOVER_DURATION = 0.1f;
+    static constexpr float DASH_COOLDOWN_FLASH_DURATION = 0.2f;
     Tower* assistedTower_ = nullptr;
 
 public:
@@ -74,22 +92,18 @@ public:
 
 private:
     void LoadStageConfig();
-    void UpdateTowerSelection();
-
-    /// @brief リザルトの「タイトルへ戻る」UI を読み込んで閉じた状態にする
-    /// @note アニメーションとアクションの登録は Canvas::Setup() より先に行う必要がある
-    void SetupResultCanvas();
-
-    /// @brief リザルト表示中の「タイトルへ戻る」操作を進める
-    /// @param _deltaTime 前フレームからの経過秒数(ゲームを止めていない実時間)
-    void UpdateResultReturn(float _deltaTime);
+    void UpdateTowerSelection(float _deltaTime);
+    void InitializePlayerSpeedEffect();
+    void InitializePlayerDashEffect();
+    void UpdatePlayerSpeedEffect(float _speed, float _maxSpeed, float _deltaTime);
+    void EmitPlayerDashEffect();
 
     /// @brief タイトルシーンへ戻る
     /// @note UI のボタンからもキー入力からも呼ばれる。二重に呼んでも SceneSwitcher 側で弾かれる
     void RequestReturnToTitle();
 
-    /// @brief 画面に常駐する UI とリザルトを描画キューへ積む
-    /// @note リザルトの暗幕がゲーム中の UI も覆えるように、最後にまとめて呼ぶ
+    /// @brief 画面に常駐する UI を描画キューへ積む
+    /// @note リザルトの暗幕は Canvas 側(= これより後)で描かれるので、ここで積んだ UI ごと沈む
     void DrawHud();
 };
 

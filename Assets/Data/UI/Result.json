@@ -6,14 +6,397 @@
     "Elements": [
         {
             "Type": "Sprite",
+            "Name": "Dim",
+            "Position": [
+                640.0,
+                360.0
+            ],
+            "Size": [
+                1280.0,
+                720.0
+            ],
+            "Color": [
+                0.0,
+                0.0,
+                0.02,
+                1.0
+            ],
+            "Texture": "white_x16.png"
+        },
+        {
+            "Type": "Sprite",
+            "Name": "PanelBorder",
+            "Position": [
+                640.0,
+                330.0
+            ],
+            "Size": [
+                886.0,
+                446.0
+            ],
+            "Color": [
+                0.25,
+                0.95,
+                0.55,
+                0.9
+            ],
+            "Texture": "white_x16.png"
+        },
+        {
+            "Type": "Sprite",
+            "Name": "Panel",
+            "Position": [
+                640.0,
+                330.0
+            ],
+            "Size": [
+                880.0,
+                440.0
+            ],
+            "Color": [
+                0.06,
+                0.07,
+                0.1,
+                1.0
+            ],
+            "Texture": "white_x16.png"
+        },
+        {
+            "Type": "Sprite",
+            "Name": "Divider",
+            "Position": [
+                640.0,
+                215.0
+            ],
+            "Size": [
+                820.0,
+                2.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                0.25
+            ],
+            "Texture": "white_x16.png"
+        },
+        {
+            "Type": "Sprite",
+            "Name": "ColumnDivider",
+            "Position": [
+                655.0,
+                390.0
+            ],
+            "Size": [
+                2.0,
+                290.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                0.15
+            ],
+            "Texture": "white_x16.png"
+        },
+        {
+            "Type": "Text",
+            "Name": "TitleText",
+            "Position": [
+                557.0,
+                140.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Text": "RESULT",
+            "FontSize": 52.0
+        },
+        {
+            "Type": "Text",
+            "Name": "TimeLabel",
+            "Position": [
+                250.0,
+                265.0
+            ],
+            "Color": [
+                0.72,
+                0.78,
+                0.88,
+                1.0
+            ],
+            "Text": "TIME",
+            "FontSize": 26.0
+        },
+        {
+            "Type": "Text",
+            "Name": "TimeValue",
+            "Position": [
+                400.0,
+                247.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Text": "0:00",
+            "FontSize": 46.0
+        },
+        {
+            "Type": "Text",
+            "Name": "ScoreLabel",
+            "Position": [
+                250.0,
+                335.0
+            ],
+            "Color": [
+                0.72,
+                0.78,
+                0.88,
+                1.0
+            ],
+            "Text": "SCORE",
+            "FontSize": 26.0
+        },
+        {
+            "Type": "Text",
+            "Name": "ScoreValue",
+            "Position": [
+                400.0,
+                317.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Text": "000000",
+            "FontSize": 46.0
+        },
+        {
+            "Type": "Text",
+            "Name": "TotalLabel",
+            "Position": [
+                250.0,
+                415.0
+            ],
+            "Color": [
+                0.25,
+                0.95,
+                0.55,
+                1.0
+            ],
+            "Text": "TOTAL",
+            "FontSize": 30.0
+        },
+        {
+            "Type": "Text",
+            "Name": "TotalValue",
+            "Position": [
+                400.0,
+                391.0
+            ],
+            "Color": [
+                0.25,
+                0.95,
+                0.55,
+                1.0
+            ],
+            "Text": "0000000",
+            "FontSize": 56.0
+        },
+        {
+            "Type": "Text",
+            "Name": "RankingTitle",
+            "Position": [
+                800.0,
+                250.0
+            ],
+            "Color": [
+                0.72,
+                0.78,
+                0.88,
+                1.0
+            ],
+            "Text": "RANKING",
+            "FontSize": 28.0
+        },
+        {
+            "Type": "Text",
+            "Name": "Rank1No",
+            "Position": [
+                770.0,
+                300.0
+            ],
+            "Color": [
+                0.72,
+                0.78,
+                0.88,
+                1.0
+            ],
+            "Text": "1",
+            "FontSize": 28.0
+        },
+        {
+            "Type": "Text",
+            "Name": "Rank1Score",
+            "Position": [
+                830.0,
+                300.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Text": "-------",
+            "FontSize": 28.0
+        },
+        {
+            "Type": "Text",
+            "Name": "Rank2No",
+            "Position": [
+                770.0,
+                346.0
+            ],
+            "Color": [
+                0.72,
+                0.78,
+                0.88,
+                1.0
+            ],
+            "Text": "2",
+            "FontSize": 28.0
+        },
+        {
+            "Type": "Text",
+            "Name": "Rank2Score",
+            "Position": [
+                830.0,
+                346.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Text": "-------",
+            "FontSize": 28.0
+        },
+        {
+            "Type": "Text",
+            "Name": "Rank3No",
+            "Position": [
+                770.0,
+                392.0
+            ],
+            "Color": [
+                0.72,
+                0.78,
+                0.88,
+                1.0
+            ],
+            "Text": "3",
+            "FontSize": 28.0
+        },
+        {
+            "Type": "Text",
+            "Name": "Rank3Score",
+            "Position": [
+                830.0,
+                392.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Text": "-------",
+            "FontSize": 28.0
+        },
+        {
+            "Type": "Text",
+            "Name": "Rank4No",
+            "Position": [
+                770.0,
+                438.0
+            ],
+            "Color": [
+                0.72,
+                0.78,
+                0.88,
+                1.0
+            ],
+            "Text": "4",
+            "FontSize": 28.0
+        },
+        {
+            "Type": "Text",
+            "Name": "Rank4Score",
+            "Position": [
+                830.0,
+                438.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Text": "-------",
+            "FontSize": 28.0
+        },
+        {
+            "Type": "Text",
+            "Name": "Rank5No",
+            "Position": [
+                770.0,
+                484.0
+            ],
+            "Color": [
+                0.72,
+                0.78,
+                0.88,
+                1.0
+            ],
+            "Text": "5",
+            "FontSize": 28.0
+        },
+        {
+            "Type": "Text",
+            "Name": "Rank5Score",
+            "Position": [
+                830.0,
+                484.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Text": "-------",
+            "FontSize": 28.0
+        },
+        {
+            "Type": "Sprite",
             "Name": "ReturnButton",
             "Position": [
                 640.0,
-                585.0
+                610.0
             ],
             "Size": [
-                420.0,
-                64.0
+                360.0,
+                72.0
             ],
             "Color": [
                 0.12,
@@ -26,14 +409,14 @@
             "Events": {
                 "Execute": "Result.ToTitle"
             },
-            "ShowAnim": "FadeIn"
+            "IdleAnim": "Blink"
         },
         {
             "Type": "Text",
             "Name": "ReturnLabel",
             "Position": [
-                549.0,
-                569.0
+                533.0,
+                592.0
             ],
             "Color": [
                 1.0,
@@ -42,26 +425,7 @@
                 1.0
             ],
             "Text": "BACK TO TITLE",
-            "FontSize": 30.0,
-            "ShowAnim": "FadeIn",
-            "IdleAnim": "Blink"
-        },
-        {
-            "Type": "Text",
-            "Name": "ReturnHint",
-            "Position": [
-                564.0,
-                629.0
-            ],
-            "Color": [
-                1.0,
-                1.0,
-                1.0,
-                0.55
-            ],
-            "Text": "PRESS SPACE OR CLICK",
-            "FontSize": 16.0,
-            "ShowAnim": "FadeIn"
+            "FontSize": 34.0
         }
     ],
     "Modules": {
@@ -69,30 +433,6 @@
             "Texture": "white_x16.png",
             "Size": 12.0,
             "HitPadding": 8.0
-        },
-        "Keyboard": {
-            "Keys": {
-                "Up": [
-                    "UP",
-                    "W"
-                ],
-                "Down": [
-                    "DOWN",
-                    "S"
-                ],
-                "Left": [
-                    "LEFT",
-                    "A"
-                ],
-                "Right": [
-                    "RIGHT",
-                    "D"
-                ],
-                "Execute": [
-                    "SPACE",
-                    "ENTER"
-                ]
-            }
         }
     },
     "DefaultFocus": "ReturnButton"

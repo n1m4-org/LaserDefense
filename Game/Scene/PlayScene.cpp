@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cmath>
+#include <limits>
 #include <variant>
 #include <vector>
 
@@ -14,7 +15,6 @@
 #include "Laser/Laser.hpp"
 #include "Input.hpp"
 #include "Json/JsonParams.hpp"
-#include "Line.hpp"
 #include "Math/MathUtils.hpp"
 #include "Pattern/Singleton.hpp"
 #include "Screen/Screen.hpp"
@@ -22,6 +22,7 @@
 #include "Time/Time.hpp"
 #include "Tower/MainTower.hpp"
 #include "Ui/UiAnimPresets.hpp"
+#include "src/ParticleSystem/ParticleSystem.hpp"
 
 #ifdef _DEBUG
 #include "imgui_internal.h"
@@ -32,6 +33,10 @@ namespace {
     constexpr const char* RESULT_CANVAS_NAME = "Result";
     /// 「タイトルへ戻る」ボタンに割り当てるアクションキー
     constexpr const char* ACTION_TO_TITLE = "Result.ToTitle";
+    constexpr const char* PLAYER_SPEED_EFFECT_TEMPLATE = "PlayerSpeedEffect";
+    constexpr const char* PLAYER_SPEED_EFFECT_SPAWN = "PlayerSpeedEffectSpawn";
+    constexpr const char* PLAYER_DASH_EFFECT_TEMPLATE = "PlayerDashEffect";
+    constexpr const char* PLAYER_DASH_EFFECT_SPAWN = "PlayerDashEffectSpawn";
 
     /// リザルトが出てから戻る操作を受け付けるまでの秒数
     /// @note タワーが落ちた瞬間はレーザーのために左クリックを押していることが多く、
@@ -40,7 +45,117 @@ namespace {
 } // namespace
 
 PlayScene::PlayScene() = default;
-PlayScene::~PlayScene() = default;
+PlayScene::~PlayScene() {
+    playerSpeedEffectHandle_.Stop();
+}
+
+void PlayScene::InitializePlayerSpeedEffect() {
+    const auto particleSystem = Particle();
+    if (!particleSystem) return;
+
+    playerSpeedParticleState_ = std::make_shared<PlayerSpeedParticleState>();
+    const std::weak_ptr<PlayerSpeedParticleState> state = playerSpeedParticleState_;
+    particleSystem->RegisterSpawnFunc(PLAYER_SPEED_EFFECT_SPAWN,
+        [state](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
+            const auto effectState = state.lock();
+            if (!effectState) {
+                _position = _center;
+                _velocity = {};
+                return;
+            }
+            const Vector3 direction = effectState->direction;
+            const Vector3 side{-direction.z, 0.0f, direction.x};
+            _position = _center - direction * MathUtils::Random(0.35f, 0.75f)
+                + side * MathUtils::Random(-0.2f, 0.2f)
+                + Vector3{0.0f, MathUtils::Random(-0.12f, 0.12f), 0.0f};
+            _velocity = direction * MathUtils::Random(-3.0f, -1.0f)
+                + side * MathUtils::Random(-0.6f, 0.6f);
+        });
+
+    ParticleSystem::EmitterConfig emitter;
+    emitter.texture = "white_x16.png";
+    emitter.frequency = 0.025f;
+    emitter.duration = std::numeric_limits<float>::max();
+    emitter.spawnCount = 1;
+    emitter.size = {0.14f, 0.14f, 0.14f};
+    emitter.particleLifetime = 0.2f;
+    emitter.spawnFuncKey = PLAYER_SPEED_EFFECT_SPAWN;
+    emitter.colorKeys = {
+        GradientKey<Vector4>{0.0f, {0.7f, 0.9f, 1.0f, 0.9f}},
+        GradientKey<Vector4>{1.0f, {0.2f, 0.55f, 1.0f, 0.0f}}
+    };
+    emitter.sizeKeys = {
+        GradientKey<Vector3>{0.0f, {0.14f, 0.14f, 0.14f}},
+        GradientKey<Vector3>{1.0f, {0.03f, 0.03f, 0.03f}}
+    };
+
+    ParticleSystem::Template speedEffect;
+    speedEffect.emitters.push_back(emitter);
+    particleSystem->Register(PLAYER_SPEED_EFFECT_TEMPLATE, speedEffect, true);
+}
+
+void PlayScene::InitializePlayerDashEffect() {
+    const auto particleSystem = Particle();
+    if (!particleSystem) return;
+
+    particleSystem->RegisterSpawnFunc(PLAYER_DASH_EFFECT_SPAWN,
+        [](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
+            const float angle = MathUtils::Random(0.0f, 6.2831853f);
+            const Vector3 direction{std::cos(angle), 0.0f, std::sin(angle)};
+            _position = _center + direction * MathUtils::Random(0.0f, 0.18f)
+                + Vector3{0.0f, MathUtils::Random(-0.1f, 0.1f), 0.0f};
+            _velocity = direction * MathUtils::Random(5.0f, 10.0f)
+                + Vector3{0.0f, MathUtils::Random(0.5f, 2.0f), 0.0f};
+        });
+
+    ParticleSystem::EmitterConfig emitter;
+    emitter.texture = "white_x16.png";
+    emitter.frequency = 0.0f;
+    emitter.duration = 0.0f;
+    emitter.spawnCount = 18;
+    emitter.size = {0.4f, 0.4f, 0.4f};
+    emitter.particleLifetime = 0.8f;
+    emitter.spawnFuncKey = PLAYER_DASH_EFFECT_SPAWN;
+    emitter.colorKeys = {
+        GradientKey<Vector4>{0.0f, {1.0f, 0.95f, 0.15f, 1.0f}},
+        GradientKey<Vector4>{1.0f, {1.0f, 0.95f, 0.15f, 0.0f}}
+    };
+
+    ParticleSystem::Template dashEffect;
+    dashEffect.emitters.push_back(emitter);
+    particleSystem->Register(PLAYER_DASH_EFFECT_TEMPLATE, dashEffect, true);
+}
+
+void PlayScene::EmitPlayerDashEffect() {
+    const auto particleSystem = Particle();
+    if (!particleSystem) return;
+    particleSystem->Emit(
+        PLAYER_DASH_EFFECT_TEMPLATE, player_->GetPosition() + player_->GetModelOffset());
+}
+
+void PlayScene::UpdatePlayerSpeedEffect(float _speed, float _maxSpeed, float _deltaTime) {
+    const auto particleSystem = Particle();
+    const Vector3 velocity = player_->GetVelocity();
+    const float horizontalSpeed = std::hypot(velocity.x, velocity.z);
+    const bool emit = particleSystem && playerSpeedParticleState_
+        && std::isfinite(_deltaTime) && _deltaTime > 0.0f
+        && std::isfinite(_speed) && std::isfinite(_maxSpeed) && _maxSpeed > 0.0001f
+        && _speed > _maxSpeed * 0.3f && horizontalSpeed > 0.0001f;
+    if (!emit) {
+        playerSpeedEffectHandle_.Stop();
+        playerSpeedEffectHandle_ = {};
+        return;
+    }
+
+    playerSpeedParticleState_->direction = {
+        velocity.x / horizontalSpeed, 0.0f, velocity.z / horizontalSpeed};
+    const Vector3 emitterPosition = player_->GetPosition() + player_->GetModelOffset();
+    if (!playerSpeedEffectHandle_.IsValid()) {
+        playerSpeedEffectHandle_ = particleSystem->Emit(
+            PLAYER_SPEED_EFFECT_TEMPLATE, emitterPosition);
+    }
+    playerSpeedEffectHandle_.SetPosition(emitterPosition);
+}
 
 void PlayScene::LoadStageConfig() {
     const auto json = Singleton<JsonParams>::GetInstance();
@@ -80,6 +195,8 @@ void PlayScene::Initialize() {
     player_->SetInput(input_);
     player_->EnableGrappleMovement();
     player_->SetStageBoundary(halfSize, wallBounce_);
+    InitializePlayerSpeedEffect();
+    InitializePlayerDashEffect();
     playerCamera_ = std::make_unique<PlayerCamera>();
     playerCamera_->Initialize(*player_);
     towerManager_ = std::make_unique<TowerManager>();
@@ -125,8 +242,8 @@ void PlayScene::Initialize() {
     // リザルトはシーンを跨がず、この画面の上に重ねて出す
     resultOverlay_ = std::make_unique<ResultOverlay>();
     resultOverlay_->Initialize();
-
-    SetupResultCanvas();
+    // 「タイトルへ戻る」ボタンから呼ばれる
+    resultOverlay_->SetOnReturn([this] { RequestReturnToTitle(); });
     mainTowerIndicator_ = std::make_unique<MainTowerIndicator>();
     mainTowerIndicator_->Initialize();
 
@@ -178,11 +295,40 @@ void PlayScene::Initialize() {
         }
     }
 
-    mouseCursor_ = std::make_unique<Line>();
-    mouseCursor_->Initialize();
-    mouseCursor_->SetName("MouseCursor");
-    mouseCursor_->SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+    for (std::size_t i = 0; i < reticleFills_.size(); ++i) {
+        const bool horizontal = i < 2;
+        reticleOutlines_[i].Initialize("white_x16.png");
+        reticleOutlines_[i].SetAnchorPoint({0.5f, 0.5f});
+        reticleOutlines_[i].SetSize(
+            horizontal ? Vector2{10.0f, 5.0f} : Vector2{5.0f, 10.0f});
+        reticleOutlines_[i].SetColor({0.0f, 0.0f, 0.0f, 1.0f});
+
+        reticleFills_[i].Initialize("white_x16.png");
+        reticleFills_[i].SetAnchorPoint({0.5f, 0.5f});
+        reticleFills_[i].SetSize(
+            horizontal ? Vector2{8.0f, 3.0f} : Vector2{3.0f, 8.0f});
+        reticleFills_[i].SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+    }
+    reticlePositionInitialized_ = false;
+    reticleHoverProgress_ = 0.0f;
     cursorVisible_ = false;
+    clickTowerGuide_.Initialize("Click Tower", 0.0f, 0.0f, 22.0f);
+    clickTowerGuide_.SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+    clickTowerGuide_.SetVisible(false);
+    clickTowerGuideElapsed_ = 0.0f;
+    clickTowerGuideVisible_ = false;
+    dashInputGuide_.Initialize("RightClick", 32.0f, 0.0f, 26.0f);
+    dashInputGuide_.SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+    dashActionGuide_.Initialize("Dash", 32.0f, 0.0f, 38.0f);
+    dashActionGuide_.SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+    dashCooldownGaugeFrame_.Initialize("white_x16.png");
+    dashCooldownGaugeFrame_.SetAnchorPoint({0.0f, 0.0f});
+    dashCooldownGaugeFrame_.SetColor({0.0f, 0.0f, 0.0f, 0.62f});
+    dashCooldownGauge_.Initialize("white_x16.png");
+    dashCooldownGauge_.SetAnchorPoint({0.0f, 0.0f});
+    dashCooldownGauge_.SetColor({0.05f, 0.35f, 1.0f, 0.72f});
+    dashCooldownRatio_ = 1.0f;
+    dashCooldownFlashTime_ = 0.0f;
 }
 
 void PlayScene::Update() {
@@ -202,28 +348,42 @@ void PlayScene::Update() {
         comboManager_->SetVisible(false);
         resultOverlay_->Show(survivalTimeManager_->GetElapsedSeconds(),
                              scoreManager_->GetScore());
-        resultElapsed_ = 0.0f;
-        returnAccepting_ = false;
     }
 
     // リザルト中はゲーム側へ渡す経過時間を 0 にして進行だけを止める。
     // Update 自体は呼び続けるので描画に必要な行列は保たれ、背景は静止画として残る
     const bool playing = !resultOverlay_->IsActive();
     const float gameDelta = playing ? deltaTime : 0.0f;
+    clickTowerGuideElapsed_ = std::min(
+        clickTowerGuideElapsed_ + gameDelta, CLICK_TOWER_GUIDE_DURATION);
+    if (playing) {
+        const Vector2 mousePosition = Singleton<Input>::GetInstance()->GetMousePosition();
+        if (std::isfinite(mousePosition.x) && std::isfinite(mousePosition.y)) {
+            if (!reticlePositionInitialized_) {
+                reticlePosition_ = mousePosition;
+                reticlePositionInitialized_ = true;
+            } else {
+                const float blend = 1.0f - std::exp(
+                    -RETICLE_FOLLOW_SPEED * std::min(gameDelta, 0.1f));
+                reticlePosition_.x += (mousePosition.x - reticlePosition_.x) * blend;
+                reticlePosition_.y += (mousePosition.y - reticlePosition_.y) * blend;
+            }
+        }
+    }
 
     // 選択判定・カーソル・描画に同じカメラ行列を使う。
 
-    if (playing) {
-        UpdateTowerSelection();
-    } else {
+    if (!playing) {
         // リザルト中は操作を受け付けない。掴んでいたレーザーとカーソルを外しておく
         laser_->ClearTarget();
         towerManager_->SetHoveredTower(nullptr);
+        assistedTower_ = nullptr;
         cursorVisible_ = false;
+        clickTowerGuideVisible_ = false;
     }
 
     playerCamera_->Update(*player_, deltaTime);
-    towerManager_->Update(deltaTime);
+    towerManager_->Update(gameDelta);
     if (MainTower* switchedMainTower = towerManager_->ConsumeMainTowerSwitch()) {
         // 衝撃波と敵の移動先に使う、現在の防衛対象を更新する。
         mainTower_ = switchedMainTower;
@@ -235,12 +395,21 @@ void PlayScene::Update() {
         }
         enemyManager_->SetTargetPosition(target.x, target.z);
     }
-    UpdateTowerSelection();
+    if (playing) UpdateTowerSelection(gameDelta);
 
     player_->SetGrappleTarget(laser_->GetConnectedTarget());
     player_->Update(gameDelta);
+    if (player_->ConsumeDashTriggered()) {
+        EmitPlayerDashEffect();
+    }
+    dashCooldownRatio_ = player_->GetDashCooldownRatio();
+    dashCooldownFlashTime_ = std::max(dashCooldownFlashTime_ - gameDelta, 0.0f);
+    if (player_->ConsumeDashCooldownCompleted()) {
+        dashCooldownFlashTime_ = DASH_COOLDOWN_FLASH_DURATION;
+    }
     const Vector3& playerVelocity = player_->GetVelocity();
     const float playerSpeed = std::hypot(playerVelocity.x, playerVelocity.z);
+    UpdatePlayerSpeedEffect(playerSpeed, player_->GetSwingMaxSpeed(), gameDelta);
     laser_->UpdateSpeedMultipliers(playerSpeed, player_->GetSwingMaxSpeed());
     enemyManager_->Update(gameDelta);
     gimmickManager_->Update(gameDelta);
@@ -266,7 +435,12 @@ void PlayScene::Update() {
 
     // リザルトだけは止めていない実時間で動かす
     resultOverlay_->Update(deltaTime);
-    UpdateResultReturn(deltaTime);
+
+    // ボタンを狙わなくても、スペースか左クリックだけで戻れるようにしておく。
+    // 受け付け始めるタイミングはリザルト側が持っている
+    if (resultOverlay_->IsReturnAccepting() && input_.IsDecide()) {
+        RequestReturnToTitle();
+    }
     DrawHud();
 }
 
@@ -283,7 +457,14 @@ void PlayScene::Draw() {
 
     // UI は 3D の描画がすべて終わったあとに重ねる
 
-    if (cursorVisible_) mouseCursor_->Draw();
+    if (cursorVisible_) {
+        for (auto& outline : reticleOutlines_) outline.Draw();
+        for (auto& fill : reticleFills_) fill.Draw();
+    }
+    if (!resultOverlay_->IsActive()) {
+        dashCooldownGaugeFrame_.Draw();
+        dashCooldownGauge_.Draw();
+    }
 }
 
 void PlayScene::Debug() {
@@ -314,8 +495,9 @@ void PlayScene::UpdateTowerSelection() {
     }
 #endif
 
-    mouseCursor_->Clear();
     cursorVisible_ = mouseAvailable;
+    clickTowerGuideVisible_ = mouseAvailable
+        && clickTowerGuideElapsed_ < CLICK_TOWER_GUIDE_DURATION;
     Tower* hovered = nullptr;
     if (mouseAvailable) {
         const Matrix4x4 inverseViewProjection = camera->GetViewProjection().Inverse();
@@ -329,17 +511,40 @@ void PlayScene::UpdateTowerSelection() {
         const Vector3 rayDirection = farPosition - nearPosition;
         hovered = towerManager_->PickTower(nearPosition, rayDirection.Normalize(), rayDirection.Length());
 
-        // スクリーン上で半径5pxの丸を、手前の平面に逆投影して描画する。
-        constexpr int segments = 24;
-        constexpr float radius = 5.0f;
-        for (int i = 0; i < segments; ++i) {
-            const float a = 2.0f * MathUtils::F_PI * static_cast<float>(i) / segments;
-            const float b = 2.0f * MathUtils::F_PI * static_cast<float>(i + 1) / segments;
-            mouseCursor_->AddLine(
-                unproject(position.x + std::cos(a) * radius, position.y + std::sin(a) * radius, 0.01f),
-                unproject(position.x + std::cos(b) * radius, position.y + std::sin(b) * radius, 0.01f));
+        const float hoverStep = std::max(_deltaTime, 0.0f) / RETICLE_HOVER_DURATION;
+        reticleHoverProgress_ = hovered
+            ? std::min(reticleHoverProgress_ + hoverStep, 1.0f)
+            : std::max(reticleHoverProgress_ - hoverStep, 0.0f);
+        const float hoverEase = reticleHoverProgress_ * reticleHoverProgress_
+            * (3.0f - 2.0f * reticleHoverProgress_);
+        const float offsetDistance = 9.0f + (6.0f - 9.0f) * hoverEase;
+        const float rotation = MathUtils::F_PI * 0.25f * hoverEase;
+        const Vector4 reticleColor{
+            1.0f + (0.2f - 1.0f) * hoverEase,
+            1.0f,
+            1.0f + (0.35f - 1.0f) * hoverEase,
+            1.0f};
+        const float rotationCos = std::cos(rotation);
+        const float rotationSin = std::sin(rotation);
+        const std::array<Vector2, 4> offsets{{
+            {-rotationCos * offsetDistance, -rotationSin * offsetDistance},
+            {rotationCos * offsetDistance, rotationSin * offsetDistance},
+            {rotationSin * offsetDistance, -rotationCos * offsetDistance},
+            {-rotationSin * offsetDistance, rotationCos * offsetDistance}
+        }};
+        for (std::size_t i = 0; i < offsets.size(); ++i) {
+            const Vector2 reticlePartPosition = reticlePosition_ + offsets[i];
+            reticleOutlines_[i].SetPosition(reticlePartPosition);
+            reticleFills_[i].SetPosition(reticlePartPosition);
+            reticleOutlines_[i].SetRotation(rotation);
+            reticleFills_[i].SetRotation(rotation);
+            reticleFills_[i].SetColor(reticleColor);
+            reticleOutlines_[i].Update();
+            reticleFills_[i].Update();
         }
-        mouseCursor_->Update();
+
+        clickTowerGuide_.SetPosition(
+            reticlePosition_.x + 18.0f, reticlePosition_.y - 11.0f);
     }
 
     if (hovered) assistedTower_ = hovered;
@@ -354,42 +559,8 @@ void PlayScene::UpdateTowerSelection() {
 }
 
 
-void PlayScene::SetupResultCanvas() {
-    // アニメーションとアクションは Setup(=JSON読み込み)より先に登録する。
-    // 読み込み時に ShowAnim / Events のキーから解決されるため、
-    // 後から登録しても JSON の指定が効かない
-    UiAnimPresets::RegisterAll(resultCanvas_);
-    resultCanvas_.RegisterAction(ACTION_TO_TITLE, [this] { RequestReturnToTitle(); });
-
-    resultCanvas_.Setup(RESULT_CANVAS_NAME);
-
-    // 読み込み直後は表示状態なので、リザルトが出るまで閉じておく
-    resultCanvas_.SetActive(false);
-    resultElapsed_ = 0.0f;
-    returnAccepting_ = false;
-}
-
-void PlayScene::UpdateResultReturn(float _deltaTime) {
-    if (!resultOverlay_->IsActive()) return;
-
-    resultElapsed_ += std::max(_deltaTime, 0.0f);
-
-    if (!returnAccepting_) {
-        // 受け付ける前は UI も出さない。出ていない案内を押せてしまう状態を作らない
-        if (resultElapsed_ < RESULT_RETURN_DELAY) return;
-        returnAccepting_ = true;
-        // 一度 Inactive を挟むと Show から始まり、出現アニメとカーソルの初期化が走る
-        resultCanvas_.SetActive(false);
-        resultCanvas_.SetActive(true);
-        return;
-    }
-
-    // ボタンを狙わなくても、スペースか左クリックだけで戻れるようにしておく
-    if (input_.IsDecide()) RequestReturnToTitle();
-}
-
 void PlayScene::RequestReturnToTitle() {
-    resultCanvas_.SetActive(false);
+    resultOverlay_->Hide();
     Change();
 }
 
@@ -407,7 +578,34 @@ void PlayScene::DrawHud() {
     survivalTimeManager_->Draw();
     comboManager_->Draw();
     mainTowerIndicator_->Draw();
+    clickTowerGuide_.SetVisible(clickTowerGuideVisible_);
+    clickTowerGuide_.Draw();
 
-    // 暗幕はいちばん最後。ここまでに積んだ UI ごと暗くして、シートを最前面に置く
-    resultOverlay_->Draw();
+    const float screenHeight = Singleton<Screen>::GetInstance()->Height();
+    const bool showControlGuide = !resultOverlay_->IsActive();
+    dashInputGuide_.SetPosition(32.0f, screenHeight - 100.0f);
+    dashInputGuide_.SetVisible(showControlGuide);
+    dashInputGuide_.Draw();
+    dashActionGuide_.SetPosition(32.0f, screenHeight - 68.0f);
+    dashActionGuide_.SetVisible(showControlGuide);
+    dashActionGuide_.Draw();
+    dashCooldownGaugeFrame_.SetPosition({18.0f, screenHeight - 114.0f});
+    dashCooldownGaugeFrame_.SetSize({164.0f, 100.0f});
+    dashCooldownGaugeFrame_.Update();
+
+    dashCooldownGauge_.SetPosition({20.0f, screenHeight - 112.0f});
+    dashCooldownGauge_.SetSize({160.0f * std::clamp(dashCooldownRatio_, 0.0f, 1.0f), 96.0f});
+    const float flashRatio = DASH_COOLDOWN_FLASH_DURATION > 0.0f
+        ? std::clamp(dashCooldownFlashTime_ / DASH_COOLDOWN_FLASH_DURATION, 0.0f, 1.0f)
+        : 0.0f;
+    dashCooldownGauge_.SetColor({
+        0.05f + 0.95f * flashRatio,
+        0.35f + 0.65f * flashRatio,
+        1.0f,
+        0.72f + 0.28f * flashRatio
+    });
+    dashCooldownGauge_.Update();
+
+    // リザルトの暗幕とシートは Canvas として Ui::Manager がこの後に描く。
+    // ここで積んだ UI はまとめて暗幕の下に沈む
 }
