@@ -9,13 +9,17 @@ void GameSceneInput::Update() {
     moveY_ = 0.0f;
     pause_ = false;
     dash_ = false;
+    decide_ = false;
 
     UpdateKeyboard();
     UpdateMouse();
 }
 
 void GameSceneInput::UpdateMouse() {
-    dash_ = Singleton<Input>::GetInstance()->IsMouseTrigger(1);
+    const auto input = Singleton<Input>::GetInstance();
+    dash_ = input->IsMouseTrigger(1);
+    // 0 が左ボタン。押しっぱなしで連続発火しないようトリガーで取る
+    if (input->IsMouseTrigger(0)) decide_ = true;
 }
 
 void GameSceneInput::UpdateKeyboard() {
@@ -29,4 +33,7 @@ void GameSceneInput::UpdateKeyboard() {
 
     // ポーズは押しっぱなしで連続発火しないようにトリガーで取る
     if (input->IsTrigger(DIK_ESCAPE)) pause_ = true;
+
+    // 決定はキーボードとマウスのどちらでも取れるようにする
+    if (input->IsTrigger(DIK_SPACE)) decide_ = true;
 }

@@ -1,0 +1,155 @@
+{
+    "Position": [
+        0.0,
+        0.0
+    ],
+    "Elements": [
+        {
+            "Type": "Sprite",
+            "Name": "BG",
+            "Position": [
+                640.0,
+                360.0
+            ],
+            "Size": [
+                1280.0,
+                720.0
+            ],
+            "Color": [
+                0.035,
+                0.045,
+                0.075,
+                1.0
+            ],
+            "Texture": "white_x16.png"
+        },
+        {
+            "Type": "Text",
+            "Name": "TitleText",
+            "Position": [
+                372.0,
+                180.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Text": "LASER DEFENSE",
+            "FontSize": 84.0,
+            "ShowAnim": "FadeIn"
+        },
+        {
+            "Type": "Sprite",
+            "Name": "TitleUnderline",
+            "Position": [
+                640.0,
+                300.0
+            ],
+            "Size": [
+                560.0,
+                4.0
+            ],
+            "Color": [
+                0.25,
+                0.75,
+                1.0,
+                0.9
+            ],
+            "Texture": "white_x16.png",
+            "ShowAnim": "FadeIn"
+        },
+        {
+            "Type": "Sprite",
+            "Name": "StartButton",
+            "Position": [
+                640.0,
+                470.0
+            ],
+            "Size": [
+                360.0,
+                72.0
+            ],
+            "Color": [
+                0.12,
+                0.34,
+                0.55,
+                0.85
+            ],
+            "Texture": "white_x16.png",
+            "Selectable": true,
+            "Events": {
+                "Execute": "Title.Start"
+            },
+            "ShowAnim": "FadeIn"
+        },
+        {
+            "Type": "Text",
+            "Name": "StartLabel",
+            "Position": [
+                549.0,
+                452.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Text": "PRESS SPACE",
+            "FontSize": 34.0,
+            "ShowAnim": "FadeIn",
+            "IdleAnim": "Blink"
+        },
+        {
+            "Type": "Text",
+            "Name": "ClickHint",
+            "Position": [
+                568.0,
+                540.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                0.55
+            ],
+            "Text": "OR CLICK TO START",
+            "FontSize": 18.0,
+            "ShowAnim": "FadeIn"
+        }
+    ],
+    "Modules": {
+        "Mouse": {
+            "Texture": "white_x16.png",
+            "Size": 12.0,
+            "HitPadding": 8.0
+        },
+        "Keyboard": {
+            "Keys": {
+                "Up": [
+                    "UP",
+                    "W"
+                ],
+                "Down": [
+                    "DOWN",
+                    "S"
+                ],
+                "Left": [
+                    "LEFT",
+                    "A"
+                ],
+                "Right": [
+                    "RIGHT",
+                    "D"
+                ],
+                "Execute": [
+                    "SPACE",
+                    "ENTER"
+                ]
+            }
+        }
+    },
+    "DefaultFocus": "StartButton"
+}

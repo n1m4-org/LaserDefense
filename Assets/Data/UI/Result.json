@@ -1,0 +1,99 @@
+{
+    "Position": [
+        0.0,
+        0.0
+    ],
+    "Elements": [
+        {
+            "Type": "Sprite",
+            "Name": "ReturnButton",
+            "Position": [
+                640.0,
+                585.0
+            ],
+            "Size": [
+                420.0,
+                64.0
+            ],
+            "Color": [
+                0.12,
+                0.34,
+                0.55,
+                0.85
+            ],
+            "Texture": "white_x16.png",
+            "Selectable": true,
+            "Events": {
+                "Execute": "Result.ToTitle"
+            },
+            "ShowAnim": "FadeIn"
+        },
+        {
+            "Type": "Text",
+            "Name": "ReturnLabel",
+            "Position": [
+                549.0,
+                569.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Text": "BACK TO TITLE",
+            "FontSize": 30.0,
+            "ShowAnim": "FadeIn",
+            "IdleAnim": "Blink"
+        },
+        {
+            "Type": "Text",
+            "Name": "ReturnHint",
+            "Position": [
+                564.0,
+                629.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                0.55
+            ],
+            "Text": "PRESS SPACE OR CLICK",
+            "FontSize": 16.0,
+            "ShowAnim": "FadeIn"
+        }
+    ],
+    "Modules": {
+        "Mouse": {
+            "Texture": "white_x16.png",
+            "Size": 12.0,
+            "HitPadding": 8.0
+        },
+        "Keyboard": {
+            "Keys": {
+                "Up": [
+                    "UP",
+                    "W"
+                ],
+                "Down": [
+                    "DOWN",
+                    "S"
+                ],
+                "Left": [
+                    "LEFT",
+                    "A"
+                ],
+                "Right": [
+                    "RIGHT",
+                    "D"
+                ],
+                "Execute": [
+                    "SPACE",
+                    "ENTER"
+                ]
+            }
+        }
+    },
+    "DefaultFocus": "ReturnButton"
+}
