@@ -20,6 +20,7 @@ class TowerManager final {
     bool mainTowerSwitched_ = false;
     MainTower* switchWarningTower_ = nullptr;
     MainTower* nextWarningTower_ = nullptr;
+    int switchWarningBeepsPlayed_ = 0;
 
     float maxHp_ = 100.0f;
     float hp_ = 100.0f;

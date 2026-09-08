@@ -67,7 +67,7 @@
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir).;$(SolutionDir)Engine\;$(SolutionDir)Engine\include;$(SolutionDir)Engine\src;$(SolutionDir)Engine\externals\assimp\include;$(SolutionDir)Engine\externals\imgui;$(SolutionDir)Engine\externals\DirectXTex;$(SolutionDir)Engine\externals\json;$(SolutionDir)Engine\Lib\Audio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir).;$(SolutionDir)Engine\;$(SolutionDir)Engine\include;$(SolutionDir)Engine\src;$(SolutionDir)Engine\externals\assimp\include;$(SolutionDir)Engine\externals\imgui;$(SolutionDir)Engine\externals\DirectXTex;$(SolutionDir)Engine\externals\json;$(SolutionDir)Engine\Lib\Audio;$(SolutionDir)Engine\Lib\Audio\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <MinimalRebuild>false</MinimalRebuild>
@@ -105,7 +105,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir).;$(SolutionDir)Engine\;$(SolutionDir)Engine\include;$(SolutionDir)Engine\src;$(SolutionDir)Engine\externals\assimp\include;$(SolutionDir)Engine\externals\imgui;$(SolutionDir)Engine\externals\DirectXTex;$(SolutionDir)Engine\externals\json;$(SolutionDir)Engine\Lib\Audio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir).;$(SolutionDir)Engine\;$(SolutionDir)Engine\include;$(SolutionDir)Engine\src;$(SolutionDir)Engine\externals\assimp\include;$(SolutionDir)Engine\externals\imgui;$(SolutionDir)Engine\externals\DirectXTex;$(SolutionDir)Engine\externals\json;$(SolutionDir)Engine\Lib\Audio;$(SolutionDir)Engine\Lib\Audio\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>MinSpace</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -166,6 +166,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Scene\PlayScene.hpp" />
     <ClInclude Include="Scene\TitleScene.hpp" />
     <ClInclude Include="Score\ScoreManager.hpp" />
+    <ClInclude Include="Sound\GameSound.hpp" />
     <ClInclude Include="SurvivalTime\SurvivalTimeManager.hpp" />
     <ClInclude Include="Tower\Tower.hpp" />
     <ClInclude Include="Tower\MainTower.hpp" />
@@ -195,6 +196,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Scene\PlayScene.cpp" />
     <ClCompile Include="Scene\TitleScene.cpp" />
     <ClCompile Include="Score\ScoreManager.cpp" />
+    <ClCompile Include="Sound\GameSound.cpp" />
     <ClCompile Include="SurvivalTime\SurvivalTimeManager.cpp" />
     <ClCompile Include="Tower\Tower.cpp" />
     <ClCompile Include="Tower\MainTower.cpp" />
