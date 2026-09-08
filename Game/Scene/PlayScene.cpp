@@ -22,23 +22,10 @@
 #include "Texture/TextureManager.hpp"
 #include "Time/Time.hpp"
 #include "Tower/MainTower.hpp"
-#include "Ui/UiAnimPresets.hpp"
 
 #ifdef _DEBUG
 #include "imgui_internal.h"
 #endif
-
-namespace {
-    /// リザルトのUIで使うキャンバス名(Assets/Data/UI/Result.json)
-    constexpr const char* RESULT_CANVAS_NAME = "Result";
-    /// 「タイトルへ戻る」ボタンに割り当てるアクションキー
-    constexpr const char* ACTION_TO_TITLE = "Result.ToTitle";
-
-    /// リザルトが出てから戻る操作を受け付けるまでの秒数
-    /// @note タワーが落ちた瞬間はレーザーのために左クリックを押していることが多く、
-    ///       すぐ受け付けると成績を見る前にタイトルへ飛んでしまう
-    constexpr float RESULT_RETURN_DELAY = 1.2f;
-} // namespace
 
 PlayScene::PlayScene() = default;
 PlayScene::~PlayScene() = default;
@@ -130,8 +117,8 @@ void PlayScene::Initialize() {
     // リザルトはシーンを跨がず、この画面の上に重ねて出す
     resultOverlay_ = std::make_unique<ResultOverlay>();
     resultOverlay_->Initialize();
-
-    SetupResultCanvas();
+    // 「タイトルへ戻る」ボタンから呼ばれる
+    resultOverlay_->SetOnReturn([this] { RequestReturnToTitle(); });
     mainTowerIndicator_ = std::make_unique<MainTowerIndicator>();
     mainTowerIndicator_->Initialize();
 
@@ -209,8 +196,6 @@ void PlayScene::Update() {
         comboManager_->SetVisible(false);
         resultOverlay_->Show(survivalTimeManager_->GetElapsedSeconds(),
                              scoreManager_->GetScore());
-        resultElapsed_ = 0.0f;
-        returnAccepting_ = false;
     }
 
     // リザルト中はゲーム側へ渡す経過時間を 0 にして進行だけを止める。
@@ -274,7 +259,12 @@ void PlayScene::Update() {
 
     // リザルトだけは止めていない実時間で動かす
     resultOverlay_->Update(deltaTime);
-    UpdateResultReturn(deltaTime);
+
+    // ボタンを狙わなくても、スペースか左クリックだけで戻れるようにしておく。
+    // 受け付け始めるタイミングはリザルト側が持っている
+    if (resultOverlay_->IsReturnAccepting() && input_.IsDecide()) {
+        RequestReturnToTitle();
+    }
     DrawHud();
 }
 
@@ -356,42 +346,8 @@ void PlayScene::UpdateTowerSelection() {
 }
 
 
-void PlayScene::SetupResultCanvas() {
-    // アニメーションとアクションは Setup(=JSON読み込み)より先に登録する。
-    // 読み込み時に ShowAnim / Events のキーから解決されるため、
-    // 後から登録しても JSON の指定が効かない
-    UiAnimPresets::RegisterAll(resultCanvas_);
-    resultCanvas_.RegisterAction(ACTION_TO_TITLE, [this] { RequestReturnToTitle(); });
-
-    resultCanvas_.Setup(RESULT_CANVAS_NAME);
-
-    // 読み込み直後は表示状態なので、リザルトが出るまで閉じておく
-    resultCanvas_.SetActive(false);
-    resultElapsed_ = 0.0f;
-    returnAccepting_ = false;
-}
-
-void PlayScene::UpdateResultReturn(float _deltaTime) {
-    if (!resultOverlay_->IsActive()) return;
-
-    resultElapsed_ += std::max(_deltaTime, 0.0f);
-
-    if (!returnAccepting_) {
-        // 受け付ける前は UI も出さない。出ていない案内を押せてしまう状態を作らない
-        if (resultElapsed_ < RESULT_RETURN_DELAY) return;
-        returnAccepting_ = true;
-        // 一度 Inactive を挟むと Show から始まり、出現アニメとカーソルの初期化が走る
-        resultCanvas_.SetActive(false);
-        resultCanvas_.SetActive(true);
-        return;
-    }
-
-    // ボタンを狙わなくても、スペースか左クリックだけで戻れるようにしておく
-    if (input_.IsDecide()) RequestReturnToTitle();
-}
-
 void PlayScene::RequestReturnToTitle() {
-    resultCanvas_.SetActive(false);
+    resultOverlay_->Hide();
     Change();
 }
 
@@ -410,6 +366,6 @@ void PlayScene::DrawHud() {
     comboManager_->Draw();
     mainTowerIndicator_->Draw();
 
-    // 暗幕はいちばん最後。ここまでに積んだ UI ごと暗くして、シートを最前面に置く
-    resultOverlay_->Draw();
+    // リザルトの暗幕とシートは Canvas として Ui::Manager がこの後に描く。
+    // ここで積んだ UI はまとめて暗幕の下に沈む
 }

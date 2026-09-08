@@ -15,7 +15,6 @@
 #include "SurvivalTime/SurvivalTimeManager.hpp"
 #include "Tower/TowerHpGauge.hpp"
 #include "Tower/TowerManager.hpp"
-#include "Ui/UserInterface.hpp"
 #include "UI/MainTowerIndicator.hpp"
 
 class MainTower;
@@ -37,14 +36,8 @@ class PlayScene final : public IScene {
     std::unique_ptr<SurvivalTimeManager> survivalTimeManager_;
     std::unique_ptr<ComboManager> comboManager_;
     std::unique_ptr<TowerHpGauge> towerHpGauge_;
+    /// リザルト。見た目と配置は Assets/Data/UI/Result.json が持ち、UIエディタから編集できる
     std::unique_ptr<ResultOverlay> resultOverlay_;
-    /// リザルトの「タイトルへ戻る」UI。
-    /// 見た目と配置は Assets/Data/UI/Result.json が持ち、UIエディタから編集できる
-    Ui::Canvas resultCanvas_{};
-    /// リザルトが出てからの経過秒数
-    float resultElapsed_ = 0.0f;
-    /// タイトルへ戻る操作を受け付け始めたか
-    bool returnAccepting_ = false;
     std::unique_ptr<MainTowerIndicator> mainTowerIndicator_;
     /// HP が尽きたらリザルトを出す対象。所有者は towerManager_
     MainTower* mainTower_ = nullptr;
@@ -75,20 +68,12 @@ private:
     void LoadStageConfig();
     void UpdateTowerSelection();
 
-    /// @brief リザルトの「タイトルへ戻る」UI を読み込んで閉じた状態にする
-    /// @note アニメーションとアクションの登録は Canvas::Setup() より先に行う必要がある
-    void SetupResultCanvas();
-
-    /// @brief リザルト表示中の「タイトルへ戻る」操作を進める
-    /// @param _deltaTime 前フレームからの経過秒数(ゲームを止めていない実時間)
-    void UpdateResultReturn(float _deltaTime);
-
     /// @brief タイトルシーンへ戻る
     /// @note UI のボタンからもキー入力からも呼ばれる。二重に呼んでも SceneSwitcher 側で弾かれる
     void RequestReturnToTitle();
 
-    /// @brief 画面に常駐する UI とリザルトを描画キューへ積む
-    /// @note リザルトの暗幕がゲーム中の UI も覆えるように、最後にまとめて呼ぶ
+    /// @brief 画面に常駐する UI を描画キューへ積む
+    /// @note リザルトの暗幕は Canvas 側(= これより後)で描かれるので、ここで積んだ UI ごと沈む
     void DrawHud();
 };
 
