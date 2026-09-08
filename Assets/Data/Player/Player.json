@@ -25,7 +25,8 @@
             "SwingBrake": 0.05,
             "TowerKeepDistance": 1.0,
             "SwingMaxSpeed": 200.0,
-            "DashSpeed": 40.0
+            "DashSpeed": 40.0,
+            "DashCooldownSeconds": 1.0
         }
     }
 }
