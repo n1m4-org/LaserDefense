@@ -15,7 +15,6 @@
 #include "Light/LightManager.hpp"
 #include "Input.hpp"
 #include "Json/JsonParams.hpp"
-#include "Line.hpp"
 #include "Math/MathUtils.hpp"
 #include "Pattern/Singleton.hpp"
 #include "Screen/Screen.hpp"
@@ -183,11 +182,36 @@ void PlayScene::Initialize() {
         }
     }
 
-    mouseCursor_ = std::make_unique<Line>();
-    mouseCursor_->Initialize();
-    mouseCursor_->SetName("MouseCursor");
-    mouseCursor_->SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+    for (std::size_t i = 0; i < reticleFills_.size(); ++i) {
+        const bool horizontal = i < 2;
+        reticleOutlines_[i].Initialize("white_x16.png");
+        reticleOutlines_[i].SetAnchorPoint({0.5f, 0.5f});
+        reticleOutlines_[i].SetSize(
+            horizontal ? Vector2{10.0f, 5.0f} : Vector2{5.0f, 10.0f});
+        reticleOutlines_[i].SetColor({0.0f, 0.0f, 0.0f, 1.0f});
+
+        reticleFills_[i].Initialize("white_x16.png");
+        reticleFills_[i].SetAnchorPoint({0.5f, 0.5f});
+        reticleFills_[i].SetSize(
+            horizontal ? Vector2{8.0f, 3.0f} : Vector2{3.0f, 8.0f});
+        reticleFills_[i].SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+    }
+    reticlePositionInitialized_ = false;
+    reticleHoverProgress_ = 0.0f;
     cursorVisible_ = false;
+    clickTowerGuide_.Initialize("Click Tower", 0.0f, 0.0f, 22.0f);
+    clickTowerGuide_.SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+    clickTowerGuide_.SetVisible(false);
+    clickTowerGuideElapsed_ = 0.0f;
+    clickTowerGuideVisible_ = false;
+    dashInputGuide_.Initialize("RightClick", 32.0f, 0.0f, 26.0f);
+    dashInputGuide_.SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+    dashActionGuide_.Initialize("Dash", 32.0f, 0.0f, 38.0f);
+    dashActionGuide_.SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+    dashCooldownGauge_.Initialize("white_x16.png");
+    dashCooldownGauge_.SetAnchorPoint({0.0f, 0.0f});
+    dashCooldownGauge_.SetColor({0.05f, 0.35f, 1.0f, 0.72f});
+    dashCooldownRatio_ = 1.0f;
 }
 
 void PlayScene::Update() {
@@ -217,17 +241,32 @@ void PlayScene::Update() {
     // Update 自体は呼び続けるので描画に必要な行列は保たれ、背景は静止画として残る
     const bool playing = !resultOverlay_->IsActive();
     const float gameDelta = playing ? deltaTime : 0.0f;
+    clickTowerGuideElapsed_ = std::min(
+        clickTowerGuideElapsed_ + gameDelta, CLICK_TOWER_GUIDE_DURATION);
+    if (playing) {
+        const Vector2 mousePosition = Singleton<Input>::GetInstance()->GetMousePosition();
+        if (std::isfinite(mousePosition.x) && std::isfinite(mousePosition.y)) {
+            if (!reticlePositionInitialized_) {
+                reticlePosition_ = mousePosition;
+                reticlePositionInitialized_ = true;
+            } else {
+                const float blend = 1.0f - std::exp(
+                    -RETICLE_FOLLOW_SPEED * std::min(gameDelta, 0.1f));
+                reticlePosition_.x += (mousePosition.x - reticlePosition_.x) * blend;
+                reticlePosition_.y += (mousePosition.y - reticlePosition_.y) * blend;
+            }
+        }
+    }
 
     // 選択判定・カーソル・描画に同じカメラ行列を使う。
 
-    if (playing) {
-        UpdateTowerSelection();
-    } else {
+    if (!playing) {
         // リザルト中は操作を受け付けない。掴んでいたレーザーとカーソルを外しておく
         laser_->ClearTarget();
         towerManager_->SetHoveredTower(nullptr);
         assistedTower_ = nullptr;
         cursorVisible_ = false;
+        clickTowerGuideVisible_ = false;
     }
 
     playerCamera_->Update(*player_, deltaTime);
@@ -243,7 +282,7 @@ void PlayScene::Update() {
         }
         enemyManager_->SetTargetPosition(target.x, target.z);
     }
-    if (playing) UpdateTowerSelection();
+    if (playing) UpdateTowerSelection(gameDelta);
 
     player_->SetGrappleTarget(laser_->GetConnectedTarget());
     player_->Update(gameDelta);
@@ -291,10 +330,14 @@ void PlayScene::Draw() {
 
     // UI は 3D の描画がすべて終わったあとに重ねる
 
-    if (cursorVisible_) mouseCursor_->Draw();
+    if (cursorVisible_) {
+        for (auto& outline : reticleOutlines_) outline.Draw();
+        for (auto& fill : reticleFills_) fill.Draw();
+    }
+    if (!resultOverlay_->IsActive()) dashCooldownGauge_.Draw();
 }
 
-void PlayScene::UpdateTowerSelection() {
+void PlayScene::UpdateTowerSelection(float _deltaTime) {
     const auto mouse = Singleton<Input>::GetInstance();
     const auto screen = Singleton<Screen>::GetInstance();
     const auto camera = Singleton<CameraController>::GetInstance()->GetActive();
@@ -316,8 +359,9 @@ void PlayScene::UpdateTowerSelection() {
     }
 #endif
 
-    mouseCursor_->Clear();
     cursorVisible_ = mouseAvailable;
+    clickTowerGuideVisible_ = mouseAvailable
+        && clickTowerGuideElapsed_ < CLICK_TOWER_GUIDE_DURATION;
     Tower* hovered = nullptr;
     if (mouseAvailable) {
         const Matrix4x4 inverseViewProjection = camera->GetViewProjection().Inverse();
@@ -331,17 +375,40 @@ void PlayScene::UpdateTowerSelection() {
         const Vector3 rayDirection = farPosition - nearPosition;
         hovered = towerManager_->PickTower(nearPosition, rayDirection.Normalize(), rayDirection.Length());
 
-        // スクリーン上で半径5pxの丸を、手前の平面に逆投影して描画する。
-        constexpr int segments = 24;
-        constexpr float radius = 5.0f;
-        for (int i = 0; i < segments; ++i) {
-            const float a = 2.0f * MathUtils::F_PI * static_cast<float>(i) / segments;
-            const float b = 2.0f * MathUtils::F_PI * static_cast<float>(i + 1) / segments;
-            mouseCursor_->AddLine(
-                unproject(position.x + std::cos(a) * radius, position.y + std::sin(a) * radius, 0.01f),
-                unproject(position.x + std::cos(b) * radius, position.y + std::sin(b) * radius, 0.01f));
+        const float hoverStep = std::max(_deltaTime, 0.0f) / RETICLE_HOVER_DURATION;
+        reticleHoverProgress_ = hovered
+            ? std::min(reticleHoverProgress_ + hoverStep, 1.0f)
+            : std::max(reticleHoverProgress_ - hoverStep, 0.0f);
+        const float hoverEase = reticleHoverProgress_ * reticleHoverProgress_
+            * (3.0f - 2.0f * reticleHoverProgress_);
+        const float offsetDistance = 9.0f + (6.0f - 9.0f) * hoverEase;
+        const float rotation = MathUtils::F_PI * 0.25f * hoverEase;
+        const Vector4 reticleColor{
+            1.0f + (0.2f - 1.0f) * hoverEase,
+            1.0f,
+            1.0f + (0.35f - 1.0f) * hoverEase,
+            1.0f};
+        const float rotationCos = std::cos(rotation);
+        const float rotationSin = std::sin(rotation);
+        const std::array<Vector2, 4> offsets{{
+            {-rotationCos * offsetDistance, -rotationSin * offsetDistance},
+            {rotationCos * offsetDistance, rotationSin * offsetDistance},
+            {rotationSin * offsetDistance, -rotationCos * offsetDistance},
+            {-rotationSin * offsetDistance, rotationCos * offsetDistance}
+        }};
+        for (std::size_t i = 0; i < offsets.size(); ++i) {
+            const Vector2 reticlePartPosition = reticlePosition_ + offsets[i];
+            reticleOutlines_[i].SetPosition(reticlePartPosition);
+            reticleFills_[i].SetPosition(reticlePartPosition);
+            reticleOutlines_[i].SetRotation(rotation);
+            reticleFills_[i].SetRotation(rotation);
+            reticleFills_[i].SetColor(reticleColor);
+            reticleOutlines_[i].Update();
+            reticleFills_[i].Update();
         }
-        mouseCursor_->Update();
+
+        clickTowerGuide_.SetPosition(
+            reticlePosition_.x + 18.0f, reticlePosition_.y - 11.0f);
     }
 
     if (hovered) assistedTower_ = hovered;
@@ -409,6 +476,21 @@ void PlayScene::DrawHud() {
     survivalTimeManager_->Draw();
     comboManager_->Draw();
     mainTowerIndicator_->Draw();
+    clickTowerGuide_.SetVisible(clickTowerGuideVisible_);
+    clickTowerGuide_.Draw();
+
+    const float screenHeight = Singleton<Screen>::GetInstance()->Height();
+    const bool showControlGuide = !resultOverlay_->IsActive();
+    dashInputGuide_.SetPosition(32.0f, screenHeight - 100.0f);
+    dashInputGuide_.SetVisible(showControlGuide);
+    dashInputGuide_.Draw();
+    dashActionGuide_.SetPosition(32.0f, screenHeight - 68.0f);
+    dashActionGuide_.SetVisible(showControlGuide);
+    dashActionGuide_.Draw();
+    // 将来はdashCooldownRatio_へ残りクールタイムの割合を渡せば、そのまま横幅へ反映できる。
+    dashCooldownGauge_.SetPosition({20.0f, screenHeight - 112.0f});
+    dashCooldownGauge_.SetSize({160.0f * std::clamp(dashCooldownRatio_, 0.0f, 1.0f), 96.0f});
+    dashCooldownGauge_.Update();
 
     // 暗幕はいちばん最後。ここまでに積んだ UI ごと暗くして、シートを最前面に置く
     resultOverlay_->Draw();

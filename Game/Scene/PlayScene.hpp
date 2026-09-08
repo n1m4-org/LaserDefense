@@ -12,7 +12,9 @@
 #include "Result/ResultOverlay.hpp"
 #include "Scene/Input/GameSceneInput.hpp"
 #include "Score/ScoreManager.hpp"
+#include "Sprite.hpp"
 #include "SurvivalTime/SurvivalTimeManager.hpp"
+#include "Text/Text.hpp"
 #include "Tower/TowerHpGauge.hpp"
 #include "Tower/TowerManager.hpp"
 #include "Ui/UserInterface.hpp"
@@ -22,7 +24,6 @@ class MainTower;
 class Player;
 class PlayerCamera;
 class Laser;
-class Line;
 class Tower;
 
 class PlayScene final : public IScene {
@@ -59,8 +60,22 @@ class PlayScene final : public IScene {
     float towerMargin_ = 20.0f;
     float fenceHeight_ = 2.0f;
     float wallBounce_ = 0.8f;
-    std::unique_ptr<Line> mouseCursor_;
+    std::array<Sprite, 4> reticleOutlines_{};
+    std::array<Sprite, 4> reticleFills_{};
+    Vector2 reticlePosition_{};
+    bool reticlePositionInitialized_ = false;
+    float reticleHoverProgress_ = 0.0f;
     bool cursorVisible_ = false;
+    Text clickTowerGuide_{};
+    float clickTowerGuideElapsed_ = 0.0f;
+    bool clickTowerGuideVisible_ = false;
+    Text dashInputGuide_{};
+    Text dashActionGuide_{};
+    Sprite dashCooldownGauge_{};
+    float dashCooldownRatio_ = 1.0f;
+    static constexpr float CLICK_TOWER_GUIDE_DURATION = 10.0f;
+    static constexpr float RETICLE_FOLLOW_SPEED = 18.0f;
+    static constexpr float RETICLE_HOVER_DURATION = 0.1f;
     Tower* assistedTower_ = nullptr;
 
 public:
@@ -73,7 +88,7 @@ public:
 
 private:
     void LoadStageConfig();
-    void UpdateTowerSelection();
+    void UpdateTowerSelection(float _deltaTime);
 
     /// @brief リザルトの「タイトルへ戻る」UI を読み込んで閉じた状態にする
     /// @note アニメーションとアクションの登録は Canvas::Setup() より先に行う必要がある
