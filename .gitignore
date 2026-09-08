@@ -3,7 +3,6 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
-./Assets/Data/Ranking/Ranking.json
 
 # User-specific files
 *.rsuser
@@ -373,3 +372,4 @@ MigrationBackup/
 FodyWeavers.xsd
 
 /Game/Assets
+/Assets/Data/Ranking/Ranking.json

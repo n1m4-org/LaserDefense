@@ -16,6 +16,8 @@ namespace {
     constexpr Vector4 SUB_TOWER_COLOR{0.0f, 1.0f, 0.0f, 1.0f};
     constexpr Vector4 SELECTION_COLOR{0.1f, 0.35f, 1.0f, 0.8f};
     constexpr Vector4 CONNECTED_COLOR{0.15f, 0.8f, 1.0f, 1.0f};
+    // Modelの影登録は通常描画と独立しているため、完全に非表示の柱は影響範囲外へ退避する。
+    constexpr float HIDDEN_PILLAR_DROP = 1000.0f;
 
     /// 終わり際がゆっくりになる補間（フラッシュの減衰に使う）
     float EaseOutCubic(float _t) {
@@ -76,8 +78,24 @@ void MainTower::Update(float _deltaTime) {
 
     Tower::Update(_deltaTime);
     // 見た目だけを上下させ、当たり判定と接続先の座標は変えない。
+    const bool pillarHidden = !defenseTarget_ && !warningActive_
+        && pillarHeightRatio_ <= 0.0001f;
+    const float pillarDrop = pillarHidden
+        ? HIDDEN_PILLAR_DROP
+        : 12.0f * (1.0f - (warningActive_ && !defenseTarget_ ? 1.0f : pillarHeightRatio_));
     model_->SetTranslate(GetPosition() + modelOffset_
-        + Vector3{0.0f, -12.0f * (1.0f - (warningActive_ && !defenseTarget_ ? 1.0f : pillarHeightRatio_)), 0.0f});
+        + Vector3{0.0f, -pillarDrop, 0.0f});
+
+    // 選択用モデルも影描画へ常時登録されるため、通常描画しない状態では地下へ退避する。
+    // Tower::Update()がマウスオーバー中のselectionModel_を更新した後に判定し直すことで、
+    // 非メインタワーを選択したときや、マウスを外した後に影だけ残る状態を防ぐ。
+    const bool showPillarSelection = defenseTarget_
+        && transitionTime_ >= transitionDuration_ && hovered_;
+    if (selectionModel_ && !showPillarSelection) {
+        selectionModel_->SetTranslate(
+            GetPosition() + Vector3{0.0f, -HIDDEN_PILLAR_DROP, 0.0f});
+        selectionModel_->Update();
+    }
 
     // 被弾フラッシュを減衰させ、色へ反映する
     damageFlashTimer_ = std::max(damageFlashTimer_ - _deltaTime, 0.0f);
@@ -90,6 +108,10 @@ void MainTower::Update(float _deltaTime) {
     if (hovered_) {
         baseSelectionModel_->SetTranslate(center);
         baseSelectionModel_->SetScale(Vector3{2.5f, 1.0f, 2.5f} * GetSelectionScaleMultiplier());
+        baseSelectionModel_->Update();
+    } else {
+        baseSelectionModel_->SetTranslate(
+            GetPosition() + Vector3{0.0f, -HIDDEN_PILLAR_DROP, 0.0f});
         baseSelectionModel_->Update();
     }
     baseCollider_->SetTranslate(center + GetColliderOffset());

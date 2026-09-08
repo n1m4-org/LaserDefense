@@ -46,6 +46,10 @@ class Player : public GameObject {
     float towerKeepDistance_ = 3.0f;
     float swingMaxSpeed_ = 35.0f;
     float dashSpeed_ = 40.0f;
+    float dashCooldownSeconds_ = 1.0f;
+    float dashCooldownRemaining_ = 0.0f;
+    bool dashCooldownCompleted_ = false;
+    bool dashTriggered_ = false;
 
 public:
     Player() = default;
@@ -62,6 +66,9 @@ public:
     void SetInput(const GameSceneInput& _input) { input_ = &_input; }
     const Vector3& GetModelOffset() const { return modelOffset_; }
     float GetSwingMaxSpeed() const { return swingMaxSpeed_; }
+    float GetDashCooldownRatio() const;
+    bool ConsumeDashCooldownCompleted();
+    bool ConsumeDashTriggered();
     void EnableGrappleMovement() { grappleMovement_ = true; }
     void SetStageBoundary(float _halfSize, float _bounce);
     // シーン所有の接続先。Update前に毎フレーム設定する。
