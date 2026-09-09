@@ -45,6 +45,7 @@ class PlayScene final : public IScene {
     /// リザルト。見た目と配置は Assets/Data/UI/Result.json が持ち、UIエディタから編集できる
     std::unique_ptr<ResultOverlay> resultOverlay_;
     std::unique_ptr<MainTowerIndicator> mainTowerIndicator_;
+    std::unique_ptr<MainTowerIndicator> gimmickIndicator_;
     /// HP が尽きたらリザルトを出す対象。所有者は towerManager_
     MainTower* mainTower_ = nullptr;
     std::unique_ptr<Model> floor_;

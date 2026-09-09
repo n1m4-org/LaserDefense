@@ -54,6 +54,7 @@ public:
 
     const IGimmick* GetActiveGimmick() const { return activeGimmick_.get(); }
     float GetRemainingTimeSeconds() const { return remainingTimeSeconds_; }
+    bool GetIndicatorPosition(Vector3& _position) const;
 
 private:
     void LoadConfig();

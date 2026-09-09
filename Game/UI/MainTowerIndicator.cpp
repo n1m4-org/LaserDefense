@@ -21,7 +21,7 @@ void MainTowerIndicator::Initialize() {
     arrow_.Initialize("arrow.png");
     arrow_.SetSize(arrowSize_);
     arrow_.SetAnchorPoint({0.5f, 0.5f});
-    arrow_.SetColor({0.25f, 0.95f, 0.55f, 1.0f});
+    arrow_.SetColor({color_.x, color_.y, color_.z, color_.w * opacity_});
     visible_ = false;
 }
 
@@ -42,6 +42,13 @@ void MainTowerIndicator::LoadConfig() {
 void MainTowerIndicator::Update(const MainTower* _target) {
     visible_ = false;
     if (!_target || !_target->IsActive() || !_target->IsDefenseTarget()) return;
+    const Vector3 worldPosition = _target->GetPosition();
+    Update(&worldPosition);
+}
+
+void MainTowerIndicator::Update(const Vector3* _worldPosition) {
+    visible_ = false;
+    if (!_worldPosition) return;
 
     const auto camera = Singleton<CameraController>::GetInstance()->GetActive();
     const auto screen = Singleton<Screen>::GetInstance();
@@ -51,7 +58,7 @@ void MainTowerIndicator::Update(const MainTower* _target) {
     if (!camera || width <= screenMargin * 2.0f || height <= screenMargin * 2.0f) return;
 
     // 斜め見下ろしでは高さがあるほど画面上の方向がずれるため、足元を案内する。
-    const Vector3 worldPosition = _target->GetPosition();
+    const Vector3 worldPosition = *_worldPosition;
     const Vector4 clip = MathUtils::Matrix::Transform(
         Vector4{worldPosition.x, worldPosition.y, worldPosition.z, 1.0f},
         camera->GetViewProjection());
@@ -96,5 +103,10 @@ void MainTowerIndicator::Draw() {
 
 void MainTowerIndicator::SetOpacity(float _opacity) {
     opacity_ = std::clamp(_opacity, 0.0f, 1.0f);
-    arrow_.SetColor({0.25f, 0.95f, 0.55f, opacity_});
+    arrow_.SetColor({color_.x, color_.y, color_.z, color_.w * opacity_});
+}
+
+void MainTowerIndicator::SetColor(const Vector4& _color) {
+    color_ = _color;
+    arrow_.SetColor({color_.x, color_.y, color_.z, color_.w * opacity_});
 }

@@ -67,6 +67,7 @@ public:
     GimmickState GetState() const override { return state_; }
     float GetTimeLimitSeconds() const override { return timeLimitSeconds_; }
     void OnTimeLimitExpired() override { state_ = GimmickState::Failed; }
+    bool GetIndicatorPosition(Vector3& _position) const override;
 
 private:
     void LoadConfig();

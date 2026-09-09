@@ -254,3 +254,7 @@ void GimmickManager::SetOpacity(float _opacity) {
     opacity_ = std::clamp(_opacity, 0.0f, 1.0f);
     UpdateTimerGauge();
 }
+
+bool GimmickManager::GetIndicatorPosition(Vector3& _position) const {
+    return activeGimmick_ && activeGimmick_->GetIndicatorPosition(_position);
+}
