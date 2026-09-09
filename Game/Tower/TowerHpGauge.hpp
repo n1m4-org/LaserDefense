@@ -145,6 +145,7 @@ class TowerHpGauge final {
     Sprite screenFlashSprite_{};    //!< 画面全体を覆う被弾フラッシュ
 
     bool visible_ = true;           //!< UI 全体の表示 / 非表示
+    float opacity_ = 1.0f;          //!< HUD全体から掛ける透明度
 
 public:
     /// @brief JSON からパラメータを読み込み、ゲージとテキストを初期化する
@@ -168,6 +169,7 @@ public:
 
     /// @brief UI の表示 / 非表示を切り替える
     void SetVisible(bool _visible);
+    void SetOpacity(float _opacity);
 
 private:
     /// @brief Assets/Data/Tower/MainTower.json から各パラメータを読み込む

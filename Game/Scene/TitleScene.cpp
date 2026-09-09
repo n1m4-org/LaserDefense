@@ -2,6 +2,7 @@
 #include "TitleScene.hpp"
 
 #include <algorithm>
+#include <cstddef>
 
 #include "Sound/GameSound.hpp"
 #include "Time/Time.hpp"
@@ -13,16 +14,30 @@
 
 namespace {
     /// タイトルが出てから下線が伸び始めるまでの秒数
-    constexpr float UNDERLINE_START_DELAY = 0.8f;
+    constexpr float UNDERLINE_START_DELAY = 0.0f;
 
     /// 下線が伸び始めてから伸びきるまでの秒数
     constexpr float UNDERLINE_GROW_DURATION = 1.6f;
 
     /// 1フレームで進める経過時間の上限(秒)
     constexpr float MAX_STEP_SECONDS = 0.1f;
+
+    /// エンジンのデフォルトFadeと同じ時間
+    constexpr float EXIT_FADE_DURATION = 1.0f;
+
+    /// TextはFade用Spriteより後に描画されるため、色を同期して黒へ近づける。
+    /// 遷移完了まで黒を維持する必要があるので、アニメーション自体は終了させない。
+    bool FadeTextToBlack(float _elapsed, Vector2&, Vector4& _color) {
+        const float progress = std::clamp(_elapsed / EXIT_FADE_DURATION, 0.0f, 1.0f);
+        const float brightness = 1.0f - progress;
+        _color.x *= brightness;
+        _color.y *= brightness;
+        _color.z *= brightness;
+        return false;
+    }
 } // namespace
 
-TitleScene::TitleScene()  = default;
+TitleScene::TitleScene() = default;
 TitleScene::~TitleScene() = default;
 
 void TitleScene::Initialize() {
@@ -32,6 +47,11 @@ void TitleScene::Initialize() {
     // 効果音はゲーム全体で1度だけ読み込み、以降のシーンでも読み直さずに使う
     GameSound::Load();
     GameSound::StartLoop(GameSound::Se::TitleBgm);
+
+    // トランジション設定
+    entryTransition_ = Transition::Type::Fade;
+    exitTransition_ = Transition::Type::Fade;
+    transitionRequested_ = false;
 
     SetupCanvas();
 }
@@ -52,6 +72,14 @@ void TitleScene::SetupCanvas() {
     canvas_.SetActive(false);
     canvas_.SetActive(true);
 
+    // Canvas内のTextだけに終了フェード用アニメーションを設定する。
+    for (std::size_t i = 0; i < canvas_.GetElementCount(); ++i) {
+        Ui::Element* element = canvas_.GetElement(i);
+        if (element && element->GetType() == "Text") {
+            element->SetHideFunc(FadeTextToBlack);
+        }
+    }
+
     // 伸ばす先の長さはエディタが持つ値をそのまま使い、演出はそこへ向かうだけにする
     underlineElapsed_ = 0.0f;
     underlineGrown_ = false;
@@ -59,7 +87,7 @@ void TitleScene::SetupCanvas() {
     if (Ui::Element* underline = canvas_.FindElementByName(UNDERLINE_NAME)) {
         underlineFullSize_ = underline->GetSize();
         // 1フレームだけ全長で映らないよう、最初から縮めておく
-        underline->SetSize({0.0f, underlineFullSize_.y});
+        underline->SetSize({ 0.0f, underlineFullSize_.y });
     }
 }
 
@@ -97,7 +125,7 @@ void TitleScene::UpdateUnderline(float _deltaTime) {
     const float t = std::clamp(
         (underlineElapsed_ - UNDERLINE_START_DELAY) / UNDERLINE_GROW_DURATION, 0.0f, 1.0f);
     const float inv = 1.0f - t;
-    underline->SetSize({underlineFullSize_.x * (1.0f - inv * inv * inv), underlineFullSize_.y});
+    underline->SetSize({ underlineFullSize_.x * (1.0f - inv * inv * inv), underlineFullSize_.y });
 
     if (t >= 1.0f) {
         // 伸びきったら以降は触らない。エディタでの長さ変更がそのまま効くようにする
@@ -107,9 +135,19 @@ void TitleScene::UpdateUnderline(float _deltaTime) {
 }
 
 void TitleScene::RequestStart() {
+    if (transitionRequested_) return;
+    transitionRequested_ = true;
+
     // UI のボタンからもキー入力からもここへ合流するので、決定音はこの1箇所でよい
     GameSound::Play(GameSound::Se::Decide);
-    canvas_.SetActive(false);
+    for (std::size_t i = 0; i < canvas_.GetElementCount(); ++i) {
+        Ui::Element* element = canvas_.GetElement(i);
+        if (element && element->GetType() == "Text") {
+            element->PlayHide();
+        }
+    }
+    // Canvasは表示したままにして、タイトルの上から終了フェードを重ねる。
+    // シーン交換後の破棄はSceneSwitcherへ任せる。
     Change();
 }
 

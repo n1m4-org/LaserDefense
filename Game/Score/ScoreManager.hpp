@@ -83,6 +83,7 @@ class ScoreManager final {
     float popupDuration_ = 0.85f;                   // 表示してから消えるまでの秒数
     float popupStackOffset_ = 30.0f;                // 同時表示が重なったときに縦へずらす量
     float charWidthRatio_ = 0.53f;                  // 右揃えに使う「1文字幅 ÷ フォントサイズ」の目安
+    float opacity_ = 1.0f;                         // HUD全体から掛ける透明度
 
 public:
     /// JSON からパラメータを読み込み、表示用テキストを初期化する
@@ -118,6 +119,7 @@ public:
 
     /// スコア表示の表示 / 非表示を切り替える
     void SetVisible(bool _visible);
+    void SetOpacity(float _opacity);
 
 private:
     /// Assets/Data/Score/Score.json から各パラメータを読み込む
