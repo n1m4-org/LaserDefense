@@ -28,10 +28,6 @@ class Laser;
 class Tower;
 
 class PlayScene final : public IScene {
-    struct PlayerSpeedParticleState {
-        Vector3 direction{1.0f, 0.0f, 0.0f};
-    };
-
     GameSceneInput input_{};
     std::unique_ptr<Player> player_{nullptr};
     std::unique_ptr<PlayerCamera> playerCamera_;
@@ -80,8 +76,8 @@ class PlayScene final : public IScene {
     float hudFadeElapsed_ = 0.0f;
     float hudFadeDuration_ = 0.45f;
     float hudOpacity_ = 0.0f;
-    std::shared_ptr<PlayerSpeedParticleState> playerSpeedParticleState_;
-    EmitterHandle playerSpeedEffectHandle_;
+    float playerSpeedEffectElapsed_ = 0.0f;
+    bool playerSpeedEffectActive_ = false;
     static constexpr float CLICK_TOWER_GUIDE_DURATION = 10.0f;
     static constexpr float RETICLE_FOLLOW_SPEED = 18.0f;
     static constexpr float RETICLE_HOVER_DURATION = 0.1f;
@@ -101,9 +97,9 @@ public:
 private:
     void LoadStageConfig();
     void UpdateTowerSelection(float _deltaTime);
-    void InitializePlayerSpeedEffect();
     void InitializePlayerDashEffect();
     void UpdatePlayerSpeedEffect(float _speed, float _maxSpeed, float _deltaTime);
+    void EmitPlayerSpeedEffect();
     void EmitPlayerDashEffect();
     void ApplyDashCooldownGauge();
 

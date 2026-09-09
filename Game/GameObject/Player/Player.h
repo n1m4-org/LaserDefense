@@ -22,8 +22,8 @@ class Player : public GameObject {
 
     std::string modelName_{"Cube"};
     Vector4 modelColor_{1.0f, 1.0f, 1.0f, 1.0f};
-    Vector3 modelScale_{0.5f, 0.5f, 0.5f};
-    Vector3 modelOffset_{0.0f, 0.5f, 0.0f};
+    Vector3 modelScale_{0.75f, 0.75f, 0.75f};
+    Vector3 modelOffset_{0.0f, 0.75f, 0.0f};
     Vector3 initialPosition_{};
     Vector3 initialRotation_{};
     float moveSpeed_ = 5.0f;
@@ -53,7 +53,7 @@ class Player : public GameObject {
     bool dashTriggered_ = false;
 
     std::unique_ptr<Collision::Collider> collider_;
-    float colliderRadius_ = 1.0f;
+    float colliderRadius_ = 1.5f;
 
 public:
     Player() = default;
