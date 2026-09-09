@@ -133,26 +133,34 @@ void GimmickManager::RegisterFailureEffect() {
     if (!context_.particleSystem) return;
 
     // 破片は球状にばらけさせる。上向きを少し強めにして「吹き上がる」形にする
+    const float burstSpawnRadius = failureBurstSpawnRadius_;
+    const float burstSpeedMin = failureBurstSpeedMin_;
+    const float burstSpeedMax = failureBurstSpeedMax_;
     context_.particleSystem->RegisterSpawnFunc(FAILURE_BURST_SPAWN,
-        [](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
+        [burstSpawnRadius, burstSpeedMin, burstSpeedMax](
+            const Vector3& _center, Vector3& _position, Vector3& _velocity) {
             const float yaw = MathUtils::Random(0.0f, 6.2831853f);
             const float pitch = MathUtils::Random(-0.35f, 1.15f);
             const float horizontal = std::cos(pitch);
             const Vector3 direction{
                 std::cos(yaw) * horizontal, std::sin(pitch), std::sin(yaw) * horizontal};
-            _position = _center + direction * MathUtils::Random(0.0f, 0.6f);
-            _velocity = direction * MathUtils::Random(7.0f, 18.0f);
+            _position = _center + direction * MathUtils::Random(0.0f, burstSpawnRadius);
+            _velocity = direction * MathUtils::Random(burstSpeedMin, burstSpeedMax);
         });
 
     // 煙はゆっくり上へ。破片が消えたあとに残って失敗の跡になる。
     // 初速を抑えて Drift で減速させると、勢いよく上がらず「ふわっと漂う」動きになる
+    const float smokeSpawnRadius = failureSmokeSpawnRadius_;
+    const float smokeSpeedMin = failureSmokeSpeedMin_;
+    const float smokeSpeedMax = failureSmokeSpeedMax_;
     context_.particleSystem->RegisterSpawnFunc(FAILURE_SMOKE_SPAWN,
-        [](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
+        [smokeSpawnRadius, smokeSpeedMin, smokeSpeedMax](
+            const Vector3& _center, Vector3& _position, Vector3& _velocity) {
             const float yaw = MathUtils::Random(0.0f, 6.2831853f);
             const Vector3 spread{std::cos(yaw), 0.0f, std::sin(yaw)};
-            _position = _center + spread * MathUtils::Random(0.0f, 1.8f)
+            _position = _center + spread * MathUtils::Random(0.0f, smokeSpawnRadius)
                 + Vector3{0.0f, MathUtils::Random(0.0f, 1.0f), 0.0f};
-            _velocity = spread * MathUtils::Random(0.15f, 0.55f)
+            _velocity = spread * MathUtils::Random(smokeSpeedMin, smokeSpeedMax)
                 + Vector3{0.0f, MathUtils::Random(0.6f, 1.5f), 0.0f};
         });
 
@@ -222,6 +230,14 @@ void GimmickManager::LoadConfig() {
     if (const auto failure = groups.find("Failure"); failure != groups.end()) {
         failureTowerDamage_ = read(failure->second, "TowerDamage", failureTowerDamage_);
         failureEffectHeight_ = read(failure->second, "EffectHeight", failureEffectHeight_);
+        failureBurstSpawnRadius_ = read(
+            failure->second, "BurstSpawnRadius", failureBurstSpawnRadius_);
+        failureBurstSpeedMin_ = read(failure->second, "BurstSpeedMin", failureBurstSpeedMin_);
+        failureBurstSpeedMax_ = read(failure->second, "BurstSpeedMax", failureBurstSpeedMax_);
+        failureSmokeSpawnRadius_ = read(
+            failure->second, "SmokeSpawnRadius", failureSmokeSpawnRadius_);
+        failureSmokeSpeedMin_ = read(failure->second, "SmokeSpeedMin", failureSmokeSpeedMin_);
+        failureSmokeSpeedMax_ = read(failure->second, "SmokeSpeedMax", failureSmokeSpeedMax_);
     }
     if (const auto lottery = groups.find("Lottery"); lottery != groups.end()) {
         routeWeight_ = read(lottery->second, "RouteWeight", routeWeight_);
@@ -262,6 +278,18 @@ void GimmickManager::LoadConfig() {
         ? std::max(towerDefenseWeight_, 0.0f) : 1.0f;
     towerOrbitWeight_ = std::isfinite(towerOrbitWeight_)
         ? std::max(towerOrbitWeight_, 0.0f) : 1.0f;
+    failureBurstSpawnRadius_ = std::isfinite(failureBurstSpawnRadius_)
+        ? std::max(failureBurstSpawnRadius_, 0.0f) : 0.9f;
+    failureBurstSpeedMin_ = std::isfinite(failureBurstSpeedMin_)
+        ? std::max(failureBurstSpeedMin_, 0.0f) : 8.0f;
+    failureBurstSpeedMax_ = std::isfinite(failureBurstSpeedMax_)
+        ? std::max(failureBurstSpeedMax_, failureBurstSpeedMin_) : 21.0f;
+    failureSmokeSpawnRadius_ = std::isfinite(failureSmokeSpawnRadius_)
+        ? std::max(failureSmokeSpawnRadius_, 0.0f) : 2.4f;
+    failureSmokeSpeedMin_ = std::isfinite(failureSmokeSpeedMin_)
+        ? std::max(failureSmokeSpeedMin_, 0.0f) : 0.2f;
+    failureSmokeSpeedMax_ = std::isfinite(failureSmokeSpeedMax_)
+        ? std::max(failureSmokeSpeedMax_, failureSmokeSpeedMin_) : 0.7f;
 }
 
 void GimmickManager::StartRandomGimmick() {

@@ -27,6 +27,12 @@ class GimmickManager final {
     float failureTowerDamage_ = 20.0f;
     /// 爆発を出す高さ。タワーの足元ではなく柱の中ほどで出す
     float failureEffectHeight_ = 3.0f;
+    float failureBurstSpawnRadius_ = 0.9f;
+    float failureBurstSpeedMin_ = 8.0f;
+    float failureBurstSpeedMax_ = 21.0f;
+    float failureSmokeSpawnRadius_ = 2.4f;
+    float failureSmokeSpeedMin_ = 0.2f;
+    float failureSmokeSpeedMax_ = 0.7f;
 
     Vector2 timerGaugePosition_{380.0f, 168.0f};
     Vector2 timerGaugeSize_{520.0f, 18.0f};

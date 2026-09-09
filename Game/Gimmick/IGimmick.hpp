@@ -29,6 +29,7 @@ struct GimmickContext {
     EnemyManager* enemyManager = nullptr;
     Laser* laser = nullptr;
     GESTD::ReferencePtr<ParticleSystem> particleSystem = nullptr;
+    float stageHalfSize = 75.0f;
 };
 
 class IGimmick {
