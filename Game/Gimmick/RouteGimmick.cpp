@@ -8,6 +8,7 @@
 #include "Json/JsonParams.hpp"
 #include "Math/MathUtils.hpp"
 #include "Pattern/Singleton.hpp"
+#include "Sound/GameSound.hpp"
 #include "Tower/MainTower.hpp"
 #include "Tower/TowerManager.hpp"
 #include "src/ParticleSystem/ParticleSystem.hpp"
@@ -394,6 +395,11 @@ void RouteGimmick::OnFloorEntered(std::size_t _index) {
     floor.floorEmitter.Stop();
     floor.orderMarkers.clear();
     EmitFloorClear(floor.color, floor.position);
+
+    // 踏むたびにピッチを上げて、順番が進んでいることを音でも分かるようにする
+    GameSound::Play(GameSound::Se::GimmickColorStep,
+        1.0f + 0.07f * static_cast<float>(nextFloorIndex_));
+
     ++nextFloorIndex_;
     if (nextFloorIndex_ >= colorCount_) {
         pendingSuccess_ = true;

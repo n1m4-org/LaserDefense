@@ -29,6 +29,11 @@ namespace {
         {"Assets/Audio/laser_loop.mp3",    0.25f}, // LaserLoop  小さめ
         {"Assets/Audio/maou_bgm_cyber45.mp3",   0.40f}, // TitleBgm
         {"Assets/Audio/maou_bgm_neorock80.mp3", 0.35f}, // PlayBgm  効果音に埋もれない程度に控えめ
+        {"Assets/Audio/maou_se_onepoint15.mp3",         0.80f}, // GimmickClear
+        {"Assets/Audio/maou_se_battle_explosion08.mp3", 0.85f}, // GimmickTowerDamage
+        {"Assets/Audio/maou_se_sound_switch01.mp3",     0.60f}, // GimmickColorStep
+        {"Assets/Audio/maou_se_8bit26.mp3",             0.22f}, // GimmickOrbitLoop  鳴りっぱなしなので小さめ
+        {"Assets/Audio/maou_se_8bit24.mp3",             0.70f}, // GimmickEnemySpawn
     }};
 
     std::array<Audio::Handle, SE_DEFINITIONS.size()> handles{};
