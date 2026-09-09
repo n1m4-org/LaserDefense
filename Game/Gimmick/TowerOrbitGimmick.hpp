@@ -42,6 +42,7 @@ class TowerOrbitGimmick final : public IGimmick {
     float arrowSize_ = 3.0f;
     float arrowIdleSpeedDegrees_ = 15.0f;
     float arrowActiveSpeedDegrees_ = 100.0f;
+    float timeLimitSeconds_ = 10.0f;
 
     float accumulatedAngle_ = 0.0f;
     float previousAngle_ = 0.0f;
@@ -58,6 +59,8 @@ public:
     void Draw() const override;
     GimmickType GetType() const override { return GimmickType::TowerOrbit; }
     GimmickState GetState() const override { return state_; }
+    float GetTimeLimitSeconds() const override { return timeLimitSeconds_; }
+    void OnTimeLimitExpired() override { state_ = GimmickState::Failed; }
 
 private:
     void LoadConfig();

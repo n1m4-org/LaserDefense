@@ -104,6 +104,7 @@ void TowerOrbitGimmick::LoadConfig() {
     };
 
     requiredDegrees_ = std::max(read("RequiredDegrees", requiredDegrees_), 1.0f);
+    timeLimitSeconds_ = std::max(read("TimeLimitSeconds", timeLimitSeconds_), 0.01f);
     aoeRadius_ = std::max(read("AoERadius", aoeRadius_), 0.1f);
     completionSeconds_ = std::max(
         read("CompletionSeconds", completionSeconds_), 0.01f);

@@ -1,6 +1,9 @@
 #define NOMINMAX
 #include "GimmickManager.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
 #include <variant>
 
 #include "Gimmick/RouteGimmick.hpp"
@@ -17,11 +20,22 @@
 #undef min
 #undef max
 
+namespace {
+    const std::string WHITE_TEXTURE = "white_x16.png";
+
+    Vector4 WithOpacity(Vector4 _color, float _opacity) {
+        _color.w *= _opacity;
+        return _color;
+    }
+}
+
 void GimmickManager::Initialize(const GimmickContext& _context) {
     context_ = _context;
     activeGimmick_.reset();
     spawnTime_ = 0.0f;
+    remainingTimeSeconds_ = 0.0f;
     LoadConfig();
+    InitializeTimerGauge();
     RouteGimmick::ResetTutorialProgress();
 }
 
@@ -37,10 +51,16 @@ void GimmickManager::Update(float _deltaTime) {
 
     if (activeGimmick_) {
         activeGimmick_->Update(_deltaTime);
+        if (!activeGimmick_->IsFinished()) {
+            remainingTimeSeconds_ = std::max(remainingTimeSeconds_ - _deltaTime, 0.0f);
+            if (remainingTimeSeconds_ <= 0.0f) activeGimmick_->OnTimeLimitExpired();
+        }
         if (activeGimmick_->IsFinished()) {
             activeGimmick_.reset();
+            remainingTimeSeconds_ = 0.0f;
             spawnTime_ = 0.0f;
         }
+        UpdateTimerGauge();
         return;
     }
 
@@ -50,14 +70,22 @@ void GimmickManager::Update(float _deltaTime) {
     StartRandomGimmick();
 }
 
-void GimmickManager::Draw() const {
+void GimmickManager::Draw() {
     if (activeGimmick_) activeGimmick_->Draw();
+    if (!activeGimmick_ || !visible_) return;
+    timerGaugeFrame_.Draw();
+    timerGaugeFill_.Draw();
+    timerLabelText_.Draw();
+    timerValueText_.Draw();
 }
 
 void GimmickManager::Debug() {
 #ifdef _DEBUG
     ImGui::Begin("GimmickManager");
     ImGui::Text("Active: %s", activeGimmick_ ? "Yes" : "No");
+    if (activeGimmick_) {
+        ImGui::Text("Remaining: %.2f / %.2f", remainingTimeSeconds_, timeLimitSeconds_);
+    }
 
     if (ImGui::Button("Route")) pendingStart_ = GimmickType::Route;
     ImGui::SameLine();
@@ -100,6 +128,32 @@ void GimmickManager::LoadConfig() {
             lottery->second, "TowerDefenseWeight", towerDefenseWeight_);
         towerOrbitWeight_ = read(lottery->second, "TowerOrbitWeight", towerOrbitWeight_);
     }
+    if (const auto gauge = groups.find("TimerGauge"); gauge != groups.end()) {
+        const auto readValue = []<typename T>(
+            const auto& _group, const char* _key, const T& _fallback) {
+            const auto entry = _group.find(_key);
+            if (entry == _group.end()) return _fallback;
+            if (const auto value = std::get_if<T>(&entry->second)) return *value;
+            return _fallback;
+        };
+        timerGaugePosition_ = readValue(gauge->second, "Position", timerGaugePosition_);
+        timerGaugeSize_ = readValue(gauge->second, "Size", timerGaugeSize_);
+        timerGaugeFrameThickness_ = read(
+            gauge->second, "FrameThickness", timerGaugeFrameThickness_);
+        timerGaugeFrameColor_ = readValue(
+            gauge->second, "FrameColor", timerGaugeFrameColor_);
+        timerGaugeColor_ = readValue(gauge->second, "Color", timerGaugeColor_);
+        timerLabel_ = readValue(gauge->second, "Label", timerLabel_);
+        timerLabelPosition_ = readValue(
+            gauge->second, "LabelPosition", timerLabelPosition_);
+        timerLabelFontSize_ = read(gauge->second, "LabelFontSize", timerLabelFontSize_);
+        timerLabelColor_ = readValue(gauge->second, "LabelColor", timerLabelColor_);
+        timerValueRightX_ = read(gauge->second, "ValueRightX", timerValueRightX_);
+        timerValuePositionY_ = read(
+            gauge->second, "ValuePositionY", timerValuePositionY_);
+        timerValueFontSize_ = read(
+            gauge->second, "ValueFontSize", timerValueFontSize_);
+    }
 
     spawnInterval_ = std::isfinite(spawnInterval_) ? std::max(spawnInterval_, 0.0f) : 30.0f;
     routeWeight_ = std::isfinite(routeWeight_) ? std::max(routeWeight_, 0.0f) : 1.0f;
@@ -126,7 +180,15 @@ void GimmickManager::StartRandomGimmick() {
 
 void GimmickManager::StartGimmick(GimmickType _type) {
     activeGimmick_ = CreateGimmick(_type);
-    if (activeGimmick_) activeGimmick_->Initialize(context_);
+    if (activeGimmick_) {
+        activeGimmick_->Initialize(context_);
+        timeLimitSeconds_ = activeGimmick_->GetTimeLimitSeconds();
+        if (!std::isfinite(timeLimitSeconds_) || timeLimitSeconds_ <= 0.0f) {
+            timeLimitSeconds_ = 10.0f;
+        }
+        remainingTimeSeconds_ = timeLimitSeconds_;
+        UpdateTimerGauge();
+    }
     spawnTime_ = 0.0f;
 }
 
@@ -140,4 +202,55 @@ std::unique_ptr<IGimmick> GimmickManager::CreateGimmick(GimmickType _type) const
         return std::make_unique<TowerOrbitGimmick>();
     }
     return nullptr;
+}
+
+void GimmickManager::InitializeTimerGauge() {
+    for (Sprite* sprite : {&timerGaugeFrame_, &timerGaugeFill_}) {
+        sprite->Initialize(WHITE_TEXTURE);
+        sprite->SetAnchorPoint({0.0f, 0.5f});
+    }
+    timerLabelText_.Initialize(
+        timerLabel_, timerLabelPosition_.x, timerLabelPosition_.y, timerLabelFontSize_);
+    timerValueText_.Initialize("", timerValueRightX_, timerValuePositionY_, timerValueFontSize_);
+    UpdateTimerGauge();
+}
+
+void GimmickManager::UpdateTimerGauge() {
+    const float ratio = timeLimitSeconds_ > 0.0f
+        ? std::clamp(remainingTimeSeconds_ / timeLimitSeconds_, 0.0f, 1.0f)
+        : 0.0f;
+    timerGaugeFrame_.SetPosition({
+        timerGaugePosition_.x - timerGaugeFrameThickness_, timerGaugePosition_.y});
+    timerGaugeFrame_.SetSize({
+        timerGaugeSize_.x + timerGaugeFrameThickness_ * 2.0f,
+        timerGaugeSize_.y + timerGaugeFrameThickness_ * 2.0f});
+    timerGaugeFrame_.SetColor(WithOpacity(timerGaugeFrameColor_, opacity_));
+    timerGaugeFrame_.Update();
+
+    timerGaugeFill_.SetPosition(timerGaugePosition_);
+    timerGaugeFill_.SetSize({timerGaugeSize_.x * ratio, timerGaugeSize_.y});
+    timerGaugeFill_.SetColor(WithOpacity(timerGaugeColor_, opacity_));
+    timerGaugeFill_.Update();
+
+    timerLabelText_.SetColor(WithOpacity(timerLabelColor_, opacity_));
+    char buffer[32]{};
+    std::snprintf(buffer, sizeof(buffer), "%.1fs", remainingTimeSeconds_);
+    const std::string value = buffer;
+    timerValueText_.SetText(value);
+    timerValueText_.SetPosition(
+        timerValueRightX_
+            - static_cast<float>(value.size()) * timerValueFontSize_ * timerValueCharWidthRatio_,
+        timerValuePositionY_);
+    timerValueText_.SetColor(WithOpacity(timerGaugeColor_, opacity_));
+}
+
+void GimmickManager::SetVisible(bool _visible) {
+    visible_ = _visible;
+    timerLabelText_.SetVisible(_visible);
+    timerValueText_.SetVisible(_visible);
+}
+
+void GimmickManager::SetOpacity(float _opacity) {
+    opacity_ = std::clamp(_opacity, 0.0f, 1.0f);
+    UpdateTimerGauge();
 }

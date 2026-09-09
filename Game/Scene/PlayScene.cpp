@@ -359,6 +359,7 @@ void PlayScene::Update() {
     hudOpacity_ = hudFadeRatio * hudFadeRatio * (3.0f - 2.0f * hudFadeRatio);
 
     towerHpGauge_->SetOpacity(hudOpacity_);
+    gimmickManager_->SetOpacity(hudOpacity_);
     scoreManager_->SetOpacity(hudOpacity_);
     survivalTimeManager_->SetOpacity(hudOpacity_);
     comboManager_->SetOpacity(hudOpacity_);
@@ -371,6 +372,7 @@ void PlayScene::Update() {
         // ゲーム中の UI は畳む。文字はスプライトより手前に描かれる仕組みなので、
         // 残すと暗幕が効かず、リザルトより明るいまま浮いてしまう
         towerHpGauge_->SetVisible(false);
+        gimmickManager_->SetVisible(false);
         scoreManager_->SetVisible(false);
         survivalTimeManager_->SetVisible(false);
         comboManager_->SetVisible(false);

@@ -39,6 +39,8 @@ public:
     virtual void Draw() const = 0;
     virtual GimmickType GetType() const = 0;
     virtual GimmickState GetState() const = 0;
+    virtual float GetTimeLimitSeconds() const = 0;
+    virtual void OnTimeLimitExpired() = 0;
     virtual void Debug() {}
 
     bool IsFinished() const {
