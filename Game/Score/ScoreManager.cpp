@@ -30,6 +30,11 @@ namespace {
             Lerp(_start.w, _end.w, _t),
         };
     }
+
+    Vector4 WithOpacity(Vector4 _color, float _opacity) {
+        _color.w *= _opacity;
+        return _color;
+    }
 }
 
 void ScoreManager::Initialize() {
@@ -139,6 +144,10 @@ void ScoreManager::SetVisible(bool _visible) {
     }
 }
 
+void ScoreManager::SetOpacity(float _opacity) {
+    opacity_ = std::clamp(_opacity, 0.0f, 1.0f);
+}
+
 void ScoreManager::LoadConfig() {
     const auto json = Singleton<JsonParams>::GetInstance();
     if (!json->Load("Score", "Score")) {
@@ -215,12 +224,12 @@ void ScoreManager::LoadConfig() {
 void ScoreManager::ApplyTextSettings() {
     textObject_.SetPosition(textPosition_.x, textPosition_.y);
     textObject_.SetFontSize(fontSize_);
-    textObject_.SetColor(textColor_);
+    textObject_.SetColor(WithOpacity(textColor_, opacity_));
 }
 
 void ScoreManager::RefreshText() {
     textObject_.SetText(MakeDisplayString());
-    textObject_.SetColor(GetTextColor());
+    textObject_.SetColor(WithOpacity(GetTextColor(), opacity_));
 
     // 加算した瞬間だけ数字を一回り大きくする。
     // 右上に置いているので、拡大した分だけ左へ寄せて右端が動かないようにする
@@ -274,7 +283,7 @@ void ScoreManager::UpdatePopups(float _deltaTime) {
             : 1.0f - (t - FADE_START) / (1.0f - FADE_START);
 
         const Vector4 color = LerpColor(popupColor_, popupHighColor_, popup.strength);
-        popup.text.SetColor({color.x, color.y, color.z, color.w * alpha});
+        popup.text.SetColor({color.x, color.y, color.z, color.w * alpha * opacity_});
     }
 }
 
@@ -311,7 +320,8 @@ void ScoreManager::SpawnGainPopup(int32_t _gained, float _strength) {
 
     target->text.SetText(buffer);
     target->text.SetFontSize(fontSize);
-    target->text.SetColor(LerpColor(popupColor_, popupHighColor_, _strength));
+    target->text.SetColor(WithOpacity(
+        LerpColor(popupColor_, popupHighColor_, _strength), opacity_));
     target->text.SetPosition(
         textRightEdge_ - EstimateTextWidth(buffer, fontSize),
         target->baseY);
