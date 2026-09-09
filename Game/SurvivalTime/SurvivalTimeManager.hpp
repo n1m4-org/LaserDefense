@@ -89,11 +89,9 @@ class SurvivalTimeManager final {
     std::array<Text, VALUE_CHAR_MAX> valueChars_{};
     size_t valueCharCount_ = 0;                 // 実際に使っている文字数
     float valueFontSize_ = 30.0f;               // 通常時のフォントサイズ
-    /// 1升の幅 ＝ フォントサイズ × これ。
-    /// いちばん太い数字（"0" = 0.718em）が収まる 0.558 が既定。
     /// 小さくすると数字同士が詰まり、大きくすると間延びする
     float valueCellRatio_ = 0.558f;
-    float valueOffsetY_ = -20.0f;               // リング中心から見たテキスト上端のずれ
+    float valueOffsetY_ = -14.5f;               // リング中心から見たテキスト上端のずれ
     Vector4 valueColor_{0.9f, 1.0f, 0.95f, 1.0f};       // 文字色
     /// ラベルの中央揃えに使う「1文字幅 ÷ フォントサイズ」の目安。
     /// 数値と違って文字列が変わらないので、平均的な字幅で合わせておけばよい

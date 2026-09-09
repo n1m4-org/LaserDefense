@@ -26,7 +26,7 @@
         "Value": {
             "FontSize": 30.0,
             "CellWidthRatio": 0.558,
-            "OffsetY": -20.0,
+            "OffsetY": -14.5,
             "Color": [0.9, 1.0, 0.95, 1.0],
             "CharWidthRatio": 0.47
         },
