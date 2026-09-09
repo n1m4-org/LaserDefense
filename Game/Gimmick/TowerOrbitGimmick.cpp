@@ -57,9 +57,7 @@ void TowerOrbitGimmick::Initialize(const GimmickContext& _context) {
     direction_ = MathUtils::Random(0.0f, 1.0f) < 0.5f
         ? OrbitDirection::Clockwise
         : OrbitDirection::CounterClockwise;
-    effectColor_ = direction_ == OrbitDirection::Clockwise
-        ? Vector4{0.15f, 1.0f, 0.35f, 1.0f}
-        : Vector4{1.0f, 0.12f, 0.08f, 1.0f};
+    effectColor_ = {0.15f, 1.0f, 0.35f, 1.0f};
 
     InitializeVisuals();
     InitializeParticles();
@@ -108,6 +106,18 @@ void TowerOrbitGimmick::LoadConfig() {
     aoeRadius_ = std::max(read("AoERadius", aoeRadius_), 0.1f);
     completionSeconds_ = std::max(
         read("CompletionSeconds", completionSeconds_), 0.01f);
+    completionFlashSeconds_ = std::max(
+        read("CompletionFlashSeconds", completionFlashSeconds_), 0.01f);
+    completionBurstCount_ = static_cast<uint16_t>(std::clamp(
+        read("CompletionBurstCount", static_cast<float>(completionBurstCount_)),
+        1.0f, 1000.0f));
+    completionBurstUpSpeedMin_ = std::max(
+        read("CompletionBurstUpSpeedMin", completionBurstUpSpeedMin_), 0.0f);
+    completionBurstUpSpeedMax_ = std::max(
+        read("CompletionBurstUpSpeedMax", completionBurstUpSpeedMax_),
+        completionBurstUpSpeedMin_);
+    completionBurstHorizontalSpeed_ = std::max(
+        read("CompletionBurstHorizontalSpeed", completionBurstHorizontalSpeed_), 0.0f);
     shockwaveScale_ = std::max(read("ShockwaveScale", shockwaveScale_), 1.0f);
     arrowRadiusRatio_ = std::max(read("ArrowRadiusRatio", arrowRadiusRatio_), 0.0f);
     arrowSize_ = std::max(read("ArrowSize", arrowSize_), 0.1f);
@@ -180,15 +190,22 @@ void TowerOrbitGimmick::InitializeParticles() {
                 std::sin(angle) * radius};
             _velocity = {0.0f, MathUtils::Random(0.3f, 1.0f), 0.0f};
         });
+    const float burstUpSpeedMin = completionBurstUpSpeedMin_;
+    const float burstUpSpeedMax = completionBurstUpSpeedMax_;
+    const float burstHorizontalSpeed = completionBurstHorizontalSpeed_;
     context_.particleSystem->RegisterSpawnFunc(COMPLETE_SPAWN,
-        [](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
-            const float y = MathUtils::Random(0.2f, 1.0f);
+        [effectRadius, burstUpSpeedMin, burstUpSpeedMax, burstHorizontalSpeed](
+            const Vector3& _center, Vector3& _position, Vector3& _velocity) {
             const float angle = MathUtils::Random(0.0f, MathUtils::F_PI * 2.0f);
-            const float horizontal = std::sqrt(std::max(1.0f - y * y, 0.0f));
-            const Vector3 direction{
-                std::cos(angle) * horizontal, y, std::sin(angle) * horizontal};
-            _position = _center + Vector3{0.0f, MathUtils::Random(0.5f, 2.0f), 0.0f};
-            _velocity = direction * MathUtils::Random(7.0f, 14.0f);
+            const float radius = std::sqrt(MathUtils::Random(0.0f, 1.0f)) * effectRadius;
+            _position = _center + Vector3{
+                std::cos(angle) * radius,
+                MathUtils::Random(0.05f, 0.45f),
+                std::sin(angle) * radius};
+            _velocity = {
+                MathUtils::Random(-burstHorizontalSpeed, burstHorizontalSpeed),
+                MathUtils::Random(burstUpSpeedMin, burstUpSpeedMax),
+                MathUtils::Random(-burstHorizontalSpeed, burstHorizontalSpeed)};
         });
 
     ParticleSystem::EmitterConfig ambient;
@@ -218,7 +235,7 @@ void TowerOrbitGimmick::InitializeParticles() {
     burst.texture = "white_x16.png";
     burst.frequency = 0.0f;
     burst.duration = 0.0f;
-    burst.spawnCount = 28;
+    burst.spawnCount = completionBurstCount_;
     burst.size = {0.9f, 0.9f, 0.9f};
     burst.particleLifetime = 1.1f;
     burst.spawnFuncKey = COMPLETE_SPAWN;
@@ -326,6 +343,12 @@ void TowerOrbitGimmick::BeginCompletion() {
     ambientEffect_.Stop();
     ambientEffect_ = {};
 
+    // 達成したフレームでAoE全体を白くし、次フレーム以降で元の色へ戻す。
+    baseAoE_->SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+    baseAoE_->Update();
+    progressAoE_->SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+    progressAoE_->Update();
+
     if (context_.particleSystem) {
         context_.particleSystem->Emit(
             COMPLETE_TEMPLATE,
@@ -339,18 +362,24 @@ void TowerOrbitGimmick::UpdateCompletion(float _deltaTime) {
         completionElapsed_ / completionSeconds_, 0.0f, 1.0f);
     const float eased = EaseOutCubic(progress);
     const float scale = aoeRadius_ * (1.0f + (shockwaveScale_ - 1.0f) * eased);
+    const float flash = 1.0f - std::clamp(
+        completionElapsed_ / completionFlashSeconds_, 0.0f, 1.0f);
 
     const float directionSign = direction_ == OrbitDirection::Clockwise ? -1.0f : 1.0f;
     arrowRotation_ += directionSign * arrowActiveSpeedDegrees_
         * MathUtils::F_PI / 180.0f * _deltaTime;
     UpdateArrowVisuals(1.0f - progress);
 
-    baseAoE_->SetColor({1.0f, 1.0f, 1.0f, 0.38f * (1.0f - progress)});
+    baseAoE_->SetColor({
+        1.0f, 1.0f, 1.0f,
+        (0.38f + 0.62f * flash) * (1.0f - progress)});
     baseAoE_->Update();
     progressAoE_->SetScale({scale, scale, 1.0f});
     progressAoE_->SetColor({
-        effectColor_.x, effectColor_.y, effectColor_.z,
-        0.72f * (1.0f - progress)});
+        effectColor_.x + (1.0f - effectColor_.x) * flash,
+        effectColor_.y + (1.0f - effectColor_.y) * flash,
+        effectColor_.z + (1.0f - effectColor_.z) * flash,
+        (0.72f + 0.28f * flash) * (1.0f - progress)});
     progressAoE_->Update();
 
     if (completionElapsed_ >= completionSeconds_) state_ = GimmickState::Success;

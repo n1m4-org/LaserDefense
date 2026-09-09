@@ -31,9 +31,9 @@ class TowerManager;
  *    2. フラッシュ   … 被弾した瞬間にゲージ全体が白く光る（輝度の急変）
  *    3. シェイク     … ゲージが左右に揺れる（動き）
  *    4. 画面フラッシュ … 画面全体がうっすら赤く光る（視線がどこにあっても気付ける）
- *    5. 危険域の明滅 … 残りが少ないとゲージが赤く明滅し続ける
+ *    5. 危険域の明滅 … 残りが少ないとゲージが明滅し続ける
  *  制限時間ゲージが「増える」方向の演出なのに対し、こちらは「減る」方向なので、
- *  色を寒色（水色）にして左上の時間ゲージと一目で区別できるようにしている。
+ *  色を緑にして、赤いギミック残り時間ゲージと一目で区別できるようにしている。
  *
  *  ## パラメータの変更方法
  *  下記メンバーの初期値はすべて Assets/Data/Tower/MainTower.json から上書きされる。
@@ -86,9 +86,9 @@ class TowerHpGauge final {
     Vector2 gaugeSize_{440.0f, 22.0f};          //!< ゲージ本体のサイズ（満タン時）
     float frameThickness_ = 3.0f;               //!< ゲージを囲む枠の太さ
     Vector4 frameColor_{0.04f, 0.04f, 0.07f, 0.85f};    //!< 枠 兼 空き部分の色
-    Vector4 safeColor_{0.35f, 0.8f, 1.0f, 1.0f};        //!< HP が十分あるときの色（寒色）
-    Vector4 warningColor_{1.0f, 0.7f, 0.25f, 1.0f};     //!< HP が減ってきたときの色
-    Vector4 dangerColor_{1.0f, 0.3f, 0.3f, 1.0f};       //!< HP が危険なときの色
+    Vector4 safeColor_{0.2f, 0.9f, 0.35f, 1.0f};        //!< HP バーの基本色
+    Vector4 warningColor_{0.2f, 0.9f, 0.35f, 1.0f};     //!< HP が減ってきたときの色
+    Vector4 dangerColor_{0.2f, 0.9f, 0.35f, 1.0f};      //!< HP が危険なときの色
     Vector4 trailColor_{1.0f, 1.0f, 1.0f, 0.95f};       //!< 失った分を示すトレイルバーの色
     float warningRatio_ = 0.4f;         //!< この割合を下回ると warningColor_ になる
     float dangerRatio_ = 0.2f;          //!< この割合を下回ると dangerColor_ になり明滅する
