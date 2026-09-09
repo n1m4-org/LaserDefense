@@ -3,6 +3,10 @@
         "Spawn": {
             "IntervalSeconds": 10.0
         },
+        "Failure": {
+            "TowerDamage": 20.0,
+            "EffectHeight": 3.0
+        },
         "Lottery": {
             "RouteWeight": 1.0,
             "TowerDefenseWeight": 1.0,
