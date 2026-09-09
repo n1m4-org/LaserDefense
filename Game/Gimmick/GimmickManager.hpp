@@ -26,7 +26,7 @@ class GimmickManager final {
     Vector2 timerGaugeSize_{520.0f, 18.0f};
     float timerGaugeFrameThickness_ = 3.0f;
     Vector4 timerGaugeFrameColor_{0.04f, 0.04f, 0.07f, 0.85f};
-    Vector4 timerGaugeColor_{0.75f, 0.3f, 1.0f, 1.0f};
+    Vector4 timerGaugeColor_{1.0f, 0.2f, 0.2f, 1.0f};
     Sprite timerGaugeFrame_{};
     Sprite timerGaugeFill_{};
     std::string timerLabel_{"GimmickRemainingTime"};

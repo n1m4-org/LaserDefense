@@ -2,6 +2,7 @@
 #define TOWER_ORBIT_GIMMICK_HPP_
 
 #include <array>
+#include <cstdint>
 #include <memory>
 
 #include "Gimmick/IGimmick.hpp"
@@ -43,6 +44,11 @@ class TowerOrbitGimmick final : public IGimmick {
     float arrowIdleSpeedDegrees_ = 15.0f;
     float arrowActiveSpeedDegrees_ = 100.0f;
     float timeLimitSeconds_ = 10.0f;
+    float completionFlashSeconds_ = 0.15f;
+    uint16_t completionBurstCount_ = 64;
+    float completionBurstUpSpeedMin_ = 8.0f;
+    float completionBurstUpSpeedMax_ = 14.0f;
+    float completionBurstHorizontalSpeed_ = 1.5f;
 
     float accumulatedAngle_ = 0.0f;
     float previousAngle_ = 0.0f;
