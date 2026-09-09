@@ -18,7 +18,6 @@ class TowerManager final {
     float switchWarningBlinkInterval_ = 0.5f;
     std::size_t nextCandidateIndex_ = 0;
     bool mainTowerSwitched_ = false;
-    bool mainTowerSwitchSuspended_ = false;
     MainTower* switchWarningTower_ = nullptr;
     MainTower* nextWarningTower_ = nullptr;
     int switchWarningBeepsPlayed_ = 0;
@@ -44,7 +43,6 @@ public:
     void SetConnectedTower(const Tower* _tower);
     MainTower* ConsumeMainTowerSwitch();
     const std::vector<MainTower*>& GetMainTowers() const { return mainTowers_; }
-    void SetMainTowerSwitchSuspended(bool _suspended) { mainTowerSwitchSuspended_ = _suspended; }
 
 private:
     void LoadConfig();

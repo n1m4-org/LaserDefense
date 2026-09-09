@@ -10,13 +10,11 @@ class MainTowerIndicator final {
     Sprite arrow_{};
     Vector2 arrowSize_{28.0f, 28.0f};
     bool visible_ = false;
-    float opacity_ = 1.0f;
 
 public:
     void Initialize();
     void Update(const MainTower* _target);
     void Draw();
-    void SetOpacity(float _opacity);
 
 private:
     void LoadConfig();

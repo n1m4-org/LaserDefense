@@ -35,11 +35,6 @@ namespace {
             Lerp(_start.w, _end.w, _t),
         };
     }
-
-    Vector4 WithOpacity(Vector4 _color, float _opacity) {
-        _color.w *= _opacity;
-        return _color;
-    }
 }
 
 void TowerHpGauge::Initialize() {
@@ -155,11 +150,6 @@ void TowerHpGauge::SetVisible(bool _visible) {
     for (auto& popup : popups_) {
         popup.text.SetVisible(_visible && popup.active);
     }
-}
-
-void TowerHpGauge::SetOpacity(float _opacity) {
-    opacity_ = std::clamp(_opacity, 0.0f, 1.0f);
-    labelText_.SetColor(WithOpacity(labelColor_, opacity_));
 }
 
 void TowerHpGauge::LoadConfig() {
@@ -332,9 +322,7 @@ void TowerHpGauge::UpdatePopups(float _deltaTime) {
         const float alpha = t < FADE_START
             ? 1.0f
             : 1.0f - (t - FADE_START) / (1.0f - FADE_START);
-        popup.text.SetColor({
-            popupColor_.x, popupColor_.y, popupColor_.z,
-            popupColor_.w * alpha * opacity_});
+        popup.text.SetColor({popupColor_.x, popupColor_.y, popupColor_.z, popupColor_.w * alpha});
     }
 }
 
@@ -352,32 +340,32 @@ void TowerHpGauge::ApplyGaugeSprites() {
 
     frameSprite_.SetPosition(framePosition);
     frameSprite_.SetSize(frameSize);
-    frameSprite_.SetColor(WithOpacity(frameColor_, opacity_));
+    frameSprite_.SetColor(frameColor_);
     frameSprite_.Update();
 
     // トレイルバーは「減る前の残量」。本体が先に減るので差分が失った量として見える。
     // 白にしているのは、本体バーが水色→橙→赤と変わってもコントラストが保たれるため
     trailSprite_.SetPosition(barPosition);
     trailSprite_.SetSize({gaugeSize_.x * trailRatio_, gaugeSize_.y * punch});
-    trailSprite_.SetColor(WithOpacity(trailColor_, opacity_));
+    trailSprite_.SetColor(trailColor_);
     trailSprite_.Update();
 
     // 本体バーは現在の残量
     fillSprite_.SetPosition(barPosition);
     fillSprite_.SetSize({gaugeSize_.x * displayRatio_, gaugeSize_.y * punch});
-    fillSprite_.SetColor(WithOpacity(gaugeColor, opacity_));
+    fillSprite_.SetColor(gaugeColor);
     fillSprite_.Update();
 
     // フラッシュはゲージ全体を覆う白。輝度の急変が周辺視野に一番効く
     flashSprite_.SetPosition(framePosition);
     flashSprite_.SetSize(frameSize);
-    flashSprite_.SetColor({1.0f, 1.0f, 1.0f, GetFlashAlpha() * opacity_});
+    flashSprite_.SetColor({1.0f, 1.0f, 1.0f, GetFlashAlpha()});
     flashSprite_.Update();
 
     // 画面全体を薄く染める。視線がゲージから離れていても被弾に気付ける
     screenFlashSprite_.SetColor({
         screenFlashColor_.x, screenFlashColor_.y, screenFlashColor_.z,
-        GetFlashAlpha() * screenFlashStrength_ * opacity_});
+        GetFlashAlpha() * screenFlashStrength_});
     screenFlashSprite_.Update();
 }
 
@@ -396,7 +384,7 @@ void TowerHpGauge::RefreshValueText() {
     valueText_.SetText(text);
 
     // 数値もゲージと同じ色にすることで、どちらを見ても同じ状態が読み取れる
-    valueText_.SetColor(WithOpacity(GetGaugeColor(), opacity_));
+    valueText_.SetColor(GetGaugeColor());
 
     // 被弾した瞬間だけ数字を一回り大きくする
     const float punchT = punchDuration_ > 0.0f ? punchTimer_ / punchDuration_ : 0.0f;
@@ -444,7 +432,7 @@ void TowerHpGauge::SpawnDamagePopup(float _damage) {
 
     target->text.SetText(text);
     target->text.SetFontSize(popupFontSize_);
-    target->text.SetColor(WithOpacity(popupColor_, opacity_));
+    target->text.SetColor(popupColor_);
     target->text.SetPosition(target->baseX, target->baseY);
     target->text.SetVisible(true);
     target->elapsed = 0.0f;

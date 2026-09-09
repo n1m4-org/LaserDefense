@@ -4,8 +4,7 @@
             "Size": 150.0,
             "TowerMargin": 45.0,
             "FenceHeight": 2.0,
-            "WallBounce": 0.8,
-            "HudFadeInSeconds": 0.45
+            "WallBounce": 0.8
         }
     }
 }
