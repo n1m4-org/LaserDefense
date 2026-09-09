@@ -36,6 +36,11 @@ namespace {
             Lerp(_start.w, _end.w, _t),
         };
     }
+
+    Vector4 WithOpacity(Vector4 _color, float _opacity) {
+        _color.w *= _opacity;
+        return _color;
+    }
 }
 
 void SurvivalTimeManager::Initialize() {
@@ -107,6 +112,11 @@ void SurvivalTimeManager::SetVisible(bool _visible) {
     visible_ = _visible;
     valueText_.SetVisible(_visible);
     labelText_.SetVisible(_visible);
+}
+
+void SurvivalTimeManager::SetOpacity(float _opacity) {
+    opacity_ = std::clamp(_opacity, 0.0f, 1.0f);
+    labelText_.SetColor(WithOpacity(labelColor_, opacity_));
 }
 
 void SurvivalTimeManager::LoadConfig() {
@@ -254,7 +264,7 @@ void SurvivalTimeManager::ApplyTickSprites() {
             ? tickGainTimers_[static_cast<size_t>(i)] / gainFlashDuration_
             : 0.0f;
         const float highlight = std::max(EaseOutCubic(std::clamp(gain, 0.0f, 1.0f)), lapFlash);
-        sprite.SetColor(LerpColor(base, gainColor_, highlight));
+        sprite.SetColor(WithOpacity(LerpColor(base, gainColor_, highlight), opacity_));
 
         sprite.Update();
     }
@@ -271,7 +281,8 @@ void SurvivalTimeManager::RefreshValueText() {
 
     // 1周した瞬間だけ数値を白く光らせて一回り大きくする
     const float lapFlash = GetLapFlashAlpha();
-    valueText_.SetColor(LerpColor(valueColor_, gainColor_, lapFlash));
+    valueText_.SetColor(WithOpacity(
+        LerpColor(valueColor_, gainColor_, lapFlash), opacity_));
 
     const float punchT = punchDuration_ > 0.0f ? punchTimer_ / punchDuration_ : 0.0f;
     const float fontSize = valueFontSize_ * Lerp(1.0f, valuePunchScale_, EaseOutCubic(punchT));
