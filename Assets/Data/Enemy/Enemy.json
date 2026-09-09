@@ -26,9 +26,9 @@
             "Range": [150.0, 150.0],
             "ExcludeRange": [10.0, 10.0],
             "MaxEnemyCount": 100,
-            "IntervalSeconds": 3.0,
+            "IntervalSeconds": 2.0,
             "InitialCount": 1,
-            "CountIncreaseIntervalSeconds": 30.0
+            "CountIncreaseIntervalSeconds": 60.0
         },
         "Movement": {
             "Speed": 3.0

@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 #include "Gimmick/IGimmick.hpp"
 #include "Math/Vector2.hpp"
@@ -20,16 +21,48 @@ class TowerDefenseGimmick final : public IGimmick {
         Completion   //!< ノルマ達成後、クリア演出を再生している間
     };
 
+    struct AbsorptionCubeVisual {
+        std::unique_ptr<Model> model;
+        Vector3 startPosition{};
+        float elapsedSeconds = 0.0f;
+    };
+
+    struct FragmentVisual {
+        std::unique_ptr<Model> model;
+        Vector3 position{};
+        Vector3 velocity{};
+        Vector3 rotation{};
+        Vector3 angularVelocity{};
+    };
+
     GimmickContext context_{};
     GimmickState state_ = GimmickState::Ready;
     MainTower* targetTower_ = nullptr;
     Phase phase_ = Phase::Warning;
 
     float warningElapsedSeconds_ = 0.0f;
-    float warningDurationSeconds_ = 5.0f;
+    float warningDurationSeconds_ = 1.0f;
     std::unique_ptr<Sprite> warningArrow_;
     Vector2 warningArrowSize_{32.0f, 32.0f};
     bool warningArrowVisible_ = false;
+    std::unique_ptr<Model> spawnerEnemyModel_;
+    float spawnerEnemyScaleMultiplier_ = 4.0f;
+    float spawnerEnemyStartHeight_ = -0.5f;
+    float spawnerEnemyFloatHeight_ = 5.0f;
+    float spawnerEnemyRotationSpeed_ = 0.6f;
+    float spawnerEnemyRotation_ = 0.0f;
+    Vector3 spawnerEnemyBaseScale_{2.0f, 2.0f, 2.0f};
+    Vector4 spawnerEnemyBaseColor_{1.0f, 0.0f, 0.0f, 1.0f};
+    std::vector<AbsorptionCubeVisual> absorptionCubes_;
+    float absorptionSeconds_ = 0.45f;
+    float absorptionArcHeight_ = 2.0f;
+    float absorptionCubeScaleRatio_ = 0.125f;
+    float absorptionPulseSeconds_ = 0.25f;
+    float absorptionPulseElapsed_ = 0.0f;
+    bool absorptionPulseActive_ = false;
+    std::vector<FragmentVisual> fragments_;
+    float fragmentScaleRatio_ = 0.25f;
+    float fragmentGravity_ = 9.8f;
 
     float timeLimitSeconds_ = 25.0f;
     int32_t requiredKillCount_ = 10;
@@ -37,6 +70,7 @@ class TowerDefenseGimmick final : public IGimmick {
     float killRadius_ = 20.0f;
     float spawnRadiusRatio_ = 0.8f;
     float spawnIntervalSeconds_ = 1.5f;
+    int32_t spawnCount_ = 3;
     float spawnElapsedSeconds_ = 0.0f;
 
     std::unique_ptr<Model> baseAoE_;
@@ -60,6 +94,13 @@ private:
     void LoadConfig();
     void SaveConfig() const;
     void UpdateWarningArrow();
+    void InitializeSpawnerEnemyVisual();
+    void UpdateSpawnerEnemyVisual(float _deltaTime);
+    void SpawnAbsorptionCube(const Vector3& _position);
+    void UpdateAbsorptionCubes(float _deltaTime);
+    void UpdateAbsorptionPulse(float _deltaTime);
+    void InitializeCompletionFragments();
+    void UpdateCompletionFragments(float _deltaTime);
     void CollectKillsInRange();
     void InitializeAoEPlane();
     void InitializeCompletionParticles();

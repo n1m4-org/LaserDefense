@@ -224,11 +224,11 @@ void EnemyManager::LoadConfig() {
 
     maxEnemyCount_ = std::clamp(maxEnemyCount_, 0, 10000);
     spawnIntervalSeconds_ = std::isfinite(spawnIntervalSeconds_)
-        ? std::max(spawnIntervalSeconds_, 0.01f) : 1.0f;
+        ? std::max(spawnIntervalSeconds_, 0.01f) : 2.0f;
     initialSpawnCount_ = std::clamp(initialSpawnCount_, 0, 128);
     spawnCountIncreaseIntervalSeconds_ =
         std::isfinite(spawnCountIncreaseIntervalSeconds_)
-        ? std::max(spawnCountIncreaseIntervalSeconds_, 0.01f) : 30.0f;
+        ? std::max(spawnCountIncreaseIntervalSeconds_, 0.01f) : 60.0f;
     moveSpeed_ = std::isfinite(moveSpeed_) ? std::max(moveSpeed_, 0.0f) : 2.0f;
     spawnAnimationDuration_ = std::max(spawnAnimationDuration_, 0.0f);
     spawnStartScale_ = std::max(spawnStartScale_, 0.0001f);

@@ -36,7 +36,7 @@ class Laser final {
     float knockbackPower_ = 18.0f;
     float damageMultiplier_ = 1.0f;
     float knockbackMultiplier_ = 1.0f;
-    float maxSpeedDamageMultiplier_ = 2.5f;
+    float maxSpeedDamageMultiplier_ = 3.0f;
     float maxSpeedKnockbackMultiplier_ = 2.0f;
     GESTD::ReferencePtr<ParticleSystem> particleSystem_;
     std::shared_ptr<BeamState> beamState_;
