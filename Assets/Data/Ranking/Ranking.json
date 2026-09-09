@@ -7,24 +7,23 @@
         },
         "Entry1": {
             "Score": 21900,
+            "Seconds": 140.83187866210938,
+            "Total": 35900
+        },
+        "Entry2": {
+            "Score": 21900,
             "Seconds": 137.63278198242188,
             "Total": 35600
         },
-        "Entry2": {
+        "Entry3": {
             "Score": 21500,
             "Seconds": 137.32774353027344,
             "Total": 35200
         },
-        "Entry3": {
+        "Entry4": {
             "Score": 7900,
             "Seconds": 106.2474365234375,
             "Total": 18500
-        },
-        "Entry4": {
-            "Score": 3300,
-            "Seconds": 84.55744934082031,
-            "Total": 11700
-
         }
     }
 }

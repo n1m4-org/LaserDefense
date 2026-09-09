@@ -24,7 +24,9 @@ private:
         Vector3 position{};
         int32_t orderNumber = 1;
         bool cleared = false;
+        float clearFlashElapsed = 0.0f;
         std::unique_ptr<Collision::Collider> collider;
+        std::unique_ptr<Model> aoe;
         EmitterHandle floorEmitter;
         std::vector<std::unique_ptr<Model>> orderMarkers;
     };
@@ -42,17 +44,24 @@ private:
     Vector3 towerPosition_{};
 
     float timeLimitSeconds_ = 10.0f;
-    float floorRadius_ = 1.5f;
+    float floorRadius_ = 8.0f;
     float floorOpacity_ = 0.55f;
+    float floorAoEOpacity_ = 0.32f;
+    float clearFlashSeconds_ = 0.15f;
+    uint16_t clearParticleCount_ = 48;
+    float clearParticleUpSpeedMin_ = 5.0f;
+    float clearParticleUpSpeedMax_ = 9.0f;
+    float clearParticleHorizontalSpeed_ = 1.0f;
     float minFloorDistance_ = 6.0f;
-    float minTowerDistance_ = 4.0f;
-    float placementRadius_ = 18.0f;
+    float minTowerDistance_ = 10.0f;
+    float placementRadius_ = 50.0f;
 
     float orderMarkerRadius_ = 0.22f;
     float orderMarkerSpacing_ = 0.5f;
     float orderMarkerHeight_ = 1.4f;
 
     bool pendingAdvanceToNormal_ = false;
+    bool pendingSuccess_ = false;
     bool debugTuningPaused_ = false;
 
 public:
@@ -81,6 +90,9 @@ private:
     void GenerateColorOrder();
     void PlaceFloors();
     void CreateOrderMarkers(ColorFloor& _floor);
+    void CreateFloorAoE(ColorFloor& _floor);
+    void UpdateFloorAoE(ColorFloor& _floor);
+    bool UpdateClearEffects(float _deltaTime);
     void UpdateOrderMarkerTransforms(ColorFloor& _floor);
     void RefreshFloorVisuals();
     Vector3 GenerateFloorPosition() const;

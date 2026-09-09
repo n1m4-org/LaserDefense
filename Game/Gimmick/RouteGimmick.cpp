@@ -66,6 +66,8 @@ void RouteGimmick::Initialize(const GimmickContext& _context) {
     context_ = _context;
     state_ = GimmickState::Active;
     nextFloorIndex_ = 0;
+    pendingAdvanceToNormal_ = false;
+    pendingSuccess_ = false;
     floors_.clear();
 
     LoadConfig();
@@ -86,18 +88,22 @@ void RouteGimmick::Initialize(const GimmickContext& _context) {
 void RouteGimmick::Update(float _deltaTime) {
     if (state_ != GimmickState::Active) return;
 
-    if (pendingAdvanceToNormal_) {
-        pendingAdvanceToNormal_ = false;
-        AdvanceToNormal();
-    }
-
     if (!std::isfinite(_deltaTime) || _deltaTime <= 0.0f) return;
     if (debugTuningPaused_) return;
 
+    const bool clearEffectActive = UpdateClearEffects(_deltaTime);
+    if (!clearEffectActive && pendingAdvanceToNormal_) {
+        pendingAdvanceToNormal_ = false;
+        AdvanceToNormal();
+    } else if (!clearEffectActive && pendingSuccess_) {
+        pendingSuccess_ = false;
+        Finish(GimmickState::Success);
+    }
 }
 
 void RouteGimmick::Draw() const {
     for (const ColorFloor& floor : floors_) {
+        if (floor.aoe) floor.aoe->Draw();
         for (const auto& marker : floor.orderMarkers) marker->Draw();
     }
 }
@@ -122,9 +128,11 @@ void RouteGimmick::Debug() {
     // ドラッグ中は毎フレーム変更イベントが発火するため、RefreshFloorVisuals()は
     // 値が実際に変わった時ではなく、編集操作が確定した瞬間(マウスを離す等)にのみ呼ぶ。
     bool visualsChanged = false;
-    DebugUIWidgets::DragFloat("Floor Radius", &floorRadius_, 0.02f, 0.3f, 4.0f);
+    DebugUIWidgets::DragFloat("Floor Radius", &floorRadius_, 0.05f, 0.3f, 15.0f);
     visualsChanged |= ImGui::IsItemDeactivatedAfterEdit();
     DebugUIWidgets::DragFloat("Floor Opacity", &floorOpacity_, 0.01f, 0.1f, 1.0f);
+    visualsChanged |= ImGui::IsItemDeactivatedAfterEdit();
+    DebugUIWidgets::DragFloat("Floor AoE Opacity", &floorAoEOpacity_, 0.01f, 0.0f, 1.0f);
     visualsChanged |= ImGui::IsItemDeactivatedAfterEdit();
     DebugUIWidgets::DragFloat("Order Marker Radius", &orderMarkerRadius_, 0.02f, 0.02f, 2.0f);
     visualsChanged |= ImGui::IsItemDeactivatedAfterEdit();
@@ -159,6 +167,20 @@ void RouteGimmick::LoadConfig() {
     timeLimitSeconds_ = read(tuning->second, "TimeLimitSeconds", timeLimitSeconds_);
     floorRadius_ = read(tuning->second, "FloorRadius", floorRadius_);
     floorOpacity_ = read(tuning->second, "FloorOpacity", floorOpacity_);
+    floorAoEOpacity_ = read(tuning->second, "FloorAoEOpacity", floorAoEOpacity_);
+    clearFlashSeconds_ = std::max(
+        read(tuning->second, "ClearFlashSeconds", clearFlashSeconds_), 0.01f);
+    clearParticleCount_ = static_cast<uint16_t>(std::clamp(
+        read(tuning->second, "ClearParticleCount", static_cast<float>(clearParticleCount_)),
+        1.0f, 1000.0f));
+    clearParticleUpSpeedMin_ = std::max(
+        read(tuning->second, "ClearParticleUpSpeedMin", clearParticleUpSpeedMin_), 0.0f);
+    clearParticleUpSpeedMax_ = std::max(
+        read(tuning->second, "ClearParticleUpSpeedMax", clearParticleUpSpeedMax_),
+        clearParticleUpSpeedMin_);
+    clearParticleHorizontalSpeed_ = std::max(
+        read(tuning->second, "ClearParticleHorizontalSpeed", clearParticleHorizontalSpeed_),
+        0.0f);
     minFloorDistance_ = read(tuning->second, "MinFloorDistance", minFloorDistance_);
     minTowerDistance_ = read(tuning->second, "MinTowerDistance", minTowerDistance_);
     placementRadius_ = read(tuning->second, "PlacementRadius", placementRadius_);
@@ -172,6 +194,14 @@ void RouteGimmick::SaveConfig() const {
     json->SetValue("Route", "Tuning", "TimeLimitSeconds", timeLimitSeconds_);
     json->SetValue("Route", "Tuning", "FloorRadius", floorRadius_);
     json->SetValue("Route", "Tuning", "FloorOpacity", floorOpacity_);
+    json->SetValue("Route", "Tuning", "FloorAoEOpacity", floorAoEOpacity_);
+    json->SetValue("Route", "Tuning", "ClearFlashSeconds", clearFlashSeconds_);
+    json->SetValue("Route", "Tuning", "ClearParticleCount",
+        static_cast<int32_t>(clearParticleCount_));
+    json->SetValue("Route", "Tuning", "ClearParticleUpSpeedMin", clearParticleUpSpeedMin_);
+    json->SetValue("Route", "Tuning", "ClearParticleUpSpeedMax", clearParticleUpSpeedMax_);
+    json->SetValue("Route", "Tuning", "ClearParticleHorizontalSpeed",
+        clearParticleHorizontalSpeed_);
     json->SetValue("Route", "Tuning", "MinFloorDistance", minFloorDistance_);
     json->SetValue("Route", "Tuning", "MinTowerDistance", minTowerDistance_);
     json->SetValue("Route", "Tuning", "PlacementRadius", placementRadius_);
@@ -223,8 +253,56 @@ void RouteGimmick::PlaceFloors() {
                 FloorAreaTemplateNameFor(floor.color), floor.position);
         }
 
+        CreateFloorAoE(floor);
         CreateOrderMarkers(floor);
     }
+}
+
+void RouteGimmick::CreateFloorAoE(ColorFloor& _floor) {
+    _floor.aoe = std::make_unique<Model>();
+    _floor.aoe->Initialize("plane");
+    _floor.aoe->SetTexture("circle2.png");
+    _floor.aoe->SetRotate({-MathUtils::F_PI * 0.5f, 0.0f, 0.0f});
+    UpdateFloorAoE(_floor);
+}
+
+void RouteGimmick::UpdateFloorAoE(ColorFloor& _floor) {
+    if (!_floor.aoe) return;
+
+    constexpr float AOE_HEIGHT = 0.035f;
+    Vector4 color = ColorToVector4(_floor.color);
+    color.w = floorAoEOpacity_;
+    _floor.aoe->SetTranslate(_floor.position + Vector3{0.0f, AOE_HEIGHT, 0.0f});
+    _floor.aoe->SetScale({floorRadius_ * 2.0f, floorRadius_ * 2.0f, 1.0f});
+    _floor.aoe->SetColor(color);
+    _floor.aoe->Update();
+}
+
+bool RouteGimmick::UpdateClearEffects(float _deltaTime) {
+    bool active = false;
+    for (ColorFloor& floor : floors_) {
+        if (!floor.cleared || !floor.aoe) continue;
+
+        floor.clearFlashElapsed = std::min(
+            floor.clearFlashElapsed + _deltaTime, clearFlashSeconds_);
+        const float progress = std::clamp(
+            floor.clearFlashElapsed / clearFlashSeconds_, 0.0f, 1.0f);
+        if (progress >= 1.0f) {
+            floor.aoe.reset();
+            continue;
+        }
+
+        const float flash = 1.0f - progress;
+        const Vector4 baseColor = ColorToVector4(floor.color);
+        floor.aoe->SetColor({
+            baseColor.x + (1.0f - baseColor.x) * flash,
+            baseColor.y + (1.0f - baseColor.y) * flash,
+            baseColor.z + (1.0f - baseColor.z) * flash,
+            (floorAoEOpacity_ + (1.0f - floorAoEOpacity_) * flash) * flash});
+        floor.aoe->Update();
+        active = true;
+    }
+    return active;
 }
 
 void RouteGimmick::CreateOrderMarkers(ColorFloor& _floor) {
@@ -261,6 +339,7 @@ void RouteGimmick::RefreshFloorVisuals() {
         if (floor.cleared) continue;
 
         if (floor.collider) floor.collider->SetSize(Collision::SphereShape(floorRadius_));
+        UpdateFloorAoE(floor);
 
         floor.floorEmitter.Stop();
         if (context_.particleSystem) {
@@ -283,8 +362,9 @@ Vector3 RouteGimmick::GenerateFloorPosition() const {
             + Vector3{std::cos(angle) * radius, 0.0f, std::sin(angle) * radius};
 
         bool farEnough = true;
+        const float requiredDistance = std::max(minFloorDistance_, floorRadius_ * 2.1f);
         for (const ColorFloor& other : floors_) {
-            if (MathUtils::Distance(candidate, other.position) < minFloorDistance_) {
+            if (MathUtils::Distance(candidate, other.position) < requiredDistance) {
                 farEnough = false;
                 break;
             }
@@ -306,14 +386,19 @@ void RouteGimmick::OnFloorEntered(std::size_t _index) {
     }
 
     floor.cleared = true;
+    floor.clearFlashElapsed = 0.0f;
     if (floor.collider) floor.collider->Disable();
+    if (floor.aoe) {
+        floor.aoe->SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+        floor.aoe->Update();
+    }
     floor.floorEmitter.Stop();
     floor.orderMarkers.clear();
     EmitFloorClear(floor.color, floor.position);
     ++nextFloorIndex_;
     if (nextFloorIndex_ >= colorCount_) {
         if (mode_ == Mode::SingleColorTutorial) pendingAdvanceToNormal_ = true;
-        else Finish(GimmickState::Success);
+        else pendingSuccess_ = true;
     }
 }
 
@@ -353,14 +438,22 @@ void RouteGimmick::RegisterParticleTemplates() const {
             _velocity.z = vx * sinA + vz * cosA;
         });
 
+    const float clearUpSpeedMin = clearParticleUpSpeedMin_;
+    const float clearUpSpeedMax = clearParticleUpSpeedMax_;
+    const float clearHorizontalSpeed = clearParticleHorizontalSpeed_;
     context_.particleSystem->RegisterSpawnFunc(FLOOR_CLEAR_SPAWN_FUNC_KEY,
-        [](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
+        [floorRadius, clearUpSpeedMin, clearUpSpeedMax, clearHorizontalSpeed](
+            const Vector3& _center, Vector3& _position, Vector3& _velocity) {
             const float angle = MathUtils::Random(0.0f, MathUtils::F_PI * 2.0f);
-            const Vector3 direction{std::cos(angle), 0.0f, std::sin(angle)};
-            _position = _center + direction * MathUtils::Random(0.3f, 0.6f)
-                + Vector3{0.0f, MathUtils::Random(0.6f, 0.9f), 0.0f};
-            _velocity = direction * MathUtils::Random(1.5f, 2.5f)
-                + Vector3{0.0f, MathUtils::Random(0.05f, 0.2f), 0.0f};
+            const float radius = std::sqrt(MathUtils::Random(0.0f, 1.0f)) * floorRadius;
+            _position = _center + Vector3{
+                std::cos(angle) * radius,
+                MathUtils::Random(0.05f, 0.45f),
+                std::sin(angle) * radius};
+            _velocity = {
+                MathUtils::Random(-clearHorizontalSpeed, clearHorizontalSpeed),
+                MathUtils::Random(clearUpSpeedMin, clearUpSpeedMax),
+                MathUtils::Random(-clearHorizontalSpeed, clearHorizontalSpeed)};
         });
 
     for (RouteColor color : {RouteColor::Red, RouteColor::Blue, RouteColor::Green, RouteColor::Yellow}) {
@@ -388,8 +481,8 @@ void RouteGimmick::RegisterParticleTemplates() const {
         floorClear.texture = "white_x16.png";
         floorClear.frequency = 0.0f;
         floorClear.duration = 0.0f;
-        floorClear.spawnCount = 16;
-        floorClear.size = {0.3f, 0.3f, 0.3f};
+        floorClear.spawnCount = clearParticleCount_;
+        floorClear.size = {0.5f, 0.5f, 0.5f};
         floorClear.particleLifetime = 1.1f;
         floorClear.spawnFuncKey = FLOOR_CLEAR_SPAWN_FUNC_KEY;
         floorClear.updateFuncKey = FLOOR_CLEAR_UPDATE_FUNC_KEY;

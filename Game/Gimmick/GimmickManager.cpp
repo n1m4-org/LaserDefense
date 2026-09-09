@@ -34,6 +34,7 @@ void GimmickManager::Initialize(const GimmickContext& _context) {
     activeGimmick_.reset();
     spawnTime_ = 0.0f;
     remainingTimeSeconds_ = 0.0f;
+    lastRandomGimmick_.reset();
     LoadConfig();
     InitializeTimerGauge();
     RouteGimmick::ResetTutorialProgress();
@@ -164,17 +165,25 @@ void GimmickManager::LoadConfig() {
 }
 
 void GimmickManager::StartRandomGimmick() {
-    const float totalWeight = routeWeight_ + towerDefenseWeight_ + towerOrbitWeight_;
+    // 前回選ばれた種類だけ今回の候補から外し、同じギミックの連続発生を防ぐ。
+    const float routeWeight = lastRandomGimmick_ != GimmickType::Route
+        ? routeWeight_ : 0.0f;
+    const float towerDefenseWeight = lastRandomGimmick_ != GimmickType::TowerDefense
+        ? towerDefenseWeight_ : 0.0f;
+    const float towerOrbitWeight = lastRandomGimmick_ != GimmickType::TowerOrbit
+        ? towerOrbitWeight_ : 0.0f;
+    const float totalWeight = routeWeight + towerDefenseWeight + towerOrbitWeight;
     if (totalWeight <= 0.0f) return;
 
     const float lottery = MathUtils::Random(0.0f, totalWeight);
     GimmickType type = GimmickType::TowerOrbit;
-    if (lottery < routeWeight_) {
+    if (lottery < routeWeight) {
         type = GimmickType::Route;
-    } else if (lottery < routeWeight_ + towerDefenseWeight_) {
+    } else if (lottery < routeWeight + towerDefenseWeight) {
         type = GimmickType::TowerDefense;
     }
 
+    lastRandomGimmick_ = type;
     StartGimmick(type);
 }
 
