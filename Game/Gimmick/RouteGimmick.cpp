@@ -71,6 +71,9 @@ void RouteGimmick::Initialize(const GimmickContext& _context) {
     floors_.clear();
 
     LoadConfig();
+    if (std::isfinite(context_.stageHalfSize) && context_.stageHalfSize > 0.0f) {
+        stageHalfSize_ = context_.stageHalfSize;
+    }
     ++invocationCount_;
     colorCount_ = std::min(invocationCount_, 4);
     timeLimitSeconds_ = baseTimeLimitSeconds_
@@ -106,6 +109,17 @@ void RouteGimmick::Draw() const {
         if (floor.aoe) floor.aoe->Draw();
         for (const auto& marker : floor.orderMarkers) marker->Draw();
     }
+}
+
+bool RouteGimmick::GetIndicatorPosition(Vector3& _position) const {
+    if (state_ != GimmickState::Active || nextFloorIndex_ < 0) return false;
+
+    for (std::size_t i = static_cast<std::size_t>(nextFloorIndex_); i < floors_.size(); ++i) {
+        if (floors_[i].cleared) continue;
+        _position = floors_[i].position;
+        return true;
+    }
+    return false;
 }
 
 void RouteGimmick::Debug() {
@@ -356,14 +370,24 @@ void RouteGimmick::RefreshFloorVisuals() {
 }
 
 Vector3 RouteGimmick::GenerateFloorPosition() const {
-    constexpr int32_t kMaxAttempts = 30;
-    Vector3 candidate = towerPosition_;
+    constexpr int32_t kMaxAttempts = 128;
+    // circle2.pngは視認性調整で判定半径の2倍表示なので、そのプレーン全体を場内へ収める。
+    const float visualRadius = floorRadius_ * 2.0f;
+    const float stageLimit = std::max(stageHalfSize_ - visualRadius, 0.0f);
+    Vector3 fallback{
+        std::clamp(towerPosition_.x, -stageLimit, stageLimit),
+        towerPosition_.y,
+        std::clamp(towerPosition_.z, -stageLimit, stageLimit)};
 
     for (int32_t attempt = 0; attempt < kMaxAttempts; ++attempt) {
         const float angle = MathUtils::Random(0.0f, MathUtils::F_PI * 2.0f);
         const float radius = MathUtils::Random(minTowerDistance_, placementRadius_);
-        candidate = towerPosition_
+        const Vector3 candidate = towerPosition_
             + Vector3{std::cos(angle) * radius, 0.0f, std::sin(angle) * radius};
+        if (std::abs(candidate.x) > stageLimit || std::abs(candidate.z) > stageLimit) {
+            continue;
+        }
+        fallback = candidate;
 
         bool farEnough = true;
         const float requiredDistance = std::max(minFloorDistance_, floorRadius_ * 2.1f);
@@ -375,7 +399,7 @@ Vector3 RouteGimmick::GenerateFloorPosition() const {
         }
         if (farEnough) return candidate;
     }
-    return candidate;
+    return fallback;
 }
 
 void RouteGimmick::OnFloorEntered(std::size_t _index) {

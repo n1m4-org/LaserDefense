@@ -38,6 +38,7 @@ private:
     int32_t nextFloorIndex_ = 0;
     std::vector<ColorFloor> floors_;
     Vector3 towerPosition_{};
+    float stageHalfSize_ = 75.0f;
 
     float timeLimitSeconds_ = 15.0f;
     float baseTimeLimitSeconds_ = 15.0f;
@@ -71,6 +72,7 @@ public:
     GimmickState GetState() const override { return state_; }
     float GetTimeLimitSeconds() const override { return timeLimitSeconds_; }
     void OnTimeLimitExpired() override { Finish(GimmickState::Failed); }
+    bool GetIndicatorPosition(Vector3& _position) const override;
 
     void Debug() override;
 

@@ -26,7 +26,7 @@ void GimmickTuningScene::Initialize() {
 
     gimmickManager_ = std::make_unique<GimmickManager>();
     gimmickManager_->Initialize(GimmickContext{
-        player_.get(), towerManager_.get(), nullptr,nullptr, Particle() });
+        player_.get(), towerManager_.get(), nullptr, nullptr, Particle(), 40.0f });
 
     floor_ = std::make_unique<Model>();
     floor_->Initialize("plane");

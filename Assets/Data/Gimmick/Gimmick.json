@@ -5,7 +5,13 @@
         },
         "Failure": {
             "TowerDamage": 20.0,
-            "EffectHeight": 3.0
+            "EffectHeight": 3.0,
+            "BurstSpawnRadius": 0.9,
+            "BurstSpeedMin": 8.0,
+            "BurstSpeedMax": 21.0,
+            "SmokeSpawnRadius": 2.4,
+            "SmokeSpeedMin": 0.2,
+            "SmokeSpeedMax": 0.7
         },
         "Lottery": {
             "RouteWeight": 1.0,

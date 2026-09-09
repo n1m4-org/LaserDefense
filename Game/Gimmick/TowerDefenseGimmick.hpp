@@ -6,9 +6,7 @@
 #include <vector>
 
 #include "Gimmick/IGimmick.hpp"
-#include "Math/Vector2.hpp"
 #include "Model.hpp"
-#include "Sprite.hpp"
 
 class MainTower;
 
@@ -42,9 +40,6 @@ class TowerDefenseGimmick final : public IGimmick {
 
     float warningElapsedSeconds_ = 0.0f;
     float warningDurationSeconds_ = 1.0f;
-    std::unique_ptr<Sprite> warningArrow_;
-    Vector2 warningArrowSize_{32.0f, 32.0f};
-    bool warningArrowVisible_ = false;
     std::unique_ptr<Model> spawnerEnemyModel_;
     float spawnerEnemyScaleMultiplier_ = 4.0f;
     float spawnerEnemyStartHeight_ = -0.5f;
@@ -87,13 +82,13 @@ public:
     GimmickState GetState() const override { return state_; }
     float GetTimeLimitSeconds() const override { return warningDurationSeconds_ + timeLimitSeconds_; }
     void OnTimeLimitExpired() override { Finish(GimmickState::Failed); }
+    bool GetIndicatorPosition(Vector3& _position) const override;
 
     void Debug() override;
 
 private:
     void LoadConfig();
     void SaveConfig() const;
-    void UpdateWarningArrow();
     void InitializeSpawnerEnemyVisual();
     void UpdateSpawnerEnemyVisual(float _deltaTime);
     void SpawnAbsorptionCube(const Vector3& _position);

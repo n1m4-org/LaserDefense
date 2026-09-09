@@ -5,15 +5,14 @@
 #include <cmath>
 #include <variant>
 
-#include "Camera/Controller/CameraController.hpp"
 #include "Enemy/EnemyManager.hpp"
 #include "Sound/GameSound.hpp"
 #include "Json/JsonParams.hpp"
 #include "Math/Easing.hpp"
 #include "Math/MathUtils.hpp"
+#include "Math/Vector2.hpp"
 #include "Math/Vector4.hpp"
 #include "Pattern/Singleton.hpp"
-#include "Screen/Screen.hpp"
 #include "Tower/MainTower.hpp"
 #include "Tower/TowerManager.hpp"
 #include "src/ParticleSystem/ParticleSystem.hpp"
@@ -28,9 +27,6 @@
 
 namespace {
     constexpr Vector4 SPAWNER_TOWER_COLOR{1.0f, 0.1f, 0.1f, 1.0f};
-    constexpr Vector4 WARNING_ARROW_COLOR{1.0f, 0.15f, 0.15f, 1.0f};
-    constexpr float EDGE_PADDING = 12.0f;
-    constexpr float EPSILON = 0.0001f;
     constexpr float AOE_HEIGHT = 0.04f;
     constexpr float AOE_VISUAL_SCALE = 2.0f;
     constexpr const char* COMPLETE_TEMPLATE = "TowerDefenseComplete";
@@ -41,7 +37,6 @@ void TowerDefenseGimmick::Initialize(const GimmickContext& _context) {
     context_ = _context;
     phase_ = Phase::Warning;
     warningElapsedSeconds_ = 0.0f;
-    warningArrowVisible_ = false;
     spawnElapsedSeconds_ = 0.0f;
     killCount_ = 0;
     spawnerEnemyRotation_ = 0.0f;
@@ -63,12 +58,6 @@ void TowerDefenseGimmick::Initialize(const GimmickContext& _context) {
     if (context_.towerManager) context_.towerManager->SetMainTowerSwitchSuspended(true);
     if (context_.enemyManager) context_.enemyManager->SetSpawnSuspended(true);
 
-    warningArrow_ = std::make_unique<Sprite>();
-    warningArrow_->Initialize("arrow.png");
-    warningArrow_->SetAnchorPoint({0.5f, 0.5f});
-    warningArrow_->SetColor(WARNING_ARROW_COLOR);
-    warningArrow_->SetSize(warningArrowSize_);
-
     InitializeSpawnerEnemyVisual();
     InitializeAoEPlane();
     InitializeCompletionParticles();
@@ -84,12 +73,10 @@ void TowerDefenseGimmick::Update(float _deltaTime) {
     if (!std::isfinite(_deltaTime) || _deltaTime <= 0.0f) return;
 
     if (phase_ == Phase::Warning) {
-        UpdateWarningArrow();
         warningElapsedSeconds_ += _deltaTime;
         UpdateSpawnerEnemyVisual(_deltaTime);
         if (warningElapsedSeconds_ >= warningDurationSeconds_) {
             phase_ = Phase::Spawning;
-            warningArrowVisible_ = false;
         }
         return;
     }
@@ -136,53 +123,6 @@ void TowerDefenseGimmick::CollectKillsInRange() {
             SpawnAbsorptionCube(position);
         }
     }
-}
-
-void TowerDefenseGimmick::UpdateWarningArrow() {
-    warningArrowVisible_ = false;
-    if (!targetTower_ || !warningArrow_) return;
-
-    const auto camera = Singleton<CameraController>::GetInstance()->GetActive();
-    const auto screen = Singleton<Screen>::GetInstance();
-    const float width = screen->Width();
-    const float height = screen->Height();
-    const float screenMargin = std::max(warningArrowSize_.x, warningArrowSize_.y) * 0.5f + EDGE_PADDING;
-    if (!camera || width <= screenMargin * 2.0f || height <= screenMargin * 2.0f) return;
-
-    const Vector3 worldPosition = targetTower_->GetPosition();
-    const Vector4 clip = MathUtils::Matrix::Transform(
-        Vector4{worldPosition.x, worldPosition.y, worldPosition.z, 1.0f},
-        camera->GetViewProjection());
-    if (!std::isfinite(clip.x) || !std::isfinite(clip.y)
-        || !std::isfinite(clip.z) || !std::isfinite(clip.w)
-        || std::abs(clip.w) <= EPSILON) return;
-
-    const float ndcX = clip.x / clip.w;
-    const float ndcY = clip.y / clip.w;
-    const float ndcZ = clip.z / clip.w;
-    const bool inFront = clip.w > 0.0f;
-    const bool onScreen = inFront && ndcZ >= 0.0f && ndcZ <= 1.0f
-        && std::abs(ndcX) <= 1.0f && std::abs(ndcY) <= 1.0f;
-    if (onScreen) return;
-
-    Vector2 direction{ndcX, -ndcY};
-    if (!inFront) direction = direction * -1.0f;
-    const float length = std::hypot(direction.x, direction.y);
-    if (length <= EPSILON) direction = {0.0f, -1.0f};
-    else direction = direction * (1.0f / length);
-
-    const Vector2 center{width * 0.5f, height * 0.5f};
-    const Vector2 halfArea{center.x - screenMargin, center.y - screenMargin};
-    const float scaleX = std::abs(direction.x) > EPSILON
-        ? halfArea.x / std::abs(direction.x) : INFINITY;
-    const float scaleY = std::abs(direction.y) > EPSILON
-        ? halfArea.y / std::abs(direction.y) : INFINITY;
-    const Vector2 position = center + direction * std::min(scaleX, scaleY);
-
-    warningArrow_->SetPosition(position);
-    warningArrow_->SetRotation(std::atan2(direction.y, direction.x) - MathUtils::F_PI);
-    warningArrow_->Update();
-    warningArrowVisible_ = true;
 }
 
 void TowerDefenseGimmick::InitializeSpawnerEnemyVisual() {
@@ -362,7 +302,14 @@ void TowerDefenseGimmick::Draw() const {
     for (const AbsorptionCubeVisual& visual : absorptionCubes_) visual.model->Draw();
     if (spawnerEnemyModel_) spawnerEnemyModel_->Draw();
     for (const FragmentVisual& fragment : fragments_) fragment.model->Draw();
-    if (warningArrowVisible_ && warningArrow_) warningArrow_->Draw();
+}
+
+bool TowerDefenseGimmick::GetIndicatorPosition(Vector3& _position) const {
+    if (state_ != GimmickState::Active || !targetTower_ || !targetTower_->IsActive()) {
+        return false;
+    }
+    _position = targetTower_->GetPosition();
+    return true;
 }
 
 void TowerDefenseGimmick::InitializeAoEPlane() {
@@ -442,7 +389,6 @@ void TowerDefenseGimmick::InitializeCompletionParticles() {
 void TowerDefenseGimmick::BeginCompletion() {
     phase_ = Phase::Completion;
     completionElapsed_ = 0.0f;
-    warningArrowVisible_ = false;
 
     if (baseAoE_) {
         baseAoE_->SetColor({1.0f, 1.0f, 1.0f, 1.0f});
@@ -635,7 +581,6 @@ void TowerDefenseGimmick::SaveConfig() const {
 
 void TowerDefenseGimmick::Finish(GimmickState _result) {
     state_ = _result;
-    warningArrowVisible_ = false;
     spawnerEnemyModel_.reset();
     absorptionCubes_.clear();
     fragments_.clear();
