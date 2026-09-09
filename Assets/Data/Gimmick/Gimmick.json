@@ -1,12 +1,22 @@
 {
     "Gimmick": {
         "Spawn": {
-            "IntervalSeconds": 30.0
+            "IntervalSeconds": 10.0
         },
         "Lottery": {
             "RouteWeight": 1.0,
             "TowerDefenseWeight": 1.0,
             "TowerOrbitWeight": 1.0
+        },
+        "TowerOrbit": {
+            "RequiredDegrees": 360.0,
+            "AoERadius": 20.0,
+            "CompletionSeconds": 0.6,
+            "ShockwaveScale": 1.8,
+            "ArrowRadiusRatio": 0.65,
+            "ArrowSize": 3.0,
+            "ArrowIdleSpeedDegrees": 15.0,
+            "ArrowActiveSpeedDegrees": 100.0
         }
     }
 }

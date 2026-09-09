@@ -269,7 +269,7 @@ void PlayScene::Initialize() {
 
     gimmickManager_ = std::make_unique<GimmickManager>();
     gimmickManager_->Initialize(GimmickContext{
-        player_.get(), towerManager_.get(), enemyManager_.get(), Particle()});
+        player_.get(), towerManager_.get(), enemyManager_.get(), laser_.get(), Particle() });
 
     shockwave_ = std::make_unique<Model>();
     shockwave_->Initialize("plane");

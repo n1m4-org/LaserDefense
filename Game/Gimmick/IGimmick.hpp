@@ -4,6 +4,7 @@
 #include "ReferencePtr.hpp"
 
 class EnemyManager;
+class Laser;
 class ParticleSystem;
 class Player;
 class TowerManager;
@@ -25,6 +26,8 @@ struct GimmickContext {
     Player* player = nullptr;
     TowerManager* towerManager = nullptr;
     EnemyManager* enemyManager = nullptr;
+    Laser* laser = nullptr;
+    ParticleSystem* particleSystem = nullptr;
     GESTD::ReferencePtr<ParticleSystem> particleSystem = nullptr;
 };
 
