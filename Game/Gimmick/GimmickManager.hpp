@@ -43,6 +43,7 @@ class GimmickManager final {
     float opacity_ = 1.0f;
     bool debugPaused_ = false;
     std::optional<GimmickType> pendingStart_;
+    std::optional<GimmickType> lastRandomGimmick_;
 
 public:
     void Initialize(const GimmickContext& _context);
