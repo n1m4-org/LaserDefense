@@ -39,9 +39,9 @@ class EnemyManager final {
     Vector2 spawnExcludeRange_{30.0f, 30.0f};
     std::vector<Vector3> spawnExclusionPositions_;
     int32_t maxEnemyCount_ = 100;
-    float spawnIntervalSeconds_ = 1.0f;
+    float spawnIntervalSeconds_ = 2.0f;
     int32_t initialSpawnCount_ = 1;
-    float spawnCountIncreaseIntervalSeconds_ = 30.0f;
+    float spawnCountIncreaseIntervalSeconds_ = 60.0f;
     bool spawnSuspended_ = false;
     std::vector<Vector3> recentDefeatPositions_;
 
@@ -74,6 +74,10 @@ public:
     /// @brief 通常のウェーブ生成(SpawnWave)を一時停止する
     /// @note SpawnExtraEnemy()による生成には影響しない
     void SetSpawnSuspended(bool _suspended) { spawnSuspended_ = _suspended; }
+
+    const std::string& GetModelName() const { return modelName_; }
+    const Vector3& GetModelScale() const { return modelScale_; }
+    const Vector4& GetModelColor() const { return modelColor_; }
 
     /// @brief 直近のUpdate()で撃破された敵の座標一覧を取得する(タワー到達での消滅は含まない)
     /// @note 範囲限定の撃破判定など、Update()ごとに最新のものへ差し替わる

@@ -1,12 +1,23 @@
 {
     "TowerDefense": {
         "Tuning": {
-            "WarningSeconds": 5.0,
+            "WarningSeconds": 1.0,
+            "EnemyScaleMultiplier": 4.0,
+            "EnemyStartHeight": -0.5,
+            "EnemyFloatHeight": 5.0,
+            "EnemyRotationSpeed": 0.6,
+            "AbsorptionSeconds": 0.45,
+            "AbsorptionArcHeight": 2.0,
+            "AbsorptionCubeScaleRatio": 0.125,
+            "AbsorptionPulseSeconds": 0.25,
+            "FragmentScaleRatio": 0.5,
+            "FragmentGravity": 9.8,
             "TimeLimitSeconds": 25.0,
             "RequiredKillCount": 5,
             "KillRadius": 20.0,
             "SpawnRadiusRatio": 0.8,
             "SpawnIntervalSeconds": 1.5,
+            "SpawnCount": 3,
             "CompletionSeconds": 0.6
         }
     }
