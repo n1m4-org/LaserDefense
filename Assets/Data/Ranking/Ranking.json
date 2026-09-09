@@ -1,0 +1,29 @@
+{
+    "Ranking": {
+        "Entry0": {
+            "Score": 38600,
+            "Seconds": 170.80856323242188,
+            "Total": 55600
+        },
+        "Entry1": {
+            "Score": 1900,
+            "Seconds": 86.83223724365234,
+            "Total": 10500
+        },
+        "Entry2": {
+            "Score": 0,
+            "Seconds": 0.0,
+            "Total": 0
+        },
+        "Entry3": {
+            "Score": 0,
+            "Seconds": 0.0,
+            "Total": 0
+        },
+        "Entry4": {
+            "Score": 0,
+            "Seconds": 0.0,
+            "Total": 0
+        }
+    }
+}
