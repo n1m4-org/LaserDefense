@@ -8,7 +8,25 @@
             "TowerDefenseWeight": 1.0,
             "TowerOrbitWeight": 1.0
         },
+        "TimerGauge": {
+            "Position": [380.0, 168.0],
+            "Size": [520.0, 18.0],
+            "FrameThickness": 3.0,
+            "FrameColor": [0.04, 0.04, 0.07, 0.85],
+            "Color": [0.75, 0.3, 1.0, 1.0],
+            "Label": "GimmickRemainingTime",
+            "LabelPosition": [380.0, 126.0],
+            "LabelFontSize": 22.0,
+            "LabelColor": [0.75, 0.8, 0.88, 1.0],
+            "ValueRightX": 900.0,
+            "ValuePositionY": 124.0,
+            "ValueFontSize": 24.0
+        },
+        "TowerDefense": {
+            "TimeLimitSeconds": 10.0
+        },
         "TowerOrbit": {
+            "TimeLimitSeconds": 20.0,
             "RequiredDegrees": 360.0,
             "AoERadius": 20.0,
             "CompletionSeconds": 0.6,

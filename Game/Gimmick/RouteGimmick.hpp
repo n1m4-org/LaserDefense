@@ -41,8 +41,7 @@ private:
     std::vector<ColorFloor> floors_;
     Vector3 towerPosition_{};
 
-    float elapsedTime_ = 0.0f;
-    float timeLimitSeconds_ = 20.0f;
+    float timeLimitSeconds_ = 10.0f;
     float floorRadius_ = 1.5f;
     float floorOpacity_ = 0.55f;
     float minFloorDistance_ = 6.0f;
@@ -64,6 +63,8 @@ public:
     void Draw() const override;
     GimmickType GetType() const override { return GimmickType::Route; }
     GimmickState GetState() const override { return state_; }
+    float GetTimeLimitSeconds() const override { return timeLimitSeconds_; }
+    void OnTimeLimitExpired() override { Finish(GimmickState::Failed); }
 
     Mode GetMode() const { return mode_; }
 
