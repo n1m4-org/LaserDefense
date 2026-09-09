@@ -1,29 +1,29 @@
 {
     "Ranking": {
         "Entry0": {
+            "Score": 244900,
+            "Seconds": 304.2132873535156,
+            "Total": 275300
+        },
+        "Entry1": {
             "Score": 38600,
             "Seconds": 170.80856323242188,
             "Total": 55600
         },
-        "Entry1": {
+        "Entry2": {
+            "Score": 7400,
+            "Seconds": 96.14177703857422,
+            "Total": 17000
+        },
+        "Entry3": {
             "Score": 1900,
             "Seconds": 86.83223724365234,
             "Total": 10500
         },
-        "Entry2": {
-            "Score": 0,
-            "Seconds": 0.0,
-            "Total": 0
-        },
-        "Entry3": {
-            "Score": 0,
-            "Seconds": 0.0,
-            "Total": 0
-        },
         "Entry4": {
-            "Score": 0,
-            "Seconds": 0.0,
-            "Total": 0
+            "Score": 1300,
+            "Seconds": 56.09275436401367,
+            "Total": 6900
         }
     }
 }

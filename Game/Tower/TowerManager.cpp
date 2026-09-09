@@ -10,6 +10,7 @@
 
 #include "Json/JsonParams.hpp"
 #include "Pattern/Singleton.hpp"
+#include "Random/RandomEngine.hpp"
 #include "Sound/GameSound.hpp"
 
 namespace {
@@ -275,6 +276,19 @@ void TowerManager::TakeDamage(float _damage) {
     hp_ = std::max(hp_ - _damage, 0.0f);
     for (MainTower* tower : mainTowers_) tower->PlayDamageFlash();
     GameSound::Play(GameSound::Se::TowerDamage);
+}
+
+MainTower* TowerManager::PickRandomIdleTower() const {
+    std::vector<MainTower*> idleTowers;
+    for (MainTower* candidate : towerCandidates_) {
+        if (std::find(mainTowers_.begin(), mainTowers_.end(), candidate) == mainTowers_.end()) {
+            idleTowers.push_back(candidate);
+        }
+    }
+    if (idleTowers.empty()) return nullptr;
+
+    const auto random = Singleton<RandomEngine>::GetInstance();
+    return idleTowers[random->Get(0, static_cast<int32_t>(idleTowers.size()) - 1)];
 }
 
 void TowerManager::Heal(float _amount) {

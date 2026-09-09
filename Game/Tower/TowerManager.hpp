@@ -46,6 +46,10 @@ public:
     const std::vector<MainTower*>& GetMainTowers() const { return mainTowers_; }
     void SetMainTowerSwitchSuspended(bool _suspended) { mainTowerSwitchSuspended_ = _suspended; }
 
+    /// @brief 現在防衛対象になっていないタワーからランダムに1つ選ぶ
+    /// @return 候補が無ければnullptr
+    MainTower* PickRandomIdleTower() const;
+
 private:
     void LoadConfig();
     void UpdateMainTowerSwitch(float _deltaTime);
