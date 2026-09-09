@@ -9,6 +9,7 @@
 #include "Gimmick/GimmickManager.hpp"
 #include "IScene.hpp"
 #include "Model.hpp"
+#include "Pause/PauseOverlay.hpp"
 #include "Result/ResultOverlay.hpp"
 #include "Scene/Input/GameSceneInput.hpp"
 #include "Score/ScoreManager.hpp"
@@ -44,6 +45,8 @@ class PlayScene final : public IScene {
     std::unique_ptr<TowerHpGauge> towerHpGauge_;
     /// リザルト。見た目と配置は Assets/Data/UI/Result.json が持ち、UIエディタから編集できる
     std::unique_ptr<ResultOverlay> resultOverlay_;
+    /// ポーズ。見た目と配置は Assets/Data/UI/Pause.json が持ち、UIエディタから編集できる
+    std::unique_ptr<PauseOverlay> pauseOverlay_;
     std::unique_ptr<MainTowerIndicator> mainTowerIndicator_;
     /// HP が尽きたらリザルトを出す対象。所有者は towerManager_
     MainTower* mainTower_ = nullptr;
@@ -102,6 +105,10 @@ private:
     void UpdatePlayerSpeedEffect(float _speed, float _maxSpeed, float _deltaTime);
     void EmitPlayerDashEffect();
     void ApplyDashCooldownGauge();
+
+    /// @brief ESC でポーズの開閉を切り替える
+    /// @note リザルト中は受け付けない。閉じるときは HUD とゲームの進行を元へ戻す
+    void UpdatePauseInput();
 
     /// @brief タイトルシーンへ戻る
     /// @note UI のボタンからもキー入力からも呼ばれる。二重に呼んでも SceneSwitcher 側で弾かれる

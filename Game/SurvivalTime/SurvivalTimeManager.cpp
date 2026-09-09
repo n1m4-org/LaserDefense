@@ -315,7 +315,7 @@ void SurvivalTimeManager::RefreshValueText() {
     // 1周した瞬間だけ数値を白く光らせて一回り大きくする
     const float lapFlash = GetLapFlashAlpha();
 
-    const Vector4 color = LerpColor(valueColor_, gainColor_, lapFlash);
+    const Vector4 color = WithOpacity(LerpColor(valueColor_, gainColor_, lapFlash), opacity_);
 
     const float punchT = punchDuration_ > 0.0f ? punchTimer_ / punchDuration_ : 0.0f;
     const float fontSize = valueFontSize_ * Lerp(1.0f, valuePunchScale_, EaseOutCubic(punchT));

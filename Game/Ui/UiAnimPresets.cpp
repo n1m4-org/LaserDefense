@@ -27,6 +27,20 @@ namespace {
         return false;
     }
 
+    /// カーソルが合っていることを示す色。BlinkBlue が寄せていく先
+    constexpr Vector4 BLINK_BLUE{0.12f, 0.45f, 0.85f, 1.0f};
+
+    /// 青へ寄せながら明滅する。終わらないので IdleAnim 専用
+    /// @note 色そのものを動かすので、土台の色が何であれ青い点滅になる
+    bool BlinkBlue(float _elapsed, Vector2&, Vector4& _color) {
+        const float wave = (std::sin(_elapsed * 3.0f) + 1.0f) * 0.5f;
+        const float t = 0.15f + wave * 0.85f;
+        _color.x += (BLINK_BLUE.x - _color.x) * t;
+        _color.y += (BLINK_BLUE.y - _color.y) * t;
+        _color.z += (BLINK_BLUE.z - _color.z) * t;
+        return false;
+    }
+
     /// 上下にゆっくり揺れ続ける。終わらないので IdleAnim 専用
     bool FloatLoop(float _elapsed, Vector2& _posOffset, Vector4&) {
         _posOffset.y += std::sin(_elapsed * 1.6f) * 4.0f;
@@ -39,7 +53,12 @@ namespace UiAnimPresets {
     void RegisterAll(Ui::Canvas& _canvas) {
         _canvas.RegisterAnimFunc("FadeIn", FadeIn);
         _canvas.RegisterAnimFunc("Blink", Blink);
+        _canvas.RegisterAnimFunc("BlinkBlue", BlinkBlue);
         _canvas.RegisterAnimFunc("Float", FloatLoop);
+    }
+
+    Ui::AnimFunc BlinkBlueFunc() {
+        return BlinkBlue;
     }
 
 } // namespace UiAnimPresets
