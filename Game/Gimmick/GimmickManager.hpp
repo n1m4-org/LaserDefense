@@ -22,6 +22,12 @@ class GimmickManager final {
     float timeLimitSeconds_ = 10.0f;
     float remainingTimeSeconds_ = 0.0f;
 
+    // ─── 失敗したときの代償 ────────────────────────────────────
+    /// メインタワーへ与えるダメージ。敵1体の到達が 10 なので、既定値は敵2体ぶん
+    float failureTowerDamage_ = 20.0f;
+    /// 爆発を出す高さ。タワーの足元ではなく柱の中ほどで出す
+    float failureEffectHeight_ = 3.0f;
+
     Vector2 timerGaugePosition_{380.0f, 168.0f};
     Vector2 timerGaugeSize_{520.0f, 18.0f};
     float timerGaugeFrameThickness_ = 3.0f;
@@ -59,6 +65,14 @@ public:
 
 private:
     void LoadConfig();
+
+    /// @brief 爆発に使うスポーン関数と更新関数を登録する
+    /// @note 見た目そのものは Assets/Data/Particle/GimmickFailed.json が持つ。
+    ///       JSON からはキーで参照するだけなので、動きの部分だけをここで用意する
+    void RegisterFailureEffect();
+
+    /// @brief ギミックに失敗したときの処理。タワーへのダメージと爆発
+    void OnGimmickFailed();
     void StartRandomGimmick();
     void StartGimmick(GimmickType _type);
     std::unique_ptr<IGimmick> CreateGimmick(GimmickType _type) const;
