@@ -52,7 +52,7 @@ void GimmickManager::Initialize(const GimmickContext& _context) {
     LoadConfig();
     RegisterFailureEffect();
     InitializeTimerGauge();
-    RouteGimmick::ResetTutorialProgress();
+    RouteGimmick::ResetInvocationCount();
 }
 
 void GimmickManager::Update(float _deltaTime) {

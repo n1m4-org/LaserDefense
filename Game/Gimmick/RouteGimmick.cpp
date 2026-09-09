@@ -66,18 +66,20 @@ void RouteGimmick::Initialize(const GimmickContext& _context) {
     context_ = _context;
     state_ = GimmickState::Active;
     nextFloorIndex_ = 0;
-    pendingAdvanceToNormal_ = false;
     pendingSuccess_ = false;
     floors_.clear();
 
     LoadConfig();
+    ++invocationCount_;
+    colorCount_ = std::min(invocationCount_, 4);
+    timeLimitSeconds_ = baseTimeLimitSeconds_
+        + static_cast<float>(colorCount_ - 1) * timePerAdditionalFloorSeconds_;
 
     towerPosition_ = {};
     if (context_.towerManager && !context_.towerManager->GetMainTowers().empty()) {
         towerPosition_ = context_.towerManager->GetMainTowers().front()->GetPosition();
     }
 
-    DetermineMode();
     GenerateColorOrder();
     RegisterParticleTemplates();
     PlaceFloors();
@@ -92,10 +94,7 @@ void RouteGimmick::Update(float _deltaTime) {
     if (debugTuningPaused_) return;
 
     const bool clearEffectActive = UpdateClearEffects(_deltaTime);
-    if (!clearEffectActive && pendingAdvanceToNormal_) {
-        pendingAdvanceToNormal_ = false;
-        AdvanceToNormal();
-    } else if (!clearEffectActive && pendingSuccess_) {
+    if (!clearEffectActive && pendingSuccess_) {
         pendingSuccess_ = false;
         Finish(GimmickState::Success);
     }
@@ -111,7 +110,7 @@ void RouteGimmick::Draw() const {
 void RouteGimmick::Debug() {
 #ifdef _DEBUG
     ImGui::Begin("RouteGimmick");
-    ImGui::Text("Mode: %s", mode_ == Mode::SingleColorTutorial ? "SingleColorTutorial" : "Normal");
+    ImGui::Text("Invocation: %d", invocationCount_);
     ImGui::Text("State: %s", state_ == GimmickState::Active ? "Active"
         : state_ == GimmickState::Success ? "Success"
         : state_ == GimmickState::Failed ? "Failed" : "Ready");
@@ -120,7 +119,10 @@ void RouteGimmick::Debug() {
 
     DebugUIWidgets::Checkbox("Pause While Tuning", &debugTuningPaused_);
 
-    DebugUIWidgets::DragFloat("Time Limit", &timeLimitSeconds_, 0.1f, 5.0f, 60.0f);
+    DebugUIWidgets::DragFloat(
+        "Base Time Limit", &baseTimeLimitSeconds_, 0.1f, 1.0f, 60.0f);
+    DebugUIWidgets::DragFloat(
+        "Time Per Additional Floor", &timePerAdditionalFloorSeconds_, 0.1f, 0.0f, 30.0f);
     DebugUIWidgets::DragFloat("Min Floor Distance", &minFloorDistance_, 0.1f, 1.0f, 20.0f);
     DebugUIWidgets::DragFloat("Min Tower Distance", &minTowerDistance_, 0.1f, 1.0f, 20.0f);
     DebugUIWidgets::DragFloat("Placement Radius", &placementRadius_, 0.2f, 5.0f, 40.0f);
@@ -164,7 +166,10 @@ void RouteGimmick::LoadConfig() {
         return _fallback;
     };
 
-    timeLimitSeconds_ = read(tuning->second, "TimeLimitSeconds", timeLimitSeconds_);
+    baseTimeLimitSeconds_ = std::max(
+        read(tuning->second, "BaseTimeLimitSeconds", baseTimeLimitSeconds_), 0.01f);
+    timePerAdditionalFloorSeconds_ = std::max(read(
+        tuning->second, "TimePerAdditionalFloorSeconds", timePerAdditionalFloorSeconds_), 0.0f);
     floorRadius_ = read(tuning->second, "FloorRadius", floorRadius_);
     floorOpacity_ = read(tuning->second, "FloorOpacity", floorOpacity_);
     floorAoEOpacity_ = read(tuning->second, "FloorAoEOpacity", floorAoEOpacity_);
@@ -191,7 +196,9 @@ void RouteGimmick::LoadConfig() {
 
 void RouteGimmick::SaveConfig() const {
     const auto json = Singleton<JsonParams>::GetInstance();
-    json->SetValue("Route", "Tuning", "TimeLimitSeconds", timeLimitSeconds_);
+    json->SetValue("Route", "Tuning", "BaseTimeLimitSeconds", baseTimeLimitSeconds_);
+    json->SetValue("Route", "Tuning", "TimePerAdditionalFloorSeconds",
+        timePerAdditionalFloorSeconds_);
     json->SetValue("Route", "Tuning", "FloorRadius", floorRadius_);
     json->SetValue("Route", "Tuning", "FloorOpacity", floorOpacity_);
     json->SetValue("Route", "Tuning", "FloorAoEOpacity", floorAoEOpacity_);
@@ -211,14 +218,10 @@ void RouteGimmick::SaveConfig() const {
     json->Save("Gimmick", "Route");
 }
 
-void RouteGimmick::DetermineMode() {
-    mode_ = singleColorTutorialCleared_ ? Mode::Normal : Mode::SingleColorTutorial;
-    colorCount_ = mode_ == Mode::SingleColorTutorial ? 1 : 4;
-}
-
 void RouteGimmick::GenerateColorOrder() {
-    colorOrder_ = {RouteColor::Red, RouteColor::Blue, RouteColor::Green, RouteColor::Yellow};
-    std::shuffle(colorOrder_.begin(), colorOrder_.end(), MathUtils::GetRandomEngine());
+    // 踏む順番を見た目だけで判断できるよう、番号と色を固定する。
+    // 1=緑、2=黄、3=青、4=赤。
+    colorOrder_ = {RouteColor::Green, RouteColor::Yellow, RouteColor::Blue, RouteColor::Red};
 }
 
 void RouteGimmick::PlaceFloors() {
@@ -393,21 +396,8 @@ void RouteGimmick::OnFloorEntered(std::size_t _index) {
     EmitFloorClear(floor.color, floor.position);
     ++nextFloorIndex_;
     if (nextFloorIndex_ >= colorCount_) {
-        if (mode_ == Mode::SingleColorTutorial) pendingAdvanceToNormal_ = true;
-        else pendingSuccess_ = true;
+        pendingSuccess_ = true;
     }
-}
-
-void RouteGimmick::AdvanceToNormal() {
-    singleColorTutorialCleared_ = true;
-    mode_ = Mode::Normal;
-    colorCount_ = 4;
-
-    nextFloorIndex_ = 0;
-    floors_.clear();
-
-    GenerateColorOrder();
-    PlaceFloors();
 }
 
 void RouteGimmick::RegisterParticleTemplates() const {
@@ -508,5 +498,4 @@ void RouteGimmick::Finish(GimmickState _result) {
         floor.floorEmitter.Stop();
     }
 
-    if (mode_ == Mode::SingleColorTutorial) singleColorTutorialCleared_ = true;
 }

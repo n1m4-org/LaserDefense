@@ -15,9 +15,6 @@
 enum class RouteColor : uint8_t { Red, Blue, Green, Yellow };
 
 class RouteGimmick final : public IGimmick {
-public:
-    enum class Mode { SingleColorTutorial, Normal };
-
 private:
     struct ColorFloor {
         RouteColor color = RouteColor::Red;
@@ -31,11 +28,10 @@ private:
         std::vector<std::unique_ptr<Model>> orderMarkers;
     };
 
-    static inline bool singleColorTutorialCleared_ = false;
+    static inline int32_t invocationCount_ = 0;
 
     GimmickContext context_{};
     GimmickState state_ = GimmickState::Ready;
-    Mode mode_ = Mode::Normal;
 
     std::array<RouteColor, 4> colorOrder_{};
     int32_t colorCount_ = 4;
@@ -43,7 +39,9 @@ private:
     std::vector<ColorFloor> floors_;
     Vector3 towerPosition_{};
 
-    float timeLimitSeconds_ = 10.0f;
+    float timeLimitSeconds_ = 15.0f;
+    float baseTimeLimitSeconds_ = 15.0f;
+    float timePerAdditionalFloorSeconds_ = 5.0f;
     float floorRadius_ = 8.0f;
     float floorOpacity_ = 0.55f;
     float floorAoEOpacity_ = 0.32f;
@@ -60,7 +58,6 @@ private:
     float orderMarkerSpacing_ = 0.5f;
     float orderMarkerHeight_ = 1.4f;
 
-    bool pendingAdvanceToNormal_ = false;
     bool pendingSuccess_ = false;
     bool debugTuningPaused_ = false;
 
@@ -75,18 +72,15 @@ public:
     float GetTimeLimitSeconds() const override { return timeLimitSeconds_; }
     void OnTimeLimitExpired() override { Finish(GimmickState::Failed); }
 
-    Mode GetMode() const { return mode_; }
-
     void Debug() override;
 
-    static void ResetTutorialProgress() {
-        singleColorTutorialCleared_ = false;
+    static void ResetInvocationCount() {
+        invocationCount_ = 0;
     }
 
 private:
     void LoadConfig();
     void SaveConfig() const;
-    void DetermineMode();
     void GenerateColorOrder();
     void PlaceFloors();
     void CreateOrderMarkers(ColorFloor& _floor);
@@ -97,7 +91,6 @@ private:
     void RefreshFloorVisuals();
     Vector3 GenerateFloorPosition() const;
     void OnFloorEntered(std::size_t _index);
-    void AdvanceToNormal();
     void RegisterParticleTemplates() const;
     void EmitFloorClear(RouteColor _color, const Vector3& _position) const;
     void Finish(GimmickState _result);
