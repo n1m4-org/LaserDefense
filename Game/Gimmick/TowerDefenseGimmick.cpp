@@ -591,7 +591,7 @@ void TowerDefenseGimmick::LoadConfig() {
     absorptionPulseSeconds_ = std::isfinite(absorptionPulseSeconds_)
         ? std::max(absorptionPulseSeconds_, 0.01f) : 0.25f;
     fragmentScaleRatio_ = std::isfinite(fragmentScaleRatio_)
-        ? std::max(fragmentScaleRatio_, 0.01f) : 0.25f;
+        ? std::max(fragmentScaleRatio_, 0.01f) : 0.5f;
     fragmentGravity_ = std::isfinite(fragmentGravity_)
         ? std::max(fragmentGravity_, 0.0f) : 9.8f;
     timeLimitSeconds_ = std::isfinite(timeLimitSeconds_) ? std::max(timeLimitSeconds_, 1.0f) : 25.0f;

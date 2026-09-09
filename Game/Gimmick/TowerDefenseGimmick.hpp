@@ -61,7 +61,7 @@ class TowerDefenseGimmick final : public IGimmick {
     float absorptionPulseElapsed_ = 0.0f;
     bool absorptionPulseActive_ = false;
     std::vector<FragmentVisual> fragments_;
-    float fragmentScaleRatio_ = 0.25f;
+    float fragmentScaleRatio_ = 0.5f;
     float fragmentGravity_ = 9.8f;
 
     float timeLimitSeconds_ = 25.0f;

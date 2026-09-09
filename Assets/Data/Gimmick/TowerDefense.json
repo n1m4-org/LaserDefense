@@ -10,7 +10,7 @@
             "AbsorptionArcHeight": 2.0,
             "AbsorptionCubeScaleRatio": 0.125,
             "AbsorptionPulseSeconds": 0.25,
-            "FragmentScaleRatio": 0.25,
+            "FragmentScaleRatio": 0.5,
             "FragmentGravity": 9.8,
             "TimeLimitSeconds": 25.0,
             "RequiredKillCount": 5,
