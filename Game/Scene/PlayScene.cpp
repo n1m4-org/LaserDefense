@@ -253,6 +253,11 @@ void PlayScene::Initialize() {
     // リザルトはシーンを跨がず、この画面の上に重ねて出す
     resultOverlay_ = std::make_unique<ResultOverlay>();
     resultOverlay_->Initialize();
+
+    pauseOverlay_ = std::make_unique<PauseOverlay>();
+    pauseOverlay_->Initialize();
+    // 「ゲームに戻る」ボタンから呼ばれる
+    pauseOverlay_->SetOnResume([this] { pauseOverlay_->Hide(); });
     // 「タイトルへ戻る」ボタンから呼ばれる
     resultOverlay_->SetOnReturn([this] { RequestReturnToTitle(); });
     mainTowerIndicator_ = std::make_unique<MainTowerIndicator>();
@@ -350,6 +355,8 @@ void PlayScene::Update() {
 
     GameSound::Update();
 
+    UpdatePauseInput();
+
     const float deltaTime = Time::GetDeltaTime();
     hudFadeElapsed_ = std::min(
         hudFadeElapsed_ + std::max(deltaTime, 0.0f), hudFadeDuration_);
@@ -357,6 +364,9 @@ void PlayScene::Update() {
         ? std::clamp(hudFadeElapsed_ / hudFadeDuration_, 0.0f, 1.0f)
         : 1.0f;
     hudOpacity_ = hudFadeRatio * hudFadeRatio * (3.0f - 2.0f * hudFadeRatio);
+    // ポーズ中はゲーム中の UI を消す。文字はスプライトより手前に描かれる仕組みなので、
+    // 残すと暗幕が効かず、ポーズシートより明るいまま浮いてしまう
+    if (pauseOverlay_->IsActive()) hudOpacity_ = 0.0f;
 
     towerHpGauge_->SetOpacity(hudOpacity_);
     scoreManager_->SetOpacity(hudOpacity_);
@@ -383,7 +393,7 @@ void PlayScene::Update() {
 
     // リザルト中はゲーム側へ渡す経過時間を 0 にして進行だけを止める。
     // Update 自体は呼び続けるので描画に必要な行列は保たれ、背景は静止画として残る
-    const bool playing = !resultOverlay_->IsActive();
+    const bool playing = !resultOverlay_->IsActive() && !pauseOverlay_->IsActive();
     const float gameDelta = playing ? deltaTime : 0.0f;
     clickTowerGuideElapsed_ = std::min(
         clickTowerGuideElapsed_ + gameDelta, CLICK_TOWER_GUIDE_DURATION);
@@ -405,7 +415,7 @@ void PlayScene::Update() {
     // 選択判定・カーソル・描画に同じカメラ行列を使う。
 
     if (!playing) {
-        // リザルト中は操作を受け付けない。掴んでいたレーザーとカーソルを外しておく
+        // リザルト中・ポーズ中は操作を受け付けない。掴んでいたレーザーとカーソルを外しておく
         laser_->ClearTarget();
         towerManager_->SetHoveredTower(nullptr);
         assistedTower_ = nullptr;
@@ -605,6 +615,17 @@ void PlayScene::Finalize() {
     GameSound::StopLoop(GameSound::Se::PlayBgm);
 }
 
+void PlayScene::UpdatePauseInput() {
+    if (!input_.IsPause()) return;
+
+    // リザルトが出たあとはポーズできない。成績の上にシートが重なってしまう
+    if (resultOverlay_->IsActive()) return;
+
+    // 開くのも閉じるのも同じ ESC。ボタンからも Hide() が呼ばれる
+    if (pauseOverlay_->IsActive()) pauseOverlay_->Hide();
+    else                           pauseOverlay_->Show();
+}
+
 void PlayScene::RequestReturnToTitle() {
     // タイトルの決定音を流用する。UI のボタンからもキー入力からもここへ合流する
     GameSound::Play(GameSound::Se::Decide);
@@ -654,7 +675,7 @@ void PlayScene::DrawHud() {
     clickTowerGuide_.Draw();
 
     const float screenHeight = Singleton<Screen>::GetInstance()->Height();
-    const bool showControlGuide = !resultOverlay_->IsActive();
+    const bool showControlGuide = !resultOverlay_->IsActive() && !pauseOverlay_->IsActive();
     dashInputGuide_.SetPosition(32.0f, screenHeight - 100.0f);
     dashInputGuide_.SetColor({ 1.0f, 1.0f, 1.0f, hudOpacity_ });
     dashInputGuide_.SetVisible(showControlGuide);
