@@ -44,6 +44,7 @@ public:
     void SetConnectedTower(const Tower* _tower);
     MainTower* ConsumeMainTowerSwitch();
     const std::vector<MainTower*>& GetMainTowers() const { return mainTowers_; }
+    const std::vector<std::unique_ptr<Tower>>& GetTowers() const { return towers_; }
     void SetMainTowerSwitchSuspended(bool _suspended) { mainTowerSwitchSuspended_ = _suspended; }
 
 private:

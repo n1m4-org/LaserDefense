@@ -276,7 +276,7 @@ void PlayScene::Initialize() {
 
     gimmickManager_ = std::make_unique<GimmickManager>();
     gimmickManager_->Initialize(GimmickContext{
-        player_.get(), towerManager_.get(), enemyManager_.get(), Particle()});
+        player_.get(), towerManager_.get(), enemyManager_.get(), laser_.get(), Particle() });
 
     shockwave_ = std::make_unique<Model>();
     shockwave_->Initialize("plane");
@@ -371,6 +371,7 @@ void PlayScene::Update() {
     if (pauseOverlay_->IsActive()) hudOpacity_ = 0.0f;
 
     towerHpGauge_->SetOpacity(hudOpacity_);
+    gimmickManager_->SetOpacity(hudOpacity_);
     scoreManager_->SetOpacity(hudOpacity_);
     survivalTimeManager_->SetOpacity(hudOpacity_);
     comboManager_->SetOpacity(hudOpacity_);
@@ -383,6 +384,7 @@ void PlayScene::Update() {
         // ゲーム中の UI は畳む。文字はスプライトより手前に描かれる仕組みなので、
         // 残すと暗幕が効かず、リザルトより明るいまま浮いてしまう
         towerHpGauge_->SetVisible(false);
+        gimmickManager_->SetVisible(false);
         scoreManager_->SetVisible(false);
         survivalTimeManager_->SetVisible(false);
         comboManager_->SetVisible(false);
