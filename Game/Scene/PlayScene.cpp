@@ -13,7 +13,6 @@
 #include "Camera/PlayerCamera.hpp"
 #include "GameObject/Player/Player.h"
 #include "Laser/Laser.hpp"
-#include "Light/LightManager.hpp"
 #include "Input.hpp"
 #include "Json/JsonParams.hpp"
 #include "Math/MathUtils.hpp"
@@ -211,9 +210,6 @@ void PlayScene::Initialize() {
     InitializePlayerDashEffect();
     playerCamera_ = std::make_unique<PlayerCamera>();
     playerCamera_->Initialize(*player_);
-    Singleton<LightManager>::GetInstance()->SetPosition(
-        player_->GetPosition() + shadowLightOffset);
-
     towerManager_ = std::make_unique<TowerManager>();
     towerManager_->Initialize();
 
@@ -273,7 +269,7 @@ void PlayScene::Initialize() {
 
     gimmickManager_ = std::make_unique<GimmickManager>();
     gimmickManager_->Initialize(GimmickContext{
-        player_.get(), towerManager_.get(), enemyManager_.get() });
+        player_.get(), towerManager_.get(), enemyManager_.get(), Particle()});
 
     shockwave_ = std::make_unique<Model>();
     shockwave_->Initialize("plane");
@@ -350,8 +346,6 @@ void PlayScene::Initialize() {
 }
 
 void PlayScene::Update() {
-    constexpr Vector3 shadowLightOffset{ 0.0f, 10.0f, 0.0f };
-
     input_.Update();
 
     GameSound::Update();
@@ -498,13 +492,22 @@ void PlayScene::Draw() {
     gimmickManager_->Draw();
     for (const auto& fence : fences_) fence->Draw();
 
-
     // UI は 3D の描画がすべて終わったあとに重ねる
 
     if (cursorVisible_) {
         for (auto& outline : reticleOutlines_) outline.Draw();
         for (auto& fill : reticleFills_) fill.Draw();
     }
+    if (!resultOverlay_->IsActive()) {
+        dashCooldownGaugeFrame_.Draw();
+        dashCooldownGauge_.Draw();
+    }
+}
+
+void PlayScene::Debug() {
+#ifdef _DEBUG
+    gimmickManager_->Debug();
+#endif
 }
 
 void PlayScene::UpdateTowerSelection(float _deltaTime) {

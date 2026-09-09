@@ -1,7 +1,10 @@
 #ifndef I_GIMMICK_HPP_
 #define I_GIMMICK_HPP_
 
+#include "ReferencePtr.hpp"
+
 class EnemyManager;
+class ParticleSystem;
 class Player;
 class TowerManager;
 
@@ -22,6 +25,7 @@ struct GimmickContext {
     Player* player = nullptr;
     TowerManager* towerManager = nullptr;
     EnemyManager* enemyManager = nullptr;
+    GESTD::ReferencePtr<ParticleSystem> particleSystem = nullptr;
 };
 
 class IGimmick {
@@ -33,6 +37,7 @@ public:
     virtual void Draw() const = 0;
     virtual GimmickType GetType() const = 0;
     virtual GimmickState GetState() const = 0;
+    virtual void Debug() {}
 
     bool IsFinished() const {
         const GimmickState state = GetState();
