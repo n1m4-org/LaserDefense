@@ -35,6 +35,7 @@ void EnemyManager::Initialize(GESTD::ReferencePtr<ParticleSystem> _particleSyste
     LoadConfig();
     elapsedSeconds_ = 0.0f;
     spawnElapsedSeconds_ = 0.0f;
+    recentDefeatPositions_.clear();
     Model::Load(modelName_);
     InitializeHitEffect();
     InitializeDeathEffect();
@@ -257,7 +258,14 @@ void EnemyManager::SpawnEnemy(const Vector3& _position) {
     enemy->SetTowerDamage(towerDamage_);
     enemy->Initialize();
     enemy->SetPosition(_position);
+    enemy->Update(0.0f);
     enemies_.push_back(std::move(enemy));
+}
+
+void EnemyManager::SpawnExtraEnemy(const Vector3& _position) {
+    if (maxEnemyCount_ <= 0
+        || enemies_.size() >= static_cast<std::size_t>(maxEnemyCount_)) return;
+    SpawnEnemy(_position);
 }
 
 void EnemyManager::SpawnWave() {
@@ -313,6 +321,7 @@ void EnemyManager::Update(float _deltaTime) {
     }
 
     // 削除の前に報酬を回収する（死亡演出が1フレームで終わる設定でも取りこぼさない）
+    recentDefeatPositions_.clear();
     CollectDefeatRewards();
 
     std::erase_if(enemies_, [](const std::unique_ptr<Enemy>& _enemy) {
@@ -339,6 +348,8 @@ void EnemyManager::CollectDefeatRewards() {
         if (!enemy->ConsumeDefeatReward()) {
             continue;
         }
+
+        recentDefeatPositions_.push_back(enemy->GetPosition());
 
         // 先にコンボを進めてから倍率を取る。こうすると倒したその1体にも倍率が乗る
         int32_t multiplier = 1;

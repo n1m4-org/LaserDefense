@@ -1,6 +1,8 @@
 #ifndef MAIN_TOWER_HPP_
 #define MAIN_TOWER_HPP_
 
+#include <optional>
+
 #include "Tower.hpp"
 
 /// 防衛対象の表示と衝突を担当する。共有HPはTowerManagerが所有する。
@@ -14,6 +16,7 @@ class MainTower final : public Tower {
     float damageFlashDuration_ = 0.3f;  //!< 被弾フラッシュの長さ（秒）
     Vector4 damageFlashColor_{1.0f, 0.3f, 0.25f, 1.0f}; //!< 被弾した瞬間に寄せる色
     bool defenseTarget_ = true;         //!< 現在、防衛対象のメインタワーとして有効か
+    std::optional<Vector4> colorOverride_; //!< 設定されている間、通常の状態色より優先して使う色
     bool warningActive_ = false;
     float warningOpacity_ = 1.0f;
     float switchWarningAlpha_ = 0.0f;
@@ -34,6 +37,11 @@ public:
     void SetDefenseTarget(bool _enabled, bool _animate = true);
     void SetSwitchWarningProgress(float _progress);
     bool IsDefenseTarget() const { return defenseTarget_; }
+
+    /// @brief 通常の状態色より優先して使う色を設定する
+    /// @param _color 上書きする色。std::nulloptを渡すと通常の状態色に戻る
+    /// @note タワー自身は上書き理由を関知しない、汎用的な見た目のフックである
+    void SetColorOverride(const std::optional<Vector4>& _color);
     Vector3 GetSelectionCenter() const override;
     Vector3 GetSelectionSize() const override;
 

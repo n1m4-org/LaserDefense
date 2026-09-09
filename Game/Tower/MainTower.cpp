@@ -173,6 +173,11 @@ Vector3 MainTower::GetSelectionSize() const {
     return defenseTarget_ ? Vector3{5.0f, 12.0f, 5.0f} : Vector3{5.0f, 2.0f, 5.0f};
 }
 
+void MainTower::SetColorOverride(const std::optional<Vector4>& _color) {
+    colorOverride_ = _color;
+    ApplyModelColor();
+}
+
 void MainTower::PlayDamageFlash() {
     damageFlashTimer_ = damageFlashDuration_;
     ApplyModelColor();
@@ -229,9 +234,10 @@ void MainTower::ApplyModelColor() {
         flash = EaseOutCubic(damageFlashTimer_ / damageFlashDuration_);
     }
 
-    const Vector4 pillarBaseColor = connected_ ? CONNECTED_COLOR : PILLAR_NORMAL_COLOR;
-    const Vector4 normalBaseColor = defenseTarget_ ? BASE_NORMAL_COLOR : SUB_TOWER_COLOR;
-    const Vector4 baseBaseColor = connected_ ? CONNECTED_COLOR : normalBaseColor;
+    const Vector4 pillarBaseColor = colorOverride_.value_or(
+        connected_ ? CONNECTED_COLOR : PILLAR_NORMAL_COLOR);
+    const Vector4 baseBaseColor = colorOverride_.value_or(
+        connected_ ? CONNECTED_COLOR : (defenseTarget_ ? BASE_NORMAL_COLOR : SUB_TOWER_COLOR));
     // 選択表現は半透明モデルへ分離し、本体色は接続状態と被弾フラッシュを扱う。
     if (model_) {
         Vector4 pillarColor = LerpColor(pillarBaseColor, damageFlashColor_, flash);

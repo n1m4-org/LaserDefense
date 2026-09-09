@@ -299,11 +299,7 @@ void RouteGimmick::OnFloorEntered(std::size_t _index) {
 
     ColorFloor& floor = floors_[_index];
     if (floor.cleared) return;
-
-    if (floor.color != colorOrder_[nextFloorIndex_]) {
-        Finish(GimmickState::Failed);
-        return;
-    }
+    if (floor.color != colorOrder_[nextFloorIndex_]) return;
 
     floor.cleared = true;
     if (floor.collider) floor.collider->Disable();
