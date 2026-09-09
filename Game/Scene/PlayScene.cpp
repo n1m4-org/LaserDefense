@@ -264,6 +264,9 @@ void PlayScene::Initialize() {
     resultOverlay_->SetOnReturn([this] { RequestReturnToTitle(); });
     mainTowerIndicator_ = std::make_unique<MainTowerIndicator>();
     mainTowerIndicator_->Initialize();
+    gimmickIndicator_ = std::make_unique<MainTowerIndicator>();
+    gimmickIndicator_->Initialize();
+    gimmickIndicator_->SetColor({1.0f, 0.15f, 0.15f, 1.0f});
 
     enemyManager_ = std::make_unique<EnemyManager>();
     enemyManager_->Initialize(Particle());
@@ -376,6 +379,7 @@ void PlayScene::Update() {
     survivalTimeManager_->SetOpacity(hudOpacity_);
     comboManager_->SetOpacity(hudOpacity_);
     mainTowerIndicator_->SetOpacity(hudOpacity_);
+    gimmickIndicator_->SetOpacity(hudOpacity_);
 
     // タワーが落ちたらリザルトへ。シーンは切り替えず画面の上へシートを重ねるだけなので、
     // 負けた瞬間の状況がそのまま背景として残る
@@ -473,6 +477,10 @@ void PlayScene::Update() {
     const auto& defenseTargets = towerManager_->GetMainTowers();
     mainTowerIndicator_->Update(
         playing && !defenseTargets.empty() ? defenseTargets.front() : nullptr);
+    Vector3 gimmickPosition{};
+    const bool hasGimmickPosition = playing
+        && gimmickManager_->GetIndicatorPosition(gimmickPosition);
+    gimmickIndicator_->Update(hasGimmickPosition ? &gimmickPosition : nullptr);
     if (shockwaveTime_ < SHOCKWAVE_DURATION) {
         const float t = shockwaveTime_ / SHOCKWAVE_DURATION;
         const float eased = 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t);
@@ -676,6 +684,7 @@ void PlayScene::DrawHud() {
     survivalTimeManager_->Draw();
     comboManager_->Draw();
     mainTowerIndicator_->Draw();
+    gimmickIndicator_->Draw();
     clickTowerGuide_.SetVisible(clickTowerGuideVisible_);
     clickTowerGuide_.SetColor({ 1.0f, 1.0f, 1.0f, hudOpacity_ });
     clickTowerGuide_.Draw();

@@ -2,6 +2,7 @@
 #define I_GIMMICK_HPP_
 
 #include "ReferencePtr.hpp"
+#include "Math/Vector3.hpp"
 
 class EnemyManager;
 class Laser;
@@ -41,6 +42,10 @@ public:
     virtual GimmickState GetState() const = 0;
     virtual float GetTimeLimitSeconds() const = 0;
     virtual void OnTimeLimitExpired() = 0;
+    virtual bool GetIndicatorPosition(Vector3& _position) const {
+        (void)_position;
+        return false;
+    }
     virtual void Debug() {}
 
     bool IsFinished() const {

@@ -84,6 +84,14 @@ void TowerOrbitGimmick::Draw() const {
     }
 }
 
+bool TowerOrbitGimmick::GetIndicatorPosition(Vector3& _position) const {
+    if (state_ != GimmickState::Active || !targetTower_ || !targetTower_->IsActive()) {
+        return false;
+    }
+    _position = targetTower_->GetPosition();
+    return true;
+}
+
 void TowerOrbitGimmick::LoadConfig() {
     const auto json = Singleton<JsonParams>::GetInstance();
     if (!json->Load("Gimmick", "Gimmick")) return;
