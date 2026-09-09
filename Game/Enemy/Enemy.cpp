@@ -13,6 +13,7 @@
 #include "Math/MathUtils.hpp"
 #include "Pattern/Singleton.hpp"
 #include "Screen/Screen.hpp"
+#include "Sound/GameSound.hpp"
 #include "src/ParticleSystem/ParticleSystem.hpp"
 
 namespace {
@@ -36,6 +37,8 @@ void Enemy::TakeDamage(const AttackHit& _hit) {
     if (!active_ || !IsAlive() || !std::isfinite(_hit.damage) || _hit.damage <= 0.0f) return;
     hp_ = std::max(0.0f, hp_ - _hit.damage);
     EmitHitEffect();
+    // 連続でヒットしたときに同じ音が重ならないよう、ピッチを少し散らす
+    GameSound::Play(GameSound::Se::EnemyHit, MathUtils::Random(0.94f, 1.06f));
     if (std::isfinite(_hit.knockbackVelocity.x) && std::isfinite(_hit.knockbackVelocity.z)) {
         // 再ヒット時は今回の攻撃方向で上書きし、無制限な速度の蓄積を避ける。
         knockbackVelocity_ = {_hit.knockbackVelocity.x, 0.0f, _hit.knockbackVelocity.z};
@@ -116,6 +119,7 @@ void Enemy::Kill(bool _awardsReward) {
     deathEffectTime_ = 0.0f;
     deathAnimationFinished_ = false;
     EmitDeathEffect();
+    GameSound::Play(GameSound::Se::EnemyDeath, MathUtils::Random(0.92f, 1.08f));
     SetVelocity({});
     if (collider_) {
         collider_->Disable();

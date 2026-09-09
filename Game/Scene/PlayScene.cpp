@@ -18,6 +18,7 @@
 #include "Math/MathUtils.hpp"
 #include "Pattern/Singleton.hpp"
 #include "Screen/Screen.hpp"
+#include "Sound/GameSound.hpp"
 #include "Texture/TextureManager.hpp"
 #include "Time/Time.hpp"
 #include "Tower/MainTower.hpp"
@@ -64,10 +65,10 @@ void PlayScene::InitializePlayerSpeedEffect() {
                 return;
             }
             const Vector3 direction = effectState->direction;
-            const Vector3 side{-direction.z, 0.0f, direction.x};
+            const Vector3 side{ -direction.z, 0.0f, direction.x };
             _position = _center - direction * MathUtils::Random(0.35f, 0.75f)
                 + side * MathUtils::Random(-0.2f, 0.2f)
-                + Vector3{0.0f, MathUtils::Random(-0.12f, 0.12f), 0.0f};
+                + Vector3{ 0.0f, MathUtils::Random(-0.12f, 0.12f), 0.0f };
             _velocity = direction * MathUtils::Random(-3.0f, -1.0f)
                 + side * MathUtils::Random(-0.6f, 0.6f);
         });
@@ -77,7 +78,7 @@ void PlayScene::InitializePlayerSpeedEffect() {
     emitter.frequency = 0.025f;
     emitter.duration = std::numeric_limits<float>::max();
     emitter.spawnCount = 1;
-    emitter.size = {0.14f, 0.14f, 0.14f};
+    emitter.size = { 0.14f, 0.14f, 0.14f };
     emitter.particleLifetime = 0.2f;
     emitter.spawnFuncKey = PLAYER_SPEED_EFFECT_SPAWN;
     emitter.colorKeys = {
@@ -101,11 +102,11 @@ void PlayScene::InitializePlayerDashEffect() {
     particleSystem->RegisterSpawnFunc(PLAYER_DASH_EFFECT_SPAWN,
         [](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
             const float angle = MathUtils::Random(0.0f, 6.2831853f);
-            const Vector3 direction{std::cos(angle), 0.0f, std::sin(angle)};
+            const Vector3 direction{ std::cos(angle), 0.0f, std::sin(angle) };
             _position = _center + direction * MathUtils::Random(0.0f, 0.18f)
-                + Vector3{0.0f, MathUtils::Random(-0.1f, 0.1f), 0.0f};
+                + Vector3{ 0.0f, MathUtils::Random(-0.1f, 0.1f), 0.0f };
             _velocity = direction * MathUtils::Random(5.0f, 10.0f)
-                + Vector3{0.0f, MathUtils::Random(0.5f, 2.0f), 0.0f};
+                + Vector3{ 0.0f, MathUtils::Random(0.5f, 2.0f), 0.0f };
         });
 
     ParticleSystem::EmitterConfig emitter;
@@ -113,7 +114,7 @@ void PlayScene::InitializePlayerDashEffect() {
     emitter.frequency = 0.0f;
     emitter.duration = 0.0f;
     emitter.spawnCount = 18;
-    emitter.size = {0.4f, 0.4f, 0.4f};
+    emitter.size = { 0.4f, 0.4f, 0.4f };
     emitter.particleLifetime = 0.8f;
     emitter.spawnFuncKey = PLAYER_DASH_EFFECT_SPAWN;
     emitter.colorKeys = {
@@ -148,7 +149,7 @@ void PlayScene::UpdatePlayerSpeedEffect(float _speed, float _maxSpeed, float _de
     }
 
     playerSpeedParticleState_->direction = {
-        velocity.x / horizontalSpeed, 0.0f, velocity.z / horizontalSpeed};
+        velocity.x / horizontalSpeed, 0.0f, velocity.z / horizontalSpeed };
     const Vector3 emitterPosition = player_->GetPosition() + player_->GetModelOffset();
     if (!playerSpeedEffectHandle_.IsValid()) {
         playerSpeedEffectHandle_ = particleSystem->Emit(
@@ -170,28 +171,38 @@ void PlayScene::LoadStageConfig() {
         if (const auto number = std::get_if<float>(&entry->second)) value = *number;
         else if (const auto integer = std::get_if<int32_t>(&entry->second)) value = static_cast<float>(*integer);
         return std::isfinite(value) ? value : _fallback;
-    };
+        };
     stageSize_ = std::max(read("Size", stageSize_), 20.0f);
     towerMargin_ = std::clamp(read("TowerMargin", towerMargin_), 2.0f, stageSize_ * 0.5f - 5.0f);
     fenceHeight_ = std::max(read("FenceHeight", fenceHeight_), 0.1f);
     wallBounce_ = std::clamp(read("WallBounce", wallBounce_), 0.0f, 1.0f);
+    hudFadeDuration_ = std::max(read("HudFadeInSeconds", hudFadeDuration_), 0.0f);
 }
 
 void PlayScene::Initialize() {
     // リザルトから戻る先。Change()を呼んだタイミングで切り替わる
     next_ = "Title";
 
+    // 通常はタイトルで読み込み済み。デバッグでこのシーンから直接始めた場合の保険
+    GameSound::Load();
+    GameSound::StartLoop(GameSound::Se::PlayBgm);
+
+    // トランジション設定
+    entryTransition_ = Transition::Type::Fade;
+    exitTransition_ = Transition::Type::Fade;
+
     LoadStageConfig();
     const float halfSize = stageSize_ * 0.5f;
     const float towerPosition = halfSize - towerMargin_;
-    constexpr Vector3 mainTowerPosition{0.0f, 0.0f, 0.0f};
+    constexpr Vector3 mainTowerPosition{ 0.0f, 0.0f, 0.0f };
+    constexpr Vector3 shadowLightOffset{ 0.0f, 10.0f, 0.0f };
 
     Singleton<TextureManager>::GetInstance()->Load("skybox.dds");
 
     player_ = std::make_unique<Player>();
     player_->Initialize();
     // 画面手前（-Z）に出現。高さは床と同じ0。
-    player_->SetPosition(mainTowerPosition + Vector3{0.0f, 0.0f, -8.0f});
+    player_->SetPosition(mainTowerPosition + Vector3{ 0.0f, 0.0f, -8.0f });
     player_->SetInput(input_);
     player_->EnableGrappleMovement();
     player_->SetStageBoundary(halfSize, wallBounce_);
@@ -204,7 +215,7 @@ void PlayScene::Initialize() {
 
     assistedTower_ = nullptr;
     mainTower_ = towerManager_->AddMainTower(mainTowerPosition);
-    std::vector<Vector3> towerPositions{mainTowerPosition};
+    std::vector<Vector3> towerPositions{ mainTowerPosition };
     towerPositions.reserve(9);
 
     // 3×3の等間隔配置。中央をメインタワーとし、合計9本にする。
@@ -213,7 +224,7 @@ void PlayScene::Initialize() {
             if (row == 1 && column == 1) continue;
             const float x = -towerPosition + static_cast<float>(column) * towerPosition;
             const float z = -towerPosition + static_cast<float>(row) * towerPosition;
-            const Vector3 position{x, 0.0f, z};
+            const Vector3 position{ x, 0.0f, z };
             towerManager_->AddTower(position);
             towerPositions.push_back(position);
         }
@@ -263,22 +274,22 @@ void PlayScene::Initialize() {
     shockwave_ = std::make_unique<Model>();
     shockwave_->Initialize("plane");
     shockwave_->SetTexture("circle2.png");
-    shockwave_->SetRotate({-MathUtils::F_PI * 0.5f, 0.0f, 0.0f});
+    shockwave_->SetRotate({ -MathUtils::F_PI * 0.5f, 0.0f, 0.0f });
     shockwaveTime_ = SHOCKWAVE_DURATION;
 
     floor_ = std::make_unique<Model>();
     floor_->Initialize("plane");
     floor_->SetTexture("white_x16.png");
-    floor_->SetColor({0.5f, 0.5f, 0.5f, 1.0f});
-    floor_->SetTranslate({0.0f, 0.0f, 0.0f});
-    floor_->SetRotate({-1.5707963f, 0.0f, 0.0f});
-    floor_->SetScale({halfSize, halfSize, 1.0f});
+    floor_->SetColor({ 0.5f, 0.5f, 0.5f, 1.0f });
+    floor_->SetTranslate({ 0.0f, 0.0f, 0.0f });
+    floor_->SetRotate({ -1.5707963f, 0.0f, 0.0f });
+    floor_->SetScale({ halfSize, halfSize, 1.0f });
 
     const float halfHeight = fenceHeight_ * 0.5f;
-    const std::array<Vector3, 4> fencePositions{{
+    const std::array<Vector3, 4> fencePositions{ {
         {0.0f, halfHeight, -halfSize}, {0.0f, halfHeight, halfSize},
         {-halfSize, halfHeight, 0.0f}, {halfSize, halfHeight, 0.0f}
-    }};
+    } };
     // Planeは片面なので表裏を用意し、ステージの内外どちらからでも見えるようにする。
     for (size_t side = 0; side < fencePositions.size(); ++side) {
         for (size_t face = 0; face < 2; ++face) {
@@ -286,11 +297,11 @@ void PlayScene::Initialize() {
             fence = std::make_unique<Model>();
             fence->Initialize("plane");
             fence->SetTexture("white_x16.png");
-            fence->SetColor({1.0f, 0.4f, 0.05f, 0.4f});
-            fence->SetScale({halfSize, halfHeight, 1.0f});
+            fence->SetColor({ 1.0f, 0.4f, 0.05f, 0.4f });
+            fence->SetScale({ halfSize, halfHeight, 1.0f });
             fence->SetTranslate(fencePositions[side]);
-            fence->SetRotate({0.0f, (side < 2 ? 0.0f : MathUtils::F_PI * 0.5f)
-                + static_cast<float>(face) * MathUtils::F_PI, 0.0f});
+            fence->SetRotate({ 0.0f, (side < 2 ? 0.0f : MathUtils::F_PI * 0.5f)
+                + static_cast<float>(face) * MathUtils::F_PI, 0.0f });
             fence->Update();
         }
     }
@@ -298,43 +309,60 @@ void PlayScene::Initialize() {
     for (std::size_t i = 0; i < reticleFills_.size(); ++i) {
         const bool horizontal = i < 2;
         reticleOutlines_[i].Initialize("white_x16.png");
-        reticleOutlines_[i].SetAnchorPoint({0.5f, 0.5f});
+        reticleOutlines_[i].SetAnchorPoint({ 0.5f, 0.5f });
         reticleOutlines_[i].SetSize(
-            horizontal ? Vector2{10.0f, 5.0f} : Vector2{5.0f, 10.0f});
-        reticleOutlines_[i].SetColor({0.0f, 0.0f, 0.0f, 1.0f});
+            horizontal ? Vector2{ 10.0f, 5.0f } : Vector2{ 5.0f, 10.0f });
+        reticleOutlines_[i].SetColor({ 0.0f, 0.0f, 0.0f, 1.0f });
 
         reticleFills_[i].Initialize("white_x16.png");
-        reticleFills_[i].SetAnchorPoint({0.5f, 0.5f});
+        reticleFills_[i].SetAnchorPoint({ 0.5f, 0.5f });
         reticleFills_[i].SetSize(
-            horizontal ? Vector2{8.0f, 3.0f} : Vector2{3.0f, 8.0f});
-        reticleFills_[i].SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+            horizontal ? Vector2{ 8.0f, 3.0f } : Vector2{ 3.0f, 8.0f });
+        reticleFills_[i].SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
     }
     reticlePositionInitialized_ = false;
     reticleHoverProgress_ = 0.0f;
     cursorVisible_ = false;
     clickTowerGuide_.Initialize("Click Tower", 0.0f, 0.0f, 22.0f);
-    clickTowerGuide_.SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+    clickTowerGuide_.SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
     clickTowerGuide_.SetVisible(false);
     clickTowerGuideElapsed_ = 0.0f;
     clickTowerGuideVisible_ = false;
     dashInputGuide_.Initialize("RightClick", 32.0f, 0.0f, 26.0f);
-    dashInputGuide_.SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+    dashInputGuide_.SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
     dashActionGuide_.Initialize("Dash", 32.0f, 0.0f, 38.0f);
-    dashActionGuide_.SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+    dashActionGuide_.SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
     dashCooldownGaugeFrame_.Initialize("white_x16.png");
-    dashCooldownGaugeFrame_.SetAnchorPoint({0.0f, 0.0f});
-    dashCooldownGaugeFrame_.SetColor({0.0f, 0.0f, 0.0f, 0.62f});
+    dashCooldownGaugeFrame_.SetAnchorPoint({ 0.0f, 0.0f });
+    dashCooldownGaugeFrame_.SetColor({ 0.0f, 0.0f, 0.0f, 0.62f });
     dashCooldownGauge_.Initialize("white_x16.png");
-    dashCooldownGauge_.SetAnchorPoint({0.0f, 0.0f});
-    dashCooldownGauge_.SetColor({0.05f, 0.35f, 1.0f, 0.72f});
+    dashCooldownGauge_.SetAnchorPoint({ 0.0f, 0.0f });
+    dashCooldownGauge_.SetColor({ 0.05f, 0.35f, 1.0f, 0.72f });
     dashCooldownRatio_ = 1.0f;
     dashCooldownFlashTime_ = 0.0f;
+    hudFadeElapsed_ = 0.0f;
+    hudOpacity_ = 0.0f;
+    ApplyDashCooldownGauge();
 }
 
 void PlayScene::Update() {
     input_.Update();
 
+    GameSound::Update();
+
     const float deltaTime = Time::GetDeltaTime();
+    hudFadeElapsed_ = std::min(
+        hudFadeElapsed_ + std::max(deltaTime, 0.0f), hudFadeDuration_);
+    const float hudFadeRatio = hudFadeDuration_ > 0.0f
+        ? std::clamp(hudFadeElapsed_ / hudFadeDuration_, 0.0f, 1.0f)
+        : 1.0f;
+    hudOpacity_ = hudFadeRatio * hudFadeRatio * (3.0f - 2.0f * hudFadeRatio);
+
+    towerHpGauge_->SetOpacity(hudOpacity_);
+    scoreManager_->SetOpacity(hudOpacity_);
+    survivalTimeManager_->SetOpacity(hudOpacity_);
+    comboManager_->SetOpacity(hudOpacity_);
+    mainTowerIndicator_->SetOpacity(hudOpacity_);
 
     // タワーが落ちたらリザルトへ。シーンは切り替えず画面の上へシートを重ねるだけなので、
     // 負けた瞬間の状況がそのまま背景として残る
@@ -347,7 +375,10 @@ void PlayScene::Update() {
         survivalTimeManager_->SetVisible(false);
         comboManager_->SetVisible(false);
         resultOverlay_->Show(survivalTimeManager_->GetElapsedSeconds(),
-                             scoreManager_->GetScore());
+            scoreManager_->GetScore());
+        // BGM を止めて、遷移音とリザルトを静かに聞かせる
+        GameSound::StopLoop(GameSound::Se::PlayBgm);
+        GameSound::Play(GameSound::Se::ResultTransition);
     }
 
     // リザルト中はゲーム側へ渡す経過時間を 0 にして進行だけを止める。
@@ -391,13 +422,20 @@ void PlayScene::Update() {
         if (playing) {
             enemyManager_->ApplyShockwave(target, SHOCKWAVE_RADIUS, SHOCKWAVE_SPEED);
             shockwaveTime_ = 0.0f;
-            shockwave_->SetTranslate(target + Vector3{0.0f, 0.05f, 0.0f});
+            shockwave_->SetTranslate(target + Vector3{ 0.0f, 0.05f, 0.0f });
+            GameSound::Play(GameSound::Se::TowerSwitch);
         }
         enemyManager_->SetTargetPosition(target.x, target.z);
     }
     if (playing) UpdateTowerSelection(gameDelta);
 
     player_->SetGrappleTarget(laser_->GetConnectedTarget());
+
+    // 接続中だけ鳴らし続ける。StartLoop / StopLoop が二重呼び出しを弾くので、
+    // 前フレームの状態を持たずに毎フレームの接続状態をそのまま渡せる
+    if (laser_->GetConnectedTarget()) GameSound::StartLoop(GameSound::Se::LaserLoop);
+    else                              GameSound::StopLoop(GameSound::Se::LaserLoop);
+
     player_->Update(gameDelta);
     if (player_->ConsumeDashTriggered()) {
         EmitPlayerDashEffect();
@@ -425,8 +463,8 @@ void PlayScene::Update() {
         const float t = shockwaveTime_ / SHOCKWAVE_DURATION;
         const float eased = 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t);
         const float size = 0.1f + (SHOCKWAVE_RADIUS * 2.0f - 0.1f) * eased;
-        shockwave_->SetScale({size, size, 1.0f});
-        shockwave_->SetColor({1.0f, 0.5f, 0.0f, 1.0f - t});
+        shockwave_->SetScale({ size, size, 1.0f });
+        shockwave_->SetColor({ 1.0f, 0.5f, 0.0f, 1.0f - t });
         shockwave_->Update();
         shockwaveTime_ = std::min(shockwaveTime_ + gameDelta, SHOCKWAVE_DURATION);
     }
@@ -502,9 +540,9 @@ void PlayScene::UpdateTowerSelection(float _deltaTime) {
         const Matrix4x4 inverseViewProjection = camera->GetViewProjection().Inverse();
         const auto unproject = [&](float _x, float _y, float _depth) {
             return MathUtils::Matrix::Transform(
-                Vector3{2.0f * _x / width - 1.0f, 1.0f - 2.0f * _y / height, _depth},
+                Vector3{ 2.0f * _x / width - 1.0f, 1.0f - 2.0f * _y / height, _depth },
                 inverseViewProjection);
-        };
+            };
         const Vector3 nearPosition = unproject(position.x, position.y, 0.0f);
         const Vector3 farPosition = unproject(position.x, position.y, 1.0f);
         const Vector3 rayDirection = farPosition - nearPosition;
@@ -522,21 +560,22 @@ void PlayScene::UpdateTowerSelection(float _deltaTime) {
             1.0f + (0.2f - 1.0f) * hoverEase,
             1.0f,
             1.0f + (0.35f - 1.0f) * hoverEase,
-            1.0f};
+            hudOpacity_ };
         const float rotationCos = std::cos(rotation);
         const float rotationSin = std::sin(rotation);
-        const std::array<Vector2, 4> offsets{{
+        const std::array<Vector2, 4> offsets{ {
             {-rotationCos * offsetDistance, -rotationSin * offsetDistance},
             {rotationCos * offsetDistance, rotationSin * offsetDistance},
             {rotationSin * offsetDistance, -rotationCos * offsetDistance},
             {-rotationSin * offsetDistance, rotationCos * offsetDistance}
-        }};
+        } };
         for (std::size_t i = 0; i < offsets.size(); ++i) {
             const Vector2 reticlePartPosition = reticlePosition_ + offsets[i];
             reticleOutlines_[i].SetPosition(reticlePartPosition);
             reticleFills_[i].SetPosition(reticlePartPosition);
             reticleOutlines_[i].SetRotation(rotation);
             reticleFills_[i].SetRotation(rotation);
+            reticleOutlines_[i].SetColor({ 0.0f, 0.0f, 0.0f, hudOpacity_ });
             reticleFills_[i].SetColor(reticleColor);
             reticleOutlines_[i].Update();
             reticleFills_[i].Update();
@@ -552,15 +591,48 @@ void PlayScene::UpdateTowerSelection(float _deltaTime) {
         laser_->ClearTarget();
     } else if (mouseAvailable && mouse->IsMouseTrigger(0)) {
         // 押し始めたTowerを保持。ドラッグで別Towerへ乗り換えない。
-        if (assistedTower_) laser_->SetTarget(assistedTower_);
-        else laser_->ClearTarget();
+        if (assistedTower_) {
+            laser_->SetTarget(assistedTower_);
+            GameSound::Play(GameSound::Se::LaserConnect);
+        } else laser_->ClearTarget();
     }
 }
 
 
+void PlayScene::Finalize() {
+    // シーンを抜けるときに鳴り続けているものを止める
+    GameSound::StopLoop(GameSound::Se::LaserLoop);
+    GameSound::StopLoop(GameSound::Se::PlayBgm);
+}
+
 void PlayScene::RequestReturnToTitle() {
+    // タイトルの決定音を流用する。UI のボタンからもキー入力からもここへ合流する
+    GameSound::Play(GameSound::Se::Decide);
     resultOverlay_->Hide();
     Change();
+}
+
+void PlayScene::ApplyDashCooldownGauge() {
+    const float screenHeight = Singleton<Screen>::GetInstance()->Height();
+
+    dashCooldownGaugeFrame_.SetPosition({ 18.0f, screenHeight - 114.0f });
+    dashCooldownGaugeFrame_.SetSize({ 164.0f, 100.0f });
+    dashCooldownGaugeFrame_.SetColor({ 0.0f, 0.0f, 0.0f, 0.62f * hudOpacity_ });
+    dashCooldownGaugeFrame_.Update();
+
+    dashCooldownGauge_.SetPosition({ 20.0f, screenHeight - 112.0f });
+    dashCooldownGauge_.SetSize({
+        160.0f * std::clamp(dashCooldownRatio_, 0.0f, 1.0f), 96.0f });
+    const float flashRatio = DASH_COOLDOWN_FLASH_DURATION > 0.0f
+        ? std::clamp(dashCooldownFlashTime_ / DASH_COOLDOWN_FLASH_DURATION, 0.0f, 1.0f)
+        : 0.0f;
+    dashCooldownGauge_.SetColor({
+        0.05f + 0.95f * flashRatio,
+        0.35f + 0.65f * flashRatio,
+        1.0f,
+        (0.72f + 0.28f * flashRatio) * hudOpacity_
+        });
+    dashCooldownGauge_.Update();
 }
 
 void PlayScene::DrawHud() {
@@ -578,32 +650,24 @@ void PlayScene::DrawHud() {
     comboManager_->Draw();
     mainTowerIndicator_->Draw();
     clickTowerGuide_.SetVisible(clickTowerGuideVisible_);
+    clickTowerGuide_.SetColor({ 1.0f, 1.0f, 1.0f, hudOpacity_ });
     clickTowerGuide_.Draw();
 
     const float screenHeight = Singleton<Screen>::GetInstance()->Height();
     const bool showControlGuide = !resultOverlay_->IsActive();
     dashInputGuide_.SetPosition(32.0f, screenHeight - 100.0f);
+    dashInputGuide_.SetColor({ 1.0f, 1.0f, 1.0f, hudOpacity_ });
     dashInputGuide_.SetVisible(showControlGuide);
     dashInputGuide_.Draw();
     dashActionGuide_.SetPosition(32.0f, screenHeight - 68.0f);
+    dashActionGuide_.SetColor({ 1.0f, 1.0f, 1.0f, hudOpacity_ });
     dashActionGuide_.SetVisible(showControlGuide);
     dashActionGuide_.Draw();
-    dashCooldownGaugeFrame_.SetPosition({18.0f, screenHeight - 114.0f});
-    dashCooldownGaugeFrame_.SetSize({164.0f, 100.0f});
-    dashCooldownGaugeFrame_.Update();
-
-    dashCooldownGauge_.SetPosition({20.0f, screenHeight - 112.0f});
-    dashCooldownGauge_.SetSize({160.0f * std::clamp(dashCooldownRatio_, 0.0f, 1.0f), 96.0f});
-    const float flashRatio = DASH_COOLDOWN_FLASH_DURATION > 0.0f
-        ? std::clamp(dashCooldownFlashTime_ / DASH_COOLDOWN_FLASH_DURATION, 0.0f, 1.0f)
-        : 0.0f;
-    dashCooldownGauge_.SetColor({
-        0.05f + 0.95f * flashRatio,
-        0.35f + 0.65f * flashRatio,
-        1.0f,
-        0.72f + 0.28f * flashRatio
-    });
-    dashCooldownGauge_.Update();
+    ApplyDashCooldownGauge();
+    if (showControlGuide) {
+        dashCooldownGaugeFrame_.Draw();
+        dashCooldownGauge_.Draw();
+    }
 
     // リザルトの暗幕とシートは Canvas として Ui::Manager がこの後に描く。
     // ここで積んだ UI はまとめて暗幕の下に沈む

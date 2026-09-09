@@ -33,6 +33,15 @@ namespace {
             Lerp(_start.w, _end.w, _t),
         };
     }
+
+    Vector4 WithOpacity(Vector4 _color, float _opacity) {
+        _color.w *= _opacity;
+        return _color;
+    }
+}
+
+void ComboManager::SetOpacity(float _opacity) {
+    opacity_ = std::clamp(_opacity, 0.0f, 1.0f);
 }
 
 void ComboManager::Initialize() {
@@ -240,19 +249,19 @@ void ComboManager::ApplyGaugeSprites() {
 
     gaugeFrameSprite_.SetPosition(framePosition);
     gaugeFrameSprite_.SetSize(frameSize);
-    gaugeFrameSprite_.SetColor(gaugeFrameColor_);
+    gaugeFrameSprite_.SetColor(WithOpacity(gaugeFrameColor_, opacity_));
     gaugeFrameSprite_.Update();
 
     // 本体バーは残りの継続時間。減っていく様子がそのまま「切れるまでの猶予」になる
     gaugeFillSprite_.SetPosition(gaugePosition_);
     gaugeFillSprite_.SetSize({gaugeSize_.x * GetRemainingRatio(), gaugeSize_.y * punch});
-    gaugeFillSprite_.SetColor(tierColor);
+    gaugeFillSprite_.SetColor(WithOpacity(tierColor, opacity_));
     gaugeFillSprite_.Update();
 
     // フラッシュはゲージ全体を覆う白。段が上がった瞬間だけ光る
     gaugeFlashSprite_.SetPosition(framePosition);
     gaugeFlashSprite_.SetSize(frameSize);
-    gaugeFlashSprite_.SetColor({1.0f, 1.0f, 1.0f, GetFlashAlpha()});
+    gaugeFlashSprite_.SetColor({1.0f, 1.0f, 1.0f, GetFlashAlpha() * opacity_});
     gaugeFlashSprite_.Update();
 }
 
@@ -263,7 +272,7 @@ void ComboManager::RefreshTexts() {
     std::snprintf(buffer, sizeof(buffer), "x%d", GetMultiplier());
     const std::string multiplier = buffer;
     multiplierText_.SetText(multiplier);
-    multiplierText_.SetColor(GetTierColor());
+    multiplierText_.SetColor(WithOpacity(GetTierColor(), opacity_));
 
     // 段が上がった瞬間だけ倍率の文字を大きく弾ませる
     const float multiplierSize = multiplierFontSize_ * GetPunchScale();
@@ -278,7 +287,7 @@ void ComboManager::RefreshTexts() {
     // コンボ数は桁が増えても右端が動かないよう、同じく右揃えにする
     const std::string count = countLabel_ + std::to_string(comboCount_);
     countText_.SetText(count);
-    countText_.SetColor(countColor_);
+    countText_.SetColor(WithOpacity(countColor_, opacity_));
     countText_.SetPosition(
         countRightX_ - EstimateTextWidth(count, countFontSize_),
         countPositionY_);

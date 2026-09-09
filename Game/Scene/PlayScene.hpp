@@ -73,6 +73,9 @@ class PlayScene final : public IScene {
     Sprite dashCooldownGauge_{};
     float dashCooldownRatio_ = 1.0f;
     float dashCooldownFlashTime_ = 0.0f;
+    float hudFadeElapsed_ = 0.0f;
+    float hudFadeDuration_ = 0.45f;
+    float hudOpacity_ = 0.0f;
     std::shared_ptr<PlayerSpeedParticleState> playerSpeedParticleState_;
     EmitterHandle playerSpeedEffectHandle_;
     static constexpr float CLICK_TOWER_GUIDE_DURATION = 10.0f;
@@ -88,6 +91,7 @@ public:
     void Initialize() override;
     void Update() override;
     void Draw() override;
+    void Finalize() override;
     void Debug() override;
 
 private:
@@ -97,6 +101,7 @@ private:
     void InitializePlayerDashEffect();
     void UpdatePlayerSpeedEffect(float _speed, float _maxSpeed, float _deltaTime);
     void EmitPlayerDashEffect();
+    void ApplyDashCooldownGauge();
 
     /// @brief タイトルシーンへ戻る
     /// @note UI のボタンからもキー入力からも呼ばれる。二重に呼んでも SceneSwitcher 側で弾かれる

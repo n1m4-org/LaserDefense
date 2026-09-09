@@ -38,6 +38,9 @@ class TitleScene final : public IScene {
     /// 下線が伸びきったか。伸びきったあとは要素に触らない
     bool underlineGrown_ = false;
 
+    /// 遷移要求済みか。Canvasとシーン入力が同じフレームに反応する場合の二重実行を防ぐ
+    bool transitionRequested_ = false;
+
 public:
     TitleScene();
     ~TitleScene() override;
@@ -45,6 +48,7 @@ public:
     void Initialize() override;
     void Update() override;
     void Draw() override;
+    void Finalize() override;
     void Debug() override;
 
 private:
