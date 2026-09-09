@@ -12,6 +12,10 @@
 #include "Json/JsonParams.hpp"
 #include "Math/MathUtils.hpp"
 #include "Pattern/Singleton.hpp"
+#include "Tower/MainTower.hpp"
+#include "Tower/Tower.hpp"
+#include "Tower/TowerManager.hpp"
+#include "src/ParticleSystem/ParticleSystem.hpp"
 
 #ifdef _DEBUG
 #include "imgui.h"
@@ -22,6 +26,16 @@
 
 namespace {
     const std::string WHITE_TEXTURE = "white_x16.png";
+
+    /// 失敗時の爆発テンプレート(Assets/Data/Particle/GimmickFailed.json)。
+    /// 起動時に自動で読み込まれ、DebugUI の Particle エディタから編集・保存できる
+    const std::string FAILURE_TEMPLATE = "GimmickFailed";
+
+    /// テンプレートの JSON から参照される関数のキー
+    const std::string FAILURE_BURST_SPAWN = "GimmickFailed.Burst";
+    const std::string FAILURE_SMOKE_SPAWN = "GimmickFailed.Smoke";
+    const std::string FAILURE_FALL_UPDATE = "GimmickFailed.Fall";
+    const std::string FAILURE_DRIFT_UPDATE = "GimmickFailed.Drift";
 
     Vector4 WithOpacity(Vector4 _color, float _opacity) {
         _color.w *= _opacity;
@@ -35,6 +49,7 @@ void GimmickManager::Initialize(const GimmickContext& _context) {
     spawnTime_ = 0.0f;
     remainingTimeSeconds_ = 0.0f;
     LoadConfig();
+    RegisterFailureEffect();
     InitializeTimerGauge();
     RouteGimmick::ResetTutorialProgress();
 }
@@ -56,6 +71,7 @@ void GimmickManager::Update(float _deltaTime) {
             if (remainingTimeSeconds_ <= 0.0f) activeGimmick_->OnTimeLimitExpired();
         }
         if (activeGimmick_->IsFinished()) {
+            if (activeGimmick_->GetState() == GimmickState::Failed) OnGimmickFailed();
             activeGimmick_.reset();
             remainingTimeSeconds_ = 0.0f;
             spawnTime_ = 0.0f;
@@ -104,6 +120,76 @@ void GimmickManager::Debug() {
 #endif
 }
 
+void GimmickManager::RegisterFailureEffect() {
+    if (!context_.particleSystem) return;
+
+    // 破片は球状にばらけさせる。上向きを少し強めにして「吹き上がる」形にする
+    context_.particleSystem->RegisterSpawnFunc(FAILURE_BURST_SPAWN,
+        [](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
+            const float yaw = MathUtils::Random(0.0f, 6.2831853f);
+            const float pitch = MathUtils::Random(-0.35f, 1.15f);
+            const float horizontal = std::cos(pitch);
+            const Vector3 direction{
+                std::cos(yaw) * horizontal, std::sin(pitch), std::sin(yaw) * horizontal};
+            _position = _center + direction * MathUtils::Random(0.0f, 0.6f);
+            _velocity = direction * MathUtils::Random(7.0f, 18.0f);
+        });
+
+    // 煙はゆっくり上へ。破片が消えたあとに残って失敗の跡になる。
+    // 初速を抑えて Drift で減速させると、勢いよく上がらず「ふわっと漂う」動きになる
+    context_.particleSystem->RegisterSpawnFunc(FAILURE_SMOKE_SPAWN,
+        [](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
+            const float yaw = MathUtils::Random(0.0f, 6.2831853f);
+            const Vector3 spread{std::cos(yaw), 0.0f, std::sin(yaw)};
+            _position = _center + spread * MathUtils::Random(0.0f, 1.8f)
+                + Vector3{0.0f, MathUtils::Random(0.0f, 1.0f), 0.0f};
+            _velocity = spread * MathUtils::Random(0.15f, 0.55f)
+                + Vector3{0.0f, MathUtils::Random(0.6f, 1.5f), 0.0f};
+        });
+
+    // 煙は重力を掛けず、空気抵抗だけで少しずつ止まっていく
+    context_.particleSystem->RegisterUpdateFunc(FAILURE_DRIFT_UPDATE,
+        [](float, const Vector3&, Vector3&, Vector3& _velocity, Vector4&) {
+            constexpr float STEP = 1.0f / 60.0f;
+            constexpr float DRAG = 0.7f;
+            const float drag = DRAG * STEP;
+            _velocity.x -= _velocity.x * drag;
+            _velocity.y -= _velocity.y * drag;
+            _velocity.z -= _velocity.z * drag;
+        });
+
+    // 破片だけは重力と空気抵抗を掛けて落とす。
+    // @note Particle の積分は 1/60 秒固定なので、ここでも同じ刻みで速度を変える
+    context_.particleSystem->RegisterUpdateFunc(FAILURE_FALL_UPDATE,
+        [](float, const Vector3&, Vector3&, Vector3& _velocity, Vector4&) {
+            constexpr float STEP = 1.0f / 60.0f;
+            constexpr float GRAVITY = 26.0f;
+            constexpr float DRAG = 1.8f;
+            _velocity.y -= GRAVITY * STEP;
+            const float drag = DRAG * STEP;
+            _velocity.x -= _velocity.x * drag;
+            _velocity.y -= _velocity.y * drag;
+            _velocity.z -= _velocity.z * drag;
+        });
+}
+
+void GimmickManager::OnGimmickFailed() {
+    // 失敗の代償はメインタワーの HP。被弾フラッシュと効果音は TakeDamage が鳴らす
+    if (context_.towerManager) {
+        context_.towerManager->TakeDamage(failureTowerDamage_);
+    }
+
+    if (!context_.particleSystem || !context_.towerManager) return;
+
+    // 爆発はダメージを受けた防衛対象の上で出す。
+    // damage と演出の場所を揃えて「守れなかったからタワーが傷んだ」と読めるようにする
+    const auto& mainTowers = context_.towerManager->GetMainTowers();
+    if (mainTowers.empty() || !mainTowers.front()) return;
+
+    context_.particleSystem->Emit(FAILURE_TEMPLATE,
+        mainTowers.front()->GetPosition() + Vector3{0.0f, failureEffectHeight_, 0.0f});
+}
+
 void GimmickManager::LoadConfig() {
     const auto json = Singleton<JsonParams>::GetInstance();
     if (!json->Load("Gimmick", "Gimmick")) return;
@@ -121,6 +207,10 @@ void GimmickManager::LoadConfig() {
 
     if (const auto spawn = groups.find("Spawn"); spawn != groups.end()) {
         spawnInterval_ = read(spawn->second, "IntervalSeconds", spawnInterval_);
+    }
+    if (const auto failure = groups.find("Failure"); failure != groups.end()) {
+        failureTowerDamage_ = read(failure->second, "TowerDamage", failureTowerDamage_);
+        failureEffectHeight_ = read(failure->second, "EffectHeight", failureEffectHeight_);
     }
     if (const auto lottery = groups.find("Lottery"); lottery != groups.end()) {
         routeWeight_ = read(lottery->second, "RouteWeight", routeWeight_);
