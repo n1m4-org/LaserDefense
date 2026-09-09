@@ -27,7 +27,6 @@ struct GimmickContext {
     TowerManager* towerManager = nullptr;
     EnemyManager* enemyManager = nullptr;
     Laser* laser = nullptr;
-    ParticleSystem* particleSystem = nullptr;
     GESTD::ReferencePtr<ParticleSystem> particleSystem = nullptr;
 };
 
