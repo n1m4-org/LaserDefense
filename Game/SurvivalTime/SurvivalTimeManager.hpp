@@ -55,20 +55,19 @@ class SurvivalTimeManager final {
 
     // ─── リングの見た目設定 ────────────────────────────────────
     Vector2 ringCenter_{104.0f, 96.0f};         // リングの中心のピクセル座標
-    float ringRadius_ = 62.0f;                  // 中心から目盛りの中心までの距離
-    Vector2 tickSize_{8.0f, 18.0f};             // 目盛り1個のサイズ（x=太さ, y=長さ）
+    float ringRadius_ = 50.0f;                  // 中心から目盛りの中心までの距離
+    Vector2 tickSize_{7.0f, 16.0f};             // 目盛り1個のサイズ（x=太さ, y=長さ）
     int32_t tickCount_ = 20;                    // 目盛りの数。1目盛り = secondsPerLap_ / これ 秒
     float secondsPerLap_ = 60.0f;               // リングが1周する秒数
     Vector4 emptyColor_{0.13f, 0.13f, 0.17f, 0.85f};    // まだ1周もしていない部分の色
     Vector4 gainColor_{1.0f, 1.0f, 1.0f, 1.0f};         // 灯った直後の目盛りの色
-    /// 周回ごとの目盛りの色。緑から暖色へ一方向に進み、最後の赤まで行ったらそこで止まる。
-    /// 「まだ余裕がある → そろそろ危ない」が色だけで読めるようにするための並び
+    /// 周回ごとの目盛りの色。耐えた分数が進むほど先の色になり、使い切ったら先頭へ戻る
     std::vector<Vector4> lapColors_{
         {0.25f, 0.95f, 0.55f, 1.0f},    // 1分目: 緑
-        {0.60f, 0.95f, 0.30f, 1.0f},    // 2分目: 黄緑
-        {1.00f, 0.85f, 0.20f, 1.0f},    // 3分目: 黄
-        {1.00f, 0.52f, 0.15f, 1.0f},    // 4分目: 橙
-        {1.00f, 0.18f, 0.15f, 1.0f},    // 5分目以降: 赤
+        {1.0f,  0.85f, 0.30f, 1.0f},    // 2分目: 黄
+        {1.0f,  0.55f, 0.25f, 1.0f},    // 3分目: 橙
+        {1.0f,  0.40f, 0.70f, 1.0f},    // 4分目: 桃
+        {0.70f, 0.50f, 1.0f,  1.0f},    // 5分目: 紫
     };
     float gainFlashDuration_ = 0.5f;    // 灯った目盛りが白く光っている秒数
 
@@ -79,31 +78,19 @@ class SurvivalTimeManager final {
     float valuePunchScale_ = 1.3f;      // 1周した瞬間に数値を何倍まで大きくするか
 
     // ─── 数値表示の設定 ────────────────────────────────────────
-    /// 数値に使える最大文字数（"MMM:SS" まで想定）
-    static constexpr size_t VALUE_CHAR_MAX = 6;
-
-    /// 数値は1文字ずつ等間隔に置く。
-    /// このフォント（Satoshi）は数字が等幅ではなく "1" が "0" より約4割細いため、
-    /// 文字列をまとめて描くと秒が変わるたびに幅が変わり、中央位置が左右へふらつく。
-    /// 1文字ぶんの升目を固定して1文字ずつ流し込むことで、等幅数字と同じ見え方にする
-    std::array<Text, VALUE_CHAR_MAX> valueChars_{};
-    size_t valueCharCount_ = 0;                 // 実際に使っている文字数
+    // リングの中心へ置くので中央揃えにする（Text は左揃えしかできないので幅を見積もる）
+    Text valueText_{};
     float valueFontSize_ = 30.0f;               // 通常時のフォントサイズ
-    /// 1升の幅 ＝ フォントサイズ × これ。
-    /// いちばん太い数字（"0" = 0.718em）が収まる 0.558 が既定。
-    /// 小さくすると数字同士が詰まり、大きくすると間延びする
-    float valueCellRatio_ = 0.558f;
+    int32_t minuteDigits_ = 2;                  // 分に確保しておく桁数（1桁のうちは空けておく）
     float valueOffsetY_ = -20.0f;               // リング中心から見たテキスト上端のずれ
     Vector4 valueColor_{0.9f, 1.0f, 0.95f, 1.0f};       // 文字色
-    /// ラベルの中央揃えに使う「1文字幅 ÷ フォントサイズ」の目安。
-    /// 数値と違って文字列が変わらないので、平均的な字幅で合わせておけばよい
-    float charWidthRatio_ = 0.53f;
+    float charWidthRatio_ = 0.53f;              // 中央揃えに使う「1文字幅 ÷ フォントサイズ」の目安
 
     // ─── ラベル（"TIME"）の設定 ────────────────────────────────
     Text labelText_{};
     std::string label_{"TIME"};                 // リングの下に出す見出し
     float labelFontSize_ = 20.0f;               // フォントサイズ
-    float labelOffsetY_ = 78.0f;                // リング中心から見たテキスト上端のずれ
+    float labelOffsetY_ = 66.0f;                // リング中心から見たテキスト上端のずれ
     Vector4 labelColor_{0.75f, 0.8f, 0.88f, 1.0f};      // 文字色
 
     // ─── 描画に使うスプライト ──────────────────────────────────
@@ -111,7 +98,6 @@ class SurvivalTimeManager final {
     std::array<Sprite, TICK_MAX> tickSprites_{};
 
     bool visible_ = true;           // UI 全体の表示 / 非表示
-    float opacity_ = 1.0f;          // HUD全体から掛ける透明度
 
 public:
     /// JSON からパラメータを読み込み、リングとテキストを初期化する
@@ -142,7 +128,6 @@ public:
 
     /// @brief UI の表示 / 非表示を切り替える
     void SetVisible(bool _visible);
-    void SetOpacity(float _opacity);
 
 private:
     /// @brief Assets/Data/SurvivalTime/SurvivalTime.json から各パラメータを読み込む
@@ -156,7 +141,6 @@ private:
     void ApplyTickSprites();
 
     /// @brief 経過時間のテキストを更新する
-    /// @note 1文字ずつ等間隔の升目へ流し込む（数字が等幅でないフォント対策）
     void RefreshValueText();
 
     /// @brief 今の周回で点灯しているべき目盛り数を求める

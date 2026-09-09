@@ -161,7 +161,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Factory\PostEffectFactory.hpp" />
     <ClInclude Include="Result\ResultOverlay.hpp" />
     <ClInclude Include="Scene\GameSampleScene.hpp" />
-    <ClInclude Include="Scene\GimmickTuningScene.hpp" />
     <ClInclude Include="Scene\Input\GameSceneInput.hpp" />
     <ClInclude Include="Scene\Input\TitleSceneInput.hpp" />
     <ClInclude Include="Scene\PlayScene.hpp" />
@@ -192,7 +191,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="MyGame.cpp" />
     <ClCompile Include="Result\ResultOverlay.cpp" />
     <ClCompile Include="Scene\GameSampleScene.cpp" />
-    <ClCompile Include="Scene\GimmickTuningScene.cpp" />
     <ClCompile Include="Scene\Input\GameSceneInput.cpp" />
     <ClCompile Include="Scene\Input\TitleSceneInput.cpp" />
     <ClCompile Include="Scene\PlayScene.cpp" />

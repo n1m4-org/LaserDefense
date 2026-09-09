@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <cmath>
 
-#include "Collision/CollisionAttribute.hpp"
 #include "GameObject/Component/MoveComponent.hpp"
 #include "Json/JsonParams.hpp"
 #include "Pattern/Singleton.hpp"
@@ -34,15 +33,6 @@ void Player::Initialize() {
     // 機能はコンポーネントとして持たせる
     move_ = AddComponent<MoveComponent>(moveSpeed_);
     move_->SetLimit(moveLimit_);
-
-    collider_ = std::make_unique<Collision::Collider>();
-    collider_->SetName("Player")
-        ->SetType(Collision::Type::Sphere)
-        ->SetOwner(this)
-        ->AddAttribute(CollisionAttribute::Player)
-        ->AddIgnore(CollisionAttribute::Enemy | CollisionAttribute::Tower | CollisionAttribute::Laser)
-        ->SetSize(Collision::SphereShape(colliderRadius_))
-        ->Enable();
 }
 
 void Player::LoadConfig() {
@@ -148,13 +138,7 @@ void Player::Update(float _deltaTime) {
 
     UpdateComponents(_deltaTime);
     offset_ = modelOffset_;
-    UpdateCollider();
     UpdateModel();
-}
-
-void Player::UpdateCollider() {
-    if (!collider_) return;
-    collider_->SetTranslate(position_ + offset_);
 }
 
 void Player::UpdateGrappleMovement(float _deltaTime) {

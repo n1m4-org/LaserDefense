@@ -93,8 +93,3 @@ void MainTowerIndicator::Draw() {
     if (!visible_) return;
     arrow_.Draw();
 }
-
-void MainTowerIndicator::SetOpacity(float _opacity) {
-    opacity_ = std::clamp(_opacity, 0.0f, 1.0f);
-    arrow_.SetColor({0.25f, 0.95f, 0.55f, opacity_});
-}

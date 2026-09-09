@@ -16,35 +16,7 @@ namespace {
     /// 円周を一周するラジアン
     constexpr float TWO_PI = 6.283185307f;
 
-    /// 数値に使うフォント（Satoshi-Variable）の送り幅。em 単位で、"0" から "9" の順。
-/// このフォントは数字が等幅ではなく、"1" は "0" の 6 割ほどの幅しかない。
-/// そのまま並べると秒が変わるたびに文字列の幅が変わってしまうので、
-/// 升の幅は固定したうえで、この値を使って1文字ずつ升の中央へ寄せている。
-/// @note フォントを差し替えたら測り直すこと（ttf の hmtx テーブルの値）
-constexpr float DIGIT_ADVANCE_EM[] = {
-    0.718f, 0.437f, 0.605f, 0.570f, 0.657f,
-    0.611f, 0.630f, 0.559f, 0.659f, 0.630f,
-};
-
-/// ":" の送り幅（em）
-constexpr float COLON_ADVANCE_EM = 0.328f;
-
-/// Text のフォントサイズ 1 に対する em の大きさ。
-/// stb_truetype はアセント〜ディセントがフォントサイズになるよう縮尺を決めるため、
-/// em はフォントサイズより一回り小さくなる。実測して合わせた値
-constexpr float EM_PER_FONT_SIZE = 0.777f;
-
-/// 1文字の送り幅をピクセルで返す（表に無い文字は数字と同じ幅とみなす）
-float GlyphWidth(char _character, float _fontSize) {
-    const float em = (_character == ':')
-        ? COLON_ADVANCE_EM
-        : (_character >= '0' && _character <= '9')
-            ? DIGIT_ADVANCE_EM[_character - '0']
-            : DIGIT_ADVANCE_EM[0];
-    return em * EM_PER_FONT_SIZE * _fontSize;
-}
-
-/// 終わり際がゆっくりになる補間（演出の減衰に使う）
+    /// 終わり際がゆっくりになる補間（演出の減衰に使う）
     float EaseOutCubic(float _t) {
         const float inv = 1.0f - _t;
         return 1.0f - inv * inv * inv;
@@ -64,11 +36,6 @@ float GlyphWidth(char _character, float _fontSize) {
             Lerp(_start.w, _end.w, _t),
         };
     }
-
-    Vector4 WithOpacity(Vector4 _color, float _opacity) {
-        _color.w *= _opacity;
-        return _color;
-    }
 }
 
 void SurvivalTimeManager::Initialize() {
@@ -87,10 +54,8 @@ void SurvivalTimeManager::Initialize() {
         tickSprites_[static_cast<size_t>(i)].Initialize(WHITE_TEXTURE);
     }
 
-    for (Text& character : valueChars_) {
-        character.Initialize("", ringCenter_.x, ringCenter_.y + valueOffsetY_, valueFontSize_);
-        character.SetColor(valueColor_);
-    }
+    valueText_.Initialize("", ringCenter_.x, ringCenter_.y + valueOffsetY_, valueFontSize_);
+    valueText_.SetColor(valueColor_);
 
     labelText_.Initialize(label_, ringCenter_.x, ringCenter_.y + labelOffsetY_, labelFontSize_);
     labelText_.SetColor(labelColor_);
@@ -122,9 +87,7 @@ void SurvivalTimeManager::Draw() {
         tickSprites_[static_cast<size_t>(i)].Draw();
     }
 
-    for (size_t i = 0; i < valueCharCount_; ++i) {
-        valueChars_[i].Draw();
-    }
+    valueText_.Draw();
     labelText_.Draw();
 }
 
@@ -142,15 +105,8 @@ void SurvivalTimeManager::Reset() {
 
 void SurvivalTimeManager::SetVisible(bool _visible) {
     visible_ = _visible;
-    for (Text& character : valueChars_) {
-        character.SetVisible(_visible);
-    }
+    valueText_.SetVisible(_visible);
     labelText_.SetVisible(_visible);
-}
-
-void SurvivalTimeManager::SetOpacity(float _opacity) {
-    opacity_ = std::clamp(_opacity, 0.0f, 1.0f);
-    labelText_.SetColor(WithOpacity(labelColor_, opacity_));
 }
 
 void SurvivalTimeManager::LoadConfig() {
@@ -202,7 +158,7 @@ void SurvivalTimeManager::LoadConfig() {
 
     if (const auto value = groups.find("Value"); value != groups.end()) {
         valueFontSize_ = read(value->second, "FontSize", valueFontSize_);
-        valueCellRatio_ = read(value->second, "CellWidthRatio", valueCellRatio_);
+        minuteDigits_ = read(value->second, "MinuteDigits", minuteDigits_);
         valueOffsetY_ = read(value->second, "OffsetY", valueOffsetY_);
         valueColor_ = read(value->second, "Color", valueColor_);
         charWidthRatio_ = read(value->second, "CharWidthRatio", charWidthRatio_);
@@ -227,7 +183,7 @@ void SurvivalTimeManager::LoadConfig() {
     punchScale_ = std::max(punchScale_, 1.0f);
     valuePunchScale_ = std::max(valuePunchScale_, 1.0f);
     valueFontSize_ = std::max(valueFontSize_, 1.0f);
-    valueCellRatio_ = std::clamp(valueCellRatio_, 0.1f, 2.0f);
+    minuteDigits_ = std::clamp(minuteDigits_, 1, 4);
     labelFontSize_ = std::max(labelFontSize_, 1.0f);
     charWidthRatio_ = std::clamp(charWidthRatio_, 0.1f, 2.0f);
     if (lapColors_.empty()) {
@@ -298,56 +254,43 @@ void SurvivalTimeManager::ApplyTickSprites() {
             ? tickGainTimers_[static_cast<size_t>(i)] / gainFlashDuration_
             : 0.0f;
         const float highlight = std::max(EaseOutCubic(std::clamp(gain, 0.0f, 1.0f)), lapFlash);
-        sprite.SetColor(WithOpacity(LerpColor(base, gainColor_, highlight), opacity_));
+        sprite.SetColor(LerpColor(base, gainColor_, highlight));
 
         sprite.Update();
     }
 }
 
 void SurvivalTimeManager::RefreshValueText() {
-    // 通算の生存時間を "MM:SS" で出す。分もゼロ埋めしておくと文字数が変わらないので、
-    // 10分を超えても桁が増えず、升目の数も位置も最初から最後まで動かない
+    // 通算の生存時間を "分:秒" で出す。リングが今の1分を表しているので、
+    // 数値と合わせて「何分何秒耐えたか」がひと目で読める
     const int32_t total = static_cast<int32_t>(elapsedSeconds_);
     char buffer[32]{};
-    std::snprintf(buffer, sizeof(buffer), "%02d:%02d", total / 60, total % 60);
+    std::snprintf(buffer, sizeof(buffer), "%d:%02d", total / 60, total % 60);
     const std::string text = buffer;
+    valueText_.SetText(text);
 
     // 1周した瞬間だけ数値を白く光らせて一回り大きくする
     const float lapFlash = GetLapFlashAlpha();
-
-    const Vector4 color = LerpColor(valueColor_, gainColor_, lapFlash);
+    valueText_.SetColor(LerpColor(valueColor_, gainColor_, lapFlash));
 
     const float punchT = punchDuration_ > 0.0f ? punchTimer_ / punchDuration_ : 0.0f;
     const float fontSize = valueFontSize_ * Lerp(1.0f, valuePunchScale_, EaseOutCubic(punchT));
+    valueText_.SetFontSize(fontSize);
 
-    // 数字は1文字 = 1升。升の幅は中身によらないので、"00:11" のように
-    // 細い数字が並んでも文字列の幅と中心が変わらない。
-    // ":" だけは升に入れず本来の幅で置く（数字と同じ升に入れると前後が間延びする）
-    valueCharCount_ = std::min(text.size(), valueChars_.size());
-    const float digitCell = fontSize * valueCellRatio_;
+    // 分は minuteDigits_ 桁ぶんの場所を常に確保しておく。
+    // 1桁のうちは十の位のぶんだけ右へずらして描くので、10分になって桁が増えても
+    // ":" から右の位置が動かない。
+    // 空白文字を頭に足す方法だと、空白の送り幅が数字と違うぶんだけずれてしまうため、
+    // 文字を足すのではなく描き始めの位置でスペースを作っている
+    const float digitWidth = fontSize * charWidthRatio_;
+    const int32_t writtenDigits = static_cast<int32_t>(text.find(':'));
+    const float pad = static_cast<float>(std::max(minuteDigits_ - writtenDigits, 0)) * digitWidth;
+    // "MM:SS" のように、確保した分の桁 + ":" + 秒2桁ぶんを表示領域の幅とみなす
+    const float fieldWidth = static_cast<float>(minuteDigits_ + 3) * digitWidth;
 
-    const auto cellWidthOf = [&](char _character) {
-        return (_character == ':') ? GlyphWidth(':', fontSize) : digitCell;
-    };
-
-    float totalWidth = 0.0f;
-    for (size_t i = 0; i < valueCharCount_; ++i) {
-        totalWidth += cellWidthOf(text[i]);
-    }
-
-    float cellLeft = ringCenter_.x - totalWidth * 0.5f;
-    for (size_t i = 0; i < valueCharCount_; ++i) {
-        Text& character = valueChars_[i];
-        character.SetText(text.substr(i, 1));
-        character.SetColor(color);
-        character.SetFontSize(fontSize);
-
-        // 升の中で中央へ寄せる。これをしないと細い "1" が升の左へ張り付いて見える
-        const float cell = cellWidthOf(text[i]);
-        character.SetPosition(cellLeft + (cell - GlyphWidth(text[i], fontSize)) * 0.5f,
-                              ringCenter_.y + valueOffsetY_);
-        cellLeft += cell;
-    }
+    valueText_.SetPosition(
+        ringCenter_.x - fieldWidth * 0.5f + pad,
+        ringCenter_.y + valueOffsetY_);
 }
 
 int32_t SurvivalTimeManager::CalcLitCount() const {
@@ -363,13 +306,12 @@ int32_t SurvivalTimeManager::CalcLitCount() const {
 }
 
 Vector4 SurvivalTimeManager::GetLapColor(int32_t _lap) const {
-    // 緑から暖色へ進み、最後の色まで行ったらそこで止める。
-    // 一巡させると「危ないところまで来た」という積み上がりが消えてしまう
+    // 用意した色を使い切ったら先頭へ戻る。長く耐えるほど色が一巡していく
     const int32_t count = static_cast<int32_t>(lapColors_.size());
     if (count <= 0) {
         return gainColor_;
     }
-    return lapColors_[static_cast<size_t>(std::clamp(_lap, 0, count - 1))];
+    return lapColors_[static_cast<size_t>(std::max(_lap, 0) % count)];
 }
 
 float SurvivalTimeManager::GetPunchScale() const {

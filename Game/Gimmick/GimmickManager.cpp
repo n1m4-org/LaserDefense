@@ -1,5 +1,8 @@
 #include "GimmickManager.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
 #include <variant>
 
 #include "Gimmick/RouteGimmick.hpp"
@@ -9,30 +12,15 @@
 #include "Math/MathUtils.hpp"
 #include "Pattern/Singleton.hpp"
 
-#ifdef _DEBUG
-#include "imgui.h"
-#endif
-
-#undef min
-#undef max
-
 void GimmickManager::Initialize(const GimmickContext& _context) {
     context_ = _context;
     activeGimmick_.reset();
     spawnTime_ = 0.0f;
     LoadConfig();
-    RouteGimmick::ResetTutorialProgress();
 }
 
 void GimmickManager::Update(float _deltaTime) {
-    if (pendingStart_) {
-        const GimmickType type = *pendingStart_;
-        pendingStart_.reset();
-        StartGimmick(type);
-    }
-
     if (!std::isfinite(_deltaTime) || _deltaTime <= 0.0f) return;
-    if (debugPaused_) return;
 
     if (activeGimmick_) {
         activeGimmick_->Update(_deltaTime);
@@ -51,28 +39,6 @@ void GimmickManager::Update(float _deltaTime) {
 
 void GimmickManager::Draw() const {
     if (activeGimmick_) activeGimmick_->Draw();
-}
-
-void GimmickManager::Debug() {
-#ifdef _DEBUG
-    ImGui::Begin("GimmickManager");
-    ImGui::Text("Active: %s", activeGimmick_ ? "Yes" : "No");
-
-    if (ImGui::Button("Route")) pendingStart_ = GimmickType::Route;
-    ImGui::SameLine();
-    if (ImGui::Button("TowerDefense")) pendingStart_ = GimmickType::TowerDefense;
-    ImGui::SameLine();
-    if (ImGui::Button("TowerOrbit")) pendingStart_ = GimmickType::TowerOrbit;
-
-    if (activeGimmick_) {
-        ImGui::Checkbox("Paused", &debugPaused_);
-        ImGui::SameLine();
-        if (ImGui::Button("Restart")) pendingStart_ = activeGimmick_->GetType();
-    }
-    ImGui::End();
-
-    if (activeGimmick_) activeGimmick_->Debug();
-#endif
 }
 
 void GimmickManager::LoadConfig() {
@@ -120,13 +86,8 @@ void GimmickManager::StartRandomGimmick() {
         type = GimmickType::TowerDefense;
     }
 
-    StartGimmick(type);
-}
-
-void GimmickManager::StartGimmick(GimmickType _type) {
-    activeGimmick_ = CreateGimmick(_type);
+    activeGimmick_ = CreateGimmick(type);
     if (activeGimmick_) activeGimmick_->Initialize(context_);
-    spawnTime_ = 0.0f;
 }
 
 std::unique_ptr<IGimmick> GimmickManager::CreateGimmick(GimmickType _type) const {
