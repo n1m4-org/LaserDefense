@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <cstdint>
 #include <cmath>
-#include <limits>
 #include <variant>
 #include <vector>
 
@@ -35,7 +34,8 @@ namespace {
     /// 「タイトルへ戻る」ボタンに割り当てるアクションキー
     constexpr const char* ACTION_TO_TITLE = "Result.ToTitle";
     constexpr const char* PLAYER_SPEED_EFFECT_TEMPLATE = "PlayerSpeedEffect";
-    constexpr const char* PLAYER_SPEED_EFFECT_SPAWN = "PlayerSpeedEffectSpawn";
+    constexpr float PLAYER_SPEED_EFFECT_THRESHOLD = 0.3f;
+    constexpr float PLAYER_SPEED_EFFECT_INTERVAL = 0.1f;
     constexpr const char* PLAYER_DASH_EFFECT_TEMPLATE = "PlayerDashEffect";
     constexpr const char* PLAYER_DASH_EFFECT_SPAWN = "PlayerDashEffectSpawn";
 
@@ -46,54 +46,7 @@ namespace {
 } // namespace
 
 PlayScene::PlayScene() = default;
-PlayScene::~PlayScene() {
-    playerSpeedEffectHandle_.Stop();
-}
-
-void PlayScene::InitializePlayerSpeedEffect() {
-    const auto particleSystem = Particle();
-    if (!particleSystem) return;
-
-    playerSpeedParticleState_ = std::make_shared<PlayerSpeedParticleState>();
-    const std::weak_ptr<PlayerSpeedParticleState> state = playerSpeedParticleState_;
-    particleSystem->RegisterSpawnFunc(PLAYER_SPEED_EFFECT_SPAWN,
-        [state](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
-            const auto effectState = state.lock();
-            if (!effectState) {
-                _position = _center;
-                _velocity = {};
-                return;
-            }
-            const Vector3 direction = effectState->direction;
-            const Vector3 side{ -direction.z, 0.0f, direction.x };
-            _position = _center - direction * MathUtils::Random(0.35f, 0.75f)
-                + side * MathUtils::Random(-0.2f, 0.2f)
-                + Vector3{ 0.0f, MathUtils::Random(-0.12f, 0.12f), 0.0f };
-            _velocity = direction * MathUtils::Random(-3.0f, -1.0f)
-                + side * MathUtils::Random(-0.6f, 0.6f);
-        });
-
-    ParticleSystem::EmitterConfig emitter;
-    emitter.texture = "white_x16.png";
-    emitter.frequency = 0.025f;
-    emitter.duration = std::numeric_limits<float>::max();
-    emitter.spawnCount = 1;
-    emitter.size = { 0.14f, 0.14f, 0.14f };
-    emitter.particleLifetime = 0.2f;
-    emitter.spawnFuncKey = PLAYER_SPEED_EFFECT_SPAWN;
-    emitter.colorKeys = {
-        GradientKey<Vector4>{0.0f, {0.7f, 0.9f, 1.0f, 0.9f}},
-        GradientKey<Vector4>{1.0f, {0.2f, 0.55f, 1.0f, 0.0f}}
-    };
-    emitter.sizeKeys = {
-        GradientKey<Vector3>{0.0f, {0.14f, 0.14f, 0.14f}},
-        GradientKey<Vector3>{1.0f, {0.03f, 0.03f, 0.03f}}
-    };
-
-    ParticleSystem::Template speedEffect;
-    speedEffect.emitters.push_back(emitter);
-    particleSystem->Register(PLAYER_SPEED_EFFECT_TEMPLATE, speedEffect, true);
-}
+PlayScene::~PlayScene() = default;
 
 void PlayScene::InitializePlayerDashEffect() {
     const auto particleSystem = Particle();
@@ -125,6 +78,22 @@ void PlayScene::InitializePlayerDashEffect() {
     ParticleSystem::Template dashEffect;
     dashEffect.emitters.push_back(emitter);
     particleSystem->Register(PLAYER_DASH_EFFECT_TEMPLATE, dashEffect, true);
+
+    // 発生の仕方はダッシュと共通にし、高速移動中のものだけ白色にする。
+    emitter.colorKeys = {
+        GradientKey<Vector4>{0.0f, {1.0f, 1.0f, 1.0f, 1.0f}},
+        GradientKey<Vector4>{1.0f, {1.0f, 1.0f, 1.0f, 0.0f}}
+    };
+    ParticleSystem::Template speedEffect;
+    speedEffect.emitters.push_back(emitter);
+    particleSystem->Register(PLAYER_SPEED_EFFECT_TEMPLATE, speedEffect, true);
+}
+
+void PlayScene::EmitPlayerSpeedEffect() {
+    const auto particleSystem = Particle();
+    if (!particleSystem) return;
+    particleSystem->Emit(
+        PLAYER_SPEED_EFFECT_TEMPLATE, player_->GetPosition() + player_->GetModelOffset());
 }
 
 void PlayScene::EmitPlayerDashEffect() {
@@ -135,27 +104,28 @@ void PlayScene::EmitPlayerDashEffect() {
 }
 
 void PlayScene::UpdatePlayerSpeedEffect(float _speed, float _maxSpeed, float _deltaTime) {
-    const auto particleSystem = Particle();
-    const Vector3 velocity = player_->GetVelocity();
-    const float horizontalSpeed = std::hypot(velocity.x, velocity.z);
-    const bool emit = particleSystem && playerSpeedParticleState_
-        && std::isfinite(_deltaTime) && _deltaTime > 0.0f
+    const bool emit = std::isfinite(_deltaTime) && _deltaTime > 0.0f
         && std::isfinite(_speed) && std::isfinite(_maxSpeed) && _maxSpeed > 0.0001f
-        && _speed > _maxSpeed * 0.3f && horizontalSpeed > 0.0001f;
+        && _speed > _maxSpeed * PLAYER_SPEED_EFFECT_THRESHOLD;
     if (!emit) {
-        playerSpeedEffectHandle_.Stop();
-        playerSpeedEffectHandle_ = {};
+        playerSpeedEffectElapsed_ = 0.0f;
+        playerSpeedEffectActive_ = false;
         return;
     }
 
-    playerSpeedParticleState_->direction = {
-        velocity.x / horizontalSpeed, 0.0f, velocity.z / horizontalSpeed };
-    const Vector3 emitterPosition = player_->GetPosition() + player_->GetModelOffset();
-    if (!playerSpeedEffectHandle_.IsValid()) {
-        playerSpeedEffectHandle_ = particleSystem->Emit(
-            PLAYER_SPEED_EFFECT_TEMPLATE, emitterPosition);
+    if (!playerSpeedEffectActive_) {
+        playerSpeedEffectActive_ = true;
+        playerSpeedEffectElapsed_ = 0.0f;
+        EmitPlayerSpeedEffect();
+        return;
     }
-    playerSpeedEffectHandle_.SetPosition(emitterPosition);
+
+    playerSpeedEffectElapsed_ += _deltaTime;
+    if (playerSpeedEffectElapsed_ >= PLAYER_SPEED_EFFECT_INTERVAL) {
+        playerSpeedEffectElapsed_ = std::fmod(
+            playerSpeedEffectElapsed_, PLAYER_SPEED_EFFECT_INTERVAL);
+        EmitPlayerSpeedEffect();
+    }
 }
 
 void PlayScene::LoadStageConfig() {
@@ -206,7 +176,6 @@ void PlayScene::Initialize() {
     player_->SetInput(input_);
     player_->EnableGrappleMovement();
     player_->SetStageBoundary(halfSize, wallBounce_);
-    InitializePlayerSpeedEffect();
     InitializePlayerDashEffect();
     playerCamera_ = std::make_unique<PlayerCamera>();
     playerCamera_->Initialize(*player_);

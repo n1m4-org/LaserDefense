@@ -3,8 +3,11 @@
         "Appearance": {
             "Model": "Cube",
             "Color": [1.0, 1.0, 1.0, 1.0],
-            "Scale": [0.5, 0.5, 0.5],
-            "ModelOffset": [0.0, 0.5, 0.0]
+            "Scale": [0.75, 0.75, 0.75],
+            "ModelOffset": [0.0, 0.75, 0.0]
+        },
+        "Collision": {
+            "Radius": 1.5
         },
         "Transform": {
             "Position": [0.0, 0.0, 0.0],

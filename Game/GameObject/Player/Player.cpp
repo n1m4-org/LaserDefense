@@ -75,6 +75,10 @@ void Player::LoadConfig() {
         initialRotation_ = read(transform->second, "Rotation", initialRotation_);
     }
 
+    if (const auto collision = groups.find("Collision"); collision != groups.end()) {
+        colliderRadius_ = read(collision->second, "Radius", colliderRadius_);
+    }
+
     if (const auto movement = groups.find("Movement"); movement != groups.end()) {
         moveSpeed_ = read(movement->second, "Speed", moveSpeed_);
         moveLimit_ = read(movement->second, "Limit", moveLimit_);
@@ -102,6 +106,7 @@ void Player::LoadConfig() {
     modelScale_.x = std::max(std::abs(modelScale_.x), 0.0001f);
     modelScale_.y = std::max(std::abs(modelScale_.y), 0.0001f);
     modelScale_.z = std::max(std::abs(modelScale_.z), 0.0001f);
+    colliderRadius_ = std::max(std::abs(colliderRadius_), 0.0001f);
     moveSpeed_ = std::max(moveSpeed_, 0.0f);
     moveLimit_ = std::abs(moveLimit_);
 }
