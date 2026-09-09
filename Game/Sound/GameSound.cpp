@@ -27,8 +27,8 @@ namespace {
         {"Assets/Audio/dash.mp3",          0.55f}, // Dash
         {"Assets/Audio/warning.mp3",       0.65f}, // SwitchWarning
         {"Assets/Audio/laser_loop.mp3",    0.25f}, // LaserLoop  小さめ
-        {"Assets/Audio/maou_bgm_cyber45.mp3",   0.40f}, // TitleBgm
-        {"Assets/Audio/maou_bgm_neorock80.mp3", 0.35f}, // PlayBgm  効果音に埋もれない程度に控えめ
+        {"Assets/Audio/pynchon.mp3",   0.40f}, // TitleBgm
+        {"Assets/Audio/Caves.mp3", 0.35f}, // PlayBgm  効果音に埋もれない程度に控えめ
         {"Assets/Audio/maou_se_onepoint15.mp3",         0.80f}, // GimmickClear
         {"Assets/Audio/maou_se_battle_explosion08.mp3", 0.85f}, // GimmickTowerDamage
         {"Assets/Audio/maou_se_sound_switch01.mp3",     0.60f}, // GimmickColorStep
