@@ -6,6 +6,7 @@
 
 #include "Gimmick/IGimmick.hpp"
 #include "Math/Vector2.hpp"
+#include "Model.hpp"
 #include "Sprite.hpp"
 
 class MainTower;
@@ -14,8 +15,9 @@ class MainTower;
 /// @note 指定時間内に必要撃破数へ届かなければ失敗になる
 class TowerDefenseGimmick final : public IGimmick {
     enum class Phase {
-        Warning,  //!< 赤矢印で対象タワーを案内している間。まだ敵は湧かない
-        Spawning  //!< 敵が湧き、制限時間と撃破数を判定している間
+        Warning,     //!< 赤矢印で対象タワーを案内している間。まだ敵は湧かない
+        Spawning,    //!< 敵が湧き、制限時間と撃破数を判定している間
+        Completion   //!< ノルマ達成後、クリア演出を再生している間
     };
 
     GimmickContext context_{};
@@ -24,19 +26,24 @@ class TowerDefenseGimmick final : public IGimmick {
     Phase phase_ = Phase::Warning;
 
     float warningElapsedSeconds_ = 0.0f;
-    float warningDurationSeconds_ = 3.0f;
+    float warningDurationSeconds_ = 5.0f;
     std::unique_ptr<Sprite> warningArrow_;
     Vector2 warningArrowSize_{32.0f, 32.0f};
     bool warningArrowVisible_ = false;
 
-    float elapsedTime_ = 0.0f;
     float timeLimitSeconds_ = 25.0f;
     int32_t requiredKillCount_ = 10;
     int32_t killCount_ = 0;
-    float killRadius_ = 8.0f;
+    float killRadius_ = 20.0f;
+    float spawnRadiusRatio_ = 0.8f;
     float spawnIntervalSeconds_ = 1.5f;
     float spawnElapsedSeconds_ = 0.0f;
-    float spawnRadius_ = 3.0f;
+
+    std::unique_ptr<Model> baseAoE_;
+    std::unique_ptr<Model> progressAoE_;
+    Vector4 effectColor_{1.0f, 0.15f, 0.15f, 1.0f};
+    float completionSeconds_ = 0.6f;
+    float completionElapsed_ = 0.0f;
 
 public:
     void Initialize(const GimmickContext& _context) override;
@@ -44,6 +51,8 @@ public:
     void Draw() const override;
     GimmickType GetType() const override { return GimmickType::TowerDefense; }
     GimmickState GetState() const override { return state_; }
+    float GetTimeLimitSeconds() const override { return warningDurationSeconds_ + timeLimitSeconds_; }
+    void OnTimeLimitExpired() override { Finish(GimmickState::Failed); }
 
     void Debug() override;
 
@@ -52,6 +61,11 @@ private:
     void SaveConfig() const;
     void UpdateWarningArrow();
     void CollectKillsInRange();
+    void InitializeAoEPlane();
+    void InitializeCompletionParticles();
+    void UpdateProgressVisual();
+    void BeginCompletion();
+    void UpdateCompletion(float _deltaTime);
     void Finish(GimmickState _result);
 };
 

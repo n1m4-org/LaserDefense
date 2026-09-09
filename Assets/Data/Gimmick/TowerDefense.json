@@ -1,12 +1,13 @@
 {
     "TowerDefense": {
         "Tuning": {
-            "WarningSeconds": 3.0,
+            "WarningSeconds": 5.0,
             "TimeLimitSeconds": 25.0,
-            "RequiredKillCount": 10,
-            "KillRadius": 15.0,
+            "RequiredKillCount": 5,
+            "KillRadius": 20.0,
+            "SpawnRadiusRatio": 0.8,
             "SpawnIntervalSeconds": 1.5,
-            "SpawnRadius": 3.0
+            "CompletionSeconds": 0.6
         }
     }
 }

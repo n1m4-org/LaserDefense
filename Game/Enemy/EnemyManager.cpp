@@ -307,10 +307,12 @@ void EnemyManager::Update(float _deltaTime) {
     if (std::isfinite(_deltaTime) && _deltaTime > 0.0f) {
         elapsedSeconds_ += _deltaTime;
 
-        spawnElapsedSeconds_ += _deltaTime;
-        if (spawnElapsedSeconds_ >= spawnIntervalSeconds_) {
-            spawnElapsedSeconds_ = std::fmod(spawnElapsedSeconds_, spawnIntervalSeconds_);
-            SpawnWave();
+        if (!spawnSuspended_) {
+            spawnElapsedSeconds_ += _deltaTime;
+            if (spawnElapsedSeconds_ >= spawnIntervalSeconds_) {
+                spawnElapsedSeconds_ = std::fmod(spawnElapsedSeconds_, spawnIntervalSeconds_);
+                SpawnWave();
+            }
         }
     }
 
