@@ -1,0 +1,175 @@
+{
+    "Position": [
+        0.0,
+        0.0
+    ],
+    "Elements": [
+        {
+            "Type": "Sprite",
+            "Name": "Dim",
+            "Position": [
+                640.0,
+                360.0
+            ],
+            "Size": [
+                1280.0,
+                720.0
+            ],
+            "Color": [
+                0.0,
+                0.0,
+                0.02,
+                0.74
+            ],
+            "Texture": "white_x16.png",
+            "ShowAnim": "FadeIn"
+        },
+        {
+            "Type": "Sprite",
+            "Name": "PanelBorder",
+            "Position": [
+                640.0,
+                360.0
+            ],
+            "Size": [
+                446.0,
+                326.0
+            ],
+            "Color": [
+                0.25,
+                0.75,
+                1.0,
+                0.9
+            ],
+            "Texture": "white_x16.png",
+            "ShowAnim": "FadeIn"
+        },
+        {
+            "Type": "Sprite",
+            "Name": "Panel",
+            "Position": [
+                640.0,
+                360.0
+            ],
+            "Size": [
+                440.0,
+                320.0
+            ],
+            "Color": [
+                0.06,
+                0.07,
+                0.1,
+                1.0
+            ],
+            "Texture": "white_x16.png",
+            "ShowAnim": "FadeIn"
+        },
+        {
+            "Type": "Text",
+            "Name": "TitleText",
+            "Position": [
+                573.0,
+                236.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Text": "PAUSE",
+            "FontSize": 52.0,
+            "ShowAnim": "FadeIn"
+        },
+        {
+            "Type": "Sprite",
+            "Name": "ResumeButton",
+            "Position": [
+                640.0,
+                356.0
+            ],
+            "Size": [
+                320.0,
+                64.0
+            ],
+            "Color": [
+                0.16,
+                0.18,
+                0.24,
+                0.85
+            ],
+            "Texture": "white_x16.png",
+            "Selectable": true,
+            "Events": {
+                "Execute": "Pause.Resume"
+            },
+            "ShowAnim": "FadeIn"
+        },
+        {
+            "Type": "Text",
+            "Name": "ResumeLabel",
+            "Position": [
+                537.0,
+                338.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Text": "BACK TO GAME",
+            "FontSize": 34.0,
+            "ShowAnim": "FadeIn"
+        },
+        {
+            "Type": "Sprite",
+            "Name": "TitleButton",
+            "Position": [
+                640.0,
+                440.0
+            ],
+            "Size": [
+                320.0,
+                64.0
+            ],
+            "Color": [
+                0.16,
+                0.18,
+                0.24,
+                0.85
+            ],
+            "Texture": "white_x16.png",
+            "Selectable": true,
+            "Events": {
+                "Execute": "Pause.ToTitle"
+            },
+            "ShowAnim": "FadeIn"
+        },
+        {
+            "Type": "Text",
+            "Name": "TitleLabel",
+            "Position": [
+                541.0,
+                422.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Text": "BACK TO TITLE",
+            "FontSize": 34.0,
+            "ShowAnim": "FadeIn"
+        }
+    ],
+    "Modules": {
+        "Mouse": {
+            "Texture": "white_x16.png",
+            "Size": 12.0,
+            "HitPadding": 0.0
+        }
+    },
+    "DefaultFocus": "ResumeButton"
+}

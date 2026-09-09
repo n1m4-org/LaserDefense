@@ -57,6 +57,7 @@ void TowerDefenseGimmick::Initialize(const GimmickContext& _context) {
     warningArrow_->SetSize(warningArrowSize_);
 
     state_ = GimmickState::Active;
+    LoadConfig();
 }
 
 void TowerDefenseGimmick::Update(float _deltaTime) {

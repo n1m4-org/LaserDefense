@@ -17,11 +17,11 @@
 class GameSceneInput {
     /// 左右の移動量 [-1.0, 1.0]
     /// 左が負、右が正。パッドのスティックを想定してfloatで保持する
-    float moveX_{ 0.f };
+    float moveX_{ 0.0f };
 
     /// 前後の移動量 [-1.0, 1.0]
     /// 手前が負、奥が正
-    float moveY_{ 0.f };
+    float moveY_{ 0.0f };
 
     /// このフレームでポーズが押されたか(トリガー)
     bool pause_{ false };

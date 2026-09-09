@@ -159,6 +159,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Camera\PlayerCamera.hpp" />
     <ClInclude Include="MyGame.hpp" />
     <ClInclude Include="Factory\PostEffectFactory.hpp" />
+    <ClInclude Include="Pause\PauseOverlay.hpp" />
     <ClInclude Include="Result\ResultOverlay.hpp" />
     <ClInclude Include="Scene\GameSampleScene.hpp" />
     <ClInclude Include="Scene\GimmickTuningScene.hpp" />
@@ -190,6 +191,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Laser\Laser.cpp" />
     <ClCompile Include="Camera\PlayerCamera.cpp" />
     <ClCompile Include="MyGame.cpp" />
+    <ClCompile Include="Pause\PauseOverlay.cpp" />
     <ClCompile Include="Result\ResultOverlay.cpp" />
     <ClCompile Include="Scene\GameSampleScene.cpp" />
     <ClCompile Include="Scene\GimmickTuningScene.cpp" />

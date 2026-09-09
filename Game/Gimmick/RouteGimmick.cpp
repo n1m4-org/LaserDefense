@@ -65,7 +65,6 @@ RouteGimmick::~RouteGimmick() {
 void RouteGimmick::Initialize(const GimmickContext& _context) {
     context_ = _context;
     state_ = GimmickState::Active;
-    elapsedTime_ = 0.0f;
     nextFloorIndex_ = 0;
     floors_.clear();
 
@@ -95,10 +94,6 @@ void RouteGimmick::Update(float _deltaTime) {
     if (!std::isfinite(_deltaTime) || _deltaTime <= 0.0f) return;
     if (debugTuningPaused_) return;
 
-    elapsedTime_ += _deltaTime;
-    if (elapsedTime_ >= timeLimitSeconds_) {
-        Finish(GimmickState::Failed);
-    }
 }
 
 void RouteGimmick::Draw() const {
@@ -114,7 +109,7 @@ void RouteGimmick::Debug() {
     ImGui::Text("State: %s", state_ == GimmickState::Active ? "Active"
         : state_ == GimmickState::Success ? "Success"
         : state_ == GimmickState::Failed ? "Failed" : "Ready");
-    ImGui::Text("Elapsed: %.2f / %.2f", elapsedTime_, timeLimitSeconds_);
+    ImGui::Text("Time Limit: %.2f", timeLimitSeconds_);
     ImGui::Text("Progress: %d / %d", nextFloorIndex_, colorCount_);
 
     DebugUIWidgets::Checkbox("Pause While Tuning", &debugTuningPaused_);
@@ -323,7 +318,6 @@ void RouteGimmick::AdvanceToNormal() {
     mode_ = Mode::Normal;
     colorCount_ = 4;
 
-    elapsedTime_ = 0.0f;
     nextFloorIndex_ = 0;
     floors_.clear();
 
