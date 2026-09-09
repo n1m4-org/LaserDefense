@@ -102,6 +102,7 @@ class ComboManager final {
     Vector4 gaugeFrameColor_{0.04f, 0.04f, 0.07f, 0.85f};   //!< 枠の色
 
     bool visible_ = true;           //!< UI 全体の表示 / 非表示
+    float opacity_ = 1.0f;          //!< HUD全体から掛ける透明度
 
 public:
     /// @brief JSON からパラメータを読み込み、テキストとゲージを初期化する
@@ -148,6 +149,7 @@ public:
 
     /// @brief UI の表示 / 非表示を切り替える
     void SetVisible(bool _visible) { visible_ = _visible; }
+    void SetOpacity(float _opacity);
 
 private:
     /// @brief Assets/Data/Combo/Combo.json から各パラメータを読み込む

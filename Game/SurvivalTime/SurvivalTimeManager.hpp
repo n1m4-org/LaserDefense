@@ -111,6 +111,7 @@ class SurvivalTimeManager final {
     std::array<Sprite, TICK_MAX> tickSprites_{};
 
     bool visible_ = true;           // UI 全体の表示 / 非表示
+    float opacity_ = 1.0f;          // HUD全体から掛ける透明度
 
 public:
     /// JSON からパラメータを読み込み、リングとテキストを初期化する
@@ -141,6 +142,7 @@ public:
 
     /// @brief UI の表示 / 非表示を切り替える
     void SetVisible(bool _visible);
+    void SetOpacity(float _opacity);
 
 private:
     /// @brief Assets/Data/SurvivalTime/SurvivalTime.json から各パラメータを読み込む
