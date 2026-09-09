@@ -271,11 +271,11 @@ void TowerManager::Draw() const {
     }
 }
 
-void TowerManager::TakeDamage(float _damage) {
+void TowerManager::TakeDamage(float _damage, bool _playSound) {
     if (!std::isfinite(_damage) || _damage <= 0.0f) return;
     hp_ = std::max(hp_ - _damage, 0.0f);
     for (MainTower* tower : mainTowers_) tower->PlayDamageFlash();
-    GameSound::Play(GameSound::Se::TowerDamage);
+    if (_playSound) GameSound::Play(GameSound::Se::TowerDamage);
 }
 
 MainTower* TowerManager::PickRandomIdleTower() const {

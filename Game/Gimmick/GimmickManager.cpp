@@ -12,6 +12,7 @@
 #include "Json/JsonParams.hpp"
 #include "Math/MathUtils.hpp"
 #include "Pattern/Singleton.hpp"
+#include "Sound/GameSound.hpp"
 #include "Tower/MainTower.hpp"
 #include "Tower/Tower.hpp"
 #include "Tower/TowerManager.hpp"
@@ -62,8 +63,12 @@ void GimmickManager::Update(float _deltaTime) {
         StartGimmick(type);
     }
 
-    if (!std::isfinite(_deltaTime) || _deltaTime <= 0.0f) return;
-    if (debugPaused_) return;
+    // ポーズやリザルトで進行が止まっている間は、回転ギミックのループ音を鳴らしっぱなしにしない。
+    // ギミック側の Update が呼ばれなくなるので、止めるのはここの役目になる
+    if (!std::isfinite(_deltaTime) || _deltaTime <= 0.0f || debugPaused_) {
+        GameSound::StopLoop(GameSound::Se::GimmickOrbitLoop);
+        return;
+    }
 
     if (activeGimmick_) {
         activeGimmick_->Update(_deltaTime);
@@ -73,6 +78,9 @@ void GimmickManager::Update(float _deltaTime) {
         }
         if (activeGimmick_->IsFinished()) {
             if (activeGimmick_->GetState() == GimmickState::Failed) OnGimmickFailed();
+            else GameSound::Play(GameSound::Se::GimmickClear);
+            // 回っている途中で終わった場合に備えて、ループ音はここでも止めておく
+            GameSound::StopLoop(GameSound::Se::GimmickOrbitLoop);
             activeGimmick_.reset();
             remainingTimeSeconds_ = 0.0f;
             spawnTime_ = 0.0f;
@@ -177,8 +185,10 @@ void GimmickManager::RegisterFailureEffect() {
 void GimmickManager::OnGimmickFailed() {
     // 失敗の代償はメインタワーの HP。被弾フラッシュと効果音は TakeDamage が鳴らす
     if (context_.towerManager) {
-        context_.towerManager->TakeDamage(failureTowerDamage_);
+        // 既定の被弾音は鳴らさない。爆発音と重ねると何が起きたのか読み取りにくくなる
+        context_.towerManager->TakeDamage(failureTowerDamage_, false);
     }
+    GameSound::Play(GameSound::Se::GimmickTowerDamage);
 
     if (!context_.particleSystem || !context_.towerManager) return;
 
@@ -281,6 +291,13 @@ void GimmickManager::StartGimmick(GimmickType _type) {
     activeGimmick_ = CreateGimmick(_type);
     if (activeGimmick_) {
         activeGimmick_->Initialize(context_);
+        // 対象のタワーが見つからないなどで初期化した時点で終わっている場合は、
+        // 発生しなかったものとして捨てる。ここを通さないと達成音や失敗の爆発が空振りする
+        if (activeGimmick_->IsFinished()) {
+            activeGimmick_.reset();
+            spawnTime_ = 0.0f;
+            return;
+        }
         timeLimitSeconds_ = activeGimmick_->GetTimeLimitSeconds();
         if (!std::isfinite(timeLimitSeconds_) || timeLimitSeconds_ <= 0.0f) {
             timeLimitSeconds_ = 10.0f;

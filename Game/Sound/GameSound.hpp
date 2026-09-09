@@ -22,6 +22,12 @@ namespace GameSound {
         TitleBgm,         //!< タイトルの BGM
         PlayBgm,          //!< ゲーム中の BGM
 
+        GimmickClear,       //!< ギミックを達成した
+        GimmickTowerDamage, //!< ギミック失敗でメインタワーが傷んだ
+        GimmickColorStep,   //!< 色巡りで正しい色を踏んだ
+        GimmickOrbitLoop,   //!< 回転ギミックで回っている間ずっと鳴らす音
+        GimmickEnemySpawn,  //!< 敵発生ギミックが始まった
+
         Count
     };
 

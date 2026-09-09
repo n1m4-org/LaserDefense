@@ -6,6 +6,7 @@
 
 #include "Camera/Controller/CameraController.hpp"
 #include "Enemy/EnemyManager.hpp"
+#include "Sound/GameSound.hpp"
 #include "Json/JsonParams.hpp"
 #include "Math/Easing.hpp"
 #include "Math/MathUtils.hpp"
@@ -63,6 +64,9 @@ void TowerDefenseGimmick::Initialize(const GimmickContext& _context) {
 
     InitializeAoEPlane();
     InitializeCompletionParticles();
+
+    // 予告の矢印が出るのと同時に鳴らして、画面外で始まっても気づけるようにする
+    GameSound::Play(GameSound::Se::GimmickEnemySpawn);
 
     state_ = GimmickState::Active;
 }

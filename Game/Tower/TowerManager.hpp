@@ -27,7 +27,11 @@ class TowerManager final {
     float hp_ = 100.0f;
 
 public:
-    void TakeDamage(float _damage);
+    /// @brief メインタワーの共有HPを減らし、被弾フラッシュを出す
+    /// @param _damage    減らす量
+    /// @param _playSound 既定の被弾音を鳴らすか。
+    ///                   ギミック失敗のように専用の音を鳴らす側は false にして二重再生を避ける
+    void TakeDamage(float _damage, bool _playSound = true);
     void Heal(float _amount);
     void ResetHp() { hp_ = maxHp_; }
     float GetHp() const { return hp_; }

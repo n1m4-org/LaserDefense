@@ -14,6 +14,7 @@
 #include "Laser/Laser.hpp"
 #include "Math/MathUtils.hpp"
 #include "Pattern/Singleton.hpp"
+#include "Sound/GameSound.hpp"
 #include "Tower/Tower.hpp"
 #include "Tower/TowerManager.hpp"
 #include "src/ParticleSystem/ParticleSystem.hpp"
@@ -32,6 +33,8 @@ namespace {
 }
 
 TowerOrbitGimmick::~TowerOrbitGimmick() {
+    // 失敗やシーン切り替えで途中で捨てられても、ループ音を残さない
+    GameSound::StopLoop(GameSound::Se::GimmickOrbitLoop);
     ambientEffect_.Stop();
 }
 
@@ -290,6 +293,11 @@ void TowerOrbitGimmick::UpdateOrbit(float _deltaTime) {
         hasPreviousAngle_ = false;
     }
 
+    // 回している間だけ鳴らす。StartLoop / StopLoop が二重呼び出しを弾くので、
+    // 状態を持たずに毎フレームその時の判定をそのまま渡せる
+    if (isPlayerOrbiting_) GameSound::StartLoop(GameSound::Se::GimmickOrbitLoop);
+    else                   GameSound::StopLoop(GameSound::Se::GimmickOrbitLoop);
+
     const float arrowSpeedDegrees = isPlayerOrbiting_
         ? arrowActiveSpeedDegrees_
         : arrowIdleSpeedDegrees_;
@@ -348,6 +356,7 @@ void TowerOrbitGimmick::UpdateArrowVisuals(float _alpha) {
 void TowerOrbitGimmick::BeginCompletion() {
     phase_ = Phase::Completion;
     completionElapsed_ = 0.0f;
+    GameSound::StopLoop(GameSound::Se::GimmickOrbitLoop);
     ambientEffect_.Stop();
     ambientEffect_ = {};
 
