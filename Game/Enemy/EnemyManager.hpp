@@ -42,6 +42,7 @@ class EnemyManager final {
     float spawnIntervalSeconds_ = 1.0f;
     int32_t initialSpawnCount_ = 1;
     float spawnCountIncreaseIntervalSeconds_ = 30.0f;
+    bool spawnSuspended_ = false;
     std::vector<Vector3> recentDefeatPositions_;
 
     /// 敵1体を倒したときの獲得スコア。Enemy.json の "Score" / "Value" で変更できる
@@ -69,6 +70,10 @@ public:
     /// @brief 通常のウェーブ生成とは別に、指定位置へ敵を1体追加で生成する
     /// @note MaxEnemyCountの上限は通常のスポーンと同様に尊重される
     void SpawnExtraEnemy(const Vector3& _position);
+
+    /// @brief 通常のウェーブ生成(SpawnWave)を一時停止する
+    /// @note SpawnExtraEnemy()による生成には影響しない
+    void SetSpawnSuspended(bool _suspended) { spawnSuspended_ = _suspended; }
 
     /// @brief 直近のUpdate()で撃破された敵の座標一覧を取得する(タワー到達での消滅は含まない)
     /// @note 範囲限定の撃破判定など、Update()ごとに最新のものへ差し替わる
