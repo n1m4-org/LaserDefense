@@ -33,7 +33,7 @@
             ],
             "Size": [
                 446.0,
-                246.0
+                326.0
             ],
             "Color": [
                 0.25,
@@ -53,7 +53,7 @@
             ],
             "Size": [
                 440.0,
-                240.0
+                320.0
             ],
             "Color": [
                 0.06,
@@ -69,7 +69,7 @@
             "Name": "TitleText",
             "Position": [
                 573.0,
-                268.0
+                236.0
             ],
             "Color": [
                 1.0,
@@ -86,16 +86,16 @@
             "Name": "ResumeButton",
             "Position": [
                 640.0,
-                406.0
+                356.0
             ],
             "Size": [
                 320.0,
-                68.0
+                64.0
             ],
             "Color": [
-                0.12,
-                0.34,
-                0.55,
+                0.16,
+                0.18,
+                0.24,
                 0.85
             ],
             "Texture": "white_x16.png",
@@ -103,15 +103,14 @@
             "Events": {
                 "Execute": "Pause.Resume"
             },
-            "ShowAnim": "FadeIn",
-            "IdleAnim": "Blink"
+            "ShowAnim": "FadeIn"
         },
         {
             "Type": "Text",
             "Name": "ResumeLabel",
             "Position": [
                 537.0,
-                388.0
+                338.0
             ],
             "Color": [
                 1.0,
@@ -122,13 +121,54 @@
             "Text": "BACK TO GAME",
             "FontSize": 34.0,
             "ShowAnim": "FadeIn"
+        },
+        {
+            "Type": "Sprite",
+            "Name": "TitleButton",
+            "Position": [
+                640.0,
+                440.0
+            ],
+            "Size": [
+                320.0,
+                64.0
+            ],
+            "Color": [
+                0.16,
+                0.18,
+                0.24,
+                0.85
+            ],
+            "Texture": "white_x16.png",
+            "Selectable": true,
+            "Events": {
+                "Execute": "Pause.ToTitle"
+            },
+            "ShowAnim": "FadeIn"
+        },
+        {
+            "Type": "Text",
+            "Name": "TitleLabel",
+            "Position": [
+                541.0,
+                422.0
+            ],
+            "Color": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "Text": "BACK TO TITLE",
+            "FontSize": 34.0,
+            "ShowAnim": "FadeIn"
         }
     ],
     "Modules": {
         "Mouse": {
             "Texture": "white_x16.png",
             "Size": 12.0,
-            "HitPadding": 8.0
+            "HitPadding": 0.0
         }
     },
     "DefaultFocus": "ResumeButton"

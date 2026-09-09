@@ -258,6 +258,8 @@ void PlayScene::Initialize() {
     pauseOverlay_->Initialize();
     // 「ゲームに戻る」ボタンから呼ばれる
     pauseOverlay_->SetOnResume([this] { pauseOverlay_->Hide(); });
+    // 「タイトルに戻る」ボタンから呼ばれる
+    pauseOverlay_->SetOnReturnToTitle([this] { RequestReturnToTitle(); });
     // 「タイトルへ戻る」ボタンから呼ばれる
     resultOverlay_->SetOnReturn([this] { RequestReturnToTitle(); });
     mainTowerIndicator_ = std::make_unique<MainTowerIndicator>();
@@ -481,8 +483,9 @@ void PlayScene::Update() {
     floor_->Update();
     for (const auto& fence : fences_) fence->Update();
 
-    // リザルトだけは止めていない実時間で動かす
+    // リザルトとポーズだけは止めていない実時間で動かす
     resultOverlay_->Update(deltaTime);
+    pauseOverlay_->Update();
 
     // ボタンを狙わなくても、スペースか左クリックだけで戻れるようにしておく。
     // 受け付け始めるタイミングはリザルト側が持っている
@@ -630,6 +633,7 @@ void PlayScene::RequestReturnToTitle() {
     // タイトルの決定音を流用する。UI のボタンからもキー入力からもここへ合流する
     GameSound::Play(GameSound::Se::Decide);
     resultOverlay_->Hide();
+    pauseOverlay_->Hide();
     Change();
 }
 

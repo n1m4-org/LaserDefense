@@ -6,24 +6,24 @@
             "Total": 55600
         },
         "Entry1": {
+            "Score": 4400,
+            "Seconds": 88.99920654296875,
+            "Total": 13200
+        },
+        "Entry2": {
+            "Score": 3400,
+            "Seconds": 94.79276275634766,
+            "Total": 12800
+        },
+        "Entry3": {
+            "Score": 2900,
+            "Seconds": 82.11125183105469,
+            "Total": 11100
+        },
+        "Entry4": {
             "Score": 1900,
             "Seconds": 86.83223724365234,
             "Total": 10500
-        },
-        "Entry2": {
-            "Score": 0,
-            "Seconds": 0.0,
-            "Total": 0
-        },
-        "Entry3": {
-            "Score": 0,
-            "Seconds": 0.0,
-            "Total": 0
-        },
-        "Entry4": {
-            "Score": 0,
-            "Seconds": 0.0,
-            "Total": 0
         }
     }
 }
