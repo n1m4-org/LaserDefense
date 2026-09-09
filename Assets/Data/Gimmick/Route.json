@@ -1,14 +1,13 @@
 {
     "Route": {
         "Tuning": {
-            "ColorRevealInterval": 0.9800000190734863,
-            "FloorDisappearDuration": 0.5299999713897705,
             "FloorOpacity": 0.6600000262260437,
             "FloorRadius": 2.680000066757202,
-            "GuideNumberLeadSeconds": 0.5,
-            "GuidedColorRevealInterval": 1.2000000476837158,
-            "MinFloorDistance": 12.199999809265137,
-            "MinTowerDistance": 9.100000381469727,
+            "MinFloorDistance": 14.699999809265137,
+            "MinTowerDistance": 17.5,
+            "OrderMarkerHeight": 2.4000000953674316,
+            "OrderMarkerRadius": 0.6200000047683716,
+            "OrderMarkerSpacing": 1.3600000143051147,
             "PlacementRadius": 18.0,
             "TimeLimitSeconds": 20.0
         }

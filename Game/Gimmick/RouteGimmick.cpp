@@ -2,16 +2,12 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdint>
-#include <string>
 #include <variant>
 
 #include "Collision/CollisionAttribute.hpp"
-#include "GameObject/Player/Player.h"
 #include "Json/JsonParams.hpp"
 #include "Math/MathUtils.hpp"
 #include "Pattern/Singleton.hpp"
-#include "Screen/Screen.hpp"
 #include "Tower/MainTower.hpp"
 #include "Tower/TowerManager.hpp"
 #include "src/ParticleSystem/ParticleSystem.hpp"
@@ -21,18 +17,22 @@
 #include "imgui.h"
 #endif
 
-namespace {
-    constexpr const char* REVEAL_SPAWN_FUNC_KEY = "RouteColorRevealSpawn";
-    constexpr const char* FLOOR_CLEAR_SPAWN_FUNC_KEY = "RouteColorFloorClearSpawn";
+#undef min
+#undef max
 
-    const char* TemplateNameFor(RouteColor _color) {
+namespace {
+    constexpr const char* FLOOR_AREA_SPAWN_FUNC_KEY = "RouteColorFloorAreaSpawn";
+    constexpr const char* FLOOR_CLEAR_SPAWN_FUNC_KEY = "RouteColorFloorClearSpawn";
+    constexpr const char* FLOOR_CLEAR_UPDATE_FUNC_KEY = "RouteColorFloorClearUpdate";
+
+    const char* FloorAreaTemplateNameFor(RouteColor _color) {
         switch (_color) {
-            case RouteColor::Red: return "RouteColorReveal_Red";
-            case RouteColor::Blue: return "RouteColorReveal_Blue";
-            case RouteColor::Green: return "RouteColorReveal_Green";
-            case RouteColor::Yellow: return "RouteColorReveal_Yellow";
+            case RouteColor::Red: return "RouteColorFloorArea_Red";
+            case RouteColor::Blue: return "RouteColorFloorArea_Blue";
+            case RouteColor::Green: return "RouteColorFloorArea_Green";
+            case RouteColor::Yellow: return "RouteColorFloorArea_Yellow";
         }
-        return "RouteColorReveal_Red";
+        return "RouteColorFloorArea_Red";
     }
 
     const char* FloorClearTemplateNameFor(RouteColor _color) {
@@ -56,14 +56,17 @@ namespace {
     }
 }
 
+RouteGimmick::~RouteGimmick() {
+    for (ColorFloor& floor : floors_) {
+        floor.floorEmitter.Stop();
+    }
+}
+
 void RouteGimmick::Initialize(const GimmickContext& _context) {
     context_ = _context;
     state_ = GimmickState::Active;
     elapsedTime_ = 0.0f;
     nextFloorIndex_ = 0;
-    revealedColorCount_ = 0;
-    colorRevealTimer_ = 0.0f;
-    guideNumberActive_ = false;
     floors_.clear();
 
     LoadConfig();
@@ -77,77 +80,64 @@ void RouteGimmick::Initialize(const GimmickContext& _context) {
     GenerateColorOrder();
     RegisterParticleTemplates();
     PlaceFloors();
-    StartColorRevealStep();
 
     if (context_.towerManager) context_.towerManager->SetMainTowerSwitchSuspended(true);
 }
 
 void RouteGimmick::Update(float _deltaTime) {
     if (state_ != GimmickState::Active) return;
+
+    if (pendingAdvanceToNormal_) {
+        pendingAdvanceToNormal_ = false;
+        AdvanceToNormal();
+    }
+
     if (!std::isfinite(_deltaTime) || _deltaTime <= 0.0f) return;
+    if (debugTuningPaused_) return;
 
     elapsedTime_ += _deltaTime;
     if (elapsedTime_ >= timeLimitSeconds_) {
         Finish(GimmickState::Failed);
-        return;
-    }
-
-    UpdateColorReveal(_deltaTime);
-    UpdateFloors(_deltaTime);
-
-    if (pendingAdvanceToGuidedTutorial_) {
-        const bool stillDisappearing = std::any_of(floors_.begin(), floors_.end(),
-            [](const ColorFloor& _floor) { return _floor.cleared && _floor.model; });
-        if (!stillDisappearing) {
-            pendingAdvanceToGuidedTutorial_ = false;
-            AdvanceToGuidedTutorial();
-        }
     }
 }
 
 void RouteGimmick::Draw() const {
     for (const ColorFloor& floor : floors_) {
-        if (floor.model) floor.model->Draw();
+        for (const auto& marker : floor.orderMarkers) marker->Draw();
     }
-    guideNumberText_.Draw();
 }
 
 void RouteGimmick::Debug() {
 #ifdef _DEBUG
     ImGui::Begin("RouteGimmick");
-    ImGui::Text("Mode: %s", mode_ == Mode::SingleColorTutorial ? "SingleColorTutorial"
-        : mode_ == Mode::GuidedTutorial ? "GuidedTutorial" : "Normal");
+    ImGui::Text("Mode: %s", mode_ == Mode::SingleColorTutorial ? "SingleColorTutorial" : "Normal");
     ImGui::Text("State: %s", state_ == GimmickState::Active ? "Active"
         : state_ == GimmickState::Success ? "Success"
         : state_ == GimmickState::Failed ? "Failed" : "Ready");
     ImGui::Text("Elapsed: %.2f / %.2f", elapsedTime_, timeLimitSeconds_);
     ImGui::Text("Progress: %d / %d", nextFloorIndex_, colorCount_);
 
+    DebugUIWidgets::Checkbox("Pause While Tuning", &debugTuningPaused_);
+
     DebugUIWidgets::DragFloat("Time Limit", &timeLimitSeconds_, 0.1f, 5.0f, 60.0f);
-    DebugUIWidgets::DragFloat("Color Reveal Interval", &colorRevealInterval_, 0.02f, 0.1f, 3.0f);
-    DebugUIWidgets::DragFloat("Guided Color Reveal Interval", &guidedColorRevealInterval_, 0.02f, 0.3f, 4.0f);
-    DebugUIWidgets::DragFloat("Guide Number Lead Seconds", &guideNumberLeadSeconds_, 0.01f, 0.1f, 2.0f);
     DebugUIWidgets::DragFloat("Min Floor Distance", &minFloorDistance_, 0.1f, 1.0f, 20.0f);
     DebugUIWidgets::DragFloat("Min Tower Distance", &minTowerDistance_, 0.1f, 1.0f, 20.0f);
     DebugUIWidgets::DragFloat("Placement Radius", &placementRadius_, 0.2f, 5.0f, 40.0f);
-    DebugUIWidgets::DragFloat("Floor Disappear Duration", &floorDisappearDuration_, 0.01f, 0.05f, 2.0f);
 
-    bool floorAppearanceChanged = false;
-    floorAppearanceChanged |= DebugUIWidgets::DragFloat("Floor Radius", &floorRadius_, 0.02f, 0.3f, 4.0f);
-    floorAppearanceChanged |= DebugUIWidgets::DragFloat("Floor Opacity", &floorOpacity_, 0.01f, 0.1f, 1.0f);
-    if (floorAppearanceChanged) {
-        for (ColorFloor& floor : floors_) {
-            if (floor.cleared) continue;
-            if (floor.collider) floor.collider->SetSize(Collision::SphereShape(floorRadius_));
-            if (floor.model) {
-                Vector4 tint = ColorToVector4(floor.color);
-                tint.w = floorOpacity_;
-                floor.model->SetColor(tint);
-                floor.model->SetScale({floorRadius_, floorRadius_, floorRadius_});
-                floor.model->Update();
-            }
-        }
-    }
+    // ドラッグ中は毎フレーム変更イベントが発火するため、RefreshFloorVisuals()は
+    // 値が実際に変わった時ではなく、編集操作が確定した瞬間(マウスを離す等)にのみ呼ぶ。
+    bool visualsChanged = false;
+    DebugUIWidgets::DragFloat("Floor Radius", &floorRadius_, 0.02f, 0.3f, 4.0f);
+    visualsChanged |= ImGui::IsItemDeactivatedAfterEdit();
+    DebugUIWidgets::DragFloat("Floor Opacity", &floorOpacity_, 0.01f, 0.1f, 1.0f);
+    visualsChanged |= ImGui::IsItemDeactivatedAfterEdit();
+    DebugUIWidgets::DragFloat("Order Marker Radius", &orderMarkerRadius_, 0.02f, 0.02f, 2.0f);
+    visualsChanged |= ImGui::IsItemDeactivatedAfterEdit();
+    DebugUIWidgets::DragFloat("Order Marker Spacing", &orderMarkerSpacing_, 0.02f, 0.05f, 3.0f);
+    visualsChanged |= ImGui::IsItemDeactivatedAfterEdit();
+    DebugUIWidgets::DragFloat("Order Marker Height", &orderMarkerHeight_, 0.05f, 0.1f, 6.0f);
+    visualsChanged |= ImGui::IsItemDeactivatedAfterEdit();
+    if (visualsChanged) RefreshFloorVisuals();
 
     if (ImGui::Button("Save Tuning")) SaveConfig();
     ImGui::End();
@@ -174,14 +164,12 @@ void RouteGimmick::LoadConfig() {
     timeLimitSeconds_ = read(tuning->second, "TimeLimitSeconds", timeLimitSeconds_);
     floorRadius_ = read(tuning->second, "FloorRadius", floorRadius_);
     floorOpacity_ = read(tuning->second, "FloorOpacity", floorOpacity_);
-    floorDisappearDuration_ = read(tuning->second, "FloorDisappearDuration", floorDisappearDuration_);
     minFloorDistance_ = read(tuning->second, "MinFloorDistance", minFloorDistance_);
     minTowerDistance_ = read(tuning->second, "MinTowerDistance", minTowerDistance_);
     placementRadius_ = read(tuning->second, "PlacementRadius", placementRadius_);
-    colorRevealInterval_ = read(tuning->second, "ColorRevealInterval", colorRevealInterval_);
-    guidedColorRevealInterval_ = read(
-        tuning->second, "GuidedColorRevealInterval", guidedColorRevealInterval_);
-    guideNumberLeadSeconds_ = read(tuning->second, "GuideNumberLeadSeconds", guideNumberLeadSeconds_);
+    orderMarkerRadius_ = read(tuning->second, "OrderMarkerRadius", orderMarkerRadius_);
+    orderMarkerSpacing_ = read(tuning->second, "OrderMarkerSpacing", orderMarkerSpacing_);
+    orderMarkerHeight_ = read(tuning->second, "OrderMarkerHeight", orderMarkerHeight_);
 }
 
 void RouteGimmick::SaveConfig() const {
@@ -189,24 +177,18 @@ void RouteGimmick::SaveConfig() const {
     json->SetValue("Route", "Tuning", "TimeLimitSeconds", timeLimitSeconds_);
     json->SetValue("Route", "Tuning", "FloorRadius", floorRadius_);
     json->SetValue("Route", "Tuning", "FloorOpacity", floorOpacity_);
-    json->SetValue("Route", "Tuning", "FloorDisappearDuration", floorDisappearDuration_);
     json->SetValue("Route", "Tuning", "MinFloorDistance", minFloorDistance_);
     json->SetValue("Route", "Tuning", "MinTowerDistance", minTowerDistance_);
     json->SetValue("Route", "Tuning", "PlacementRadius", placementRadius_);
-    json->SetValue("Route", "Tuning", "ColorRevealInterval", colorRevealInterval_);
-    json->SetValue("Route", "Tuning", "GuidedColorRevealInterval", guidedColorRevealInterval_);
-    json->SetValue("Route", "Tuning", "GuideNumberLeadSeconds", guideNumberLeadSeconds_);
+    json->SetValue("Route", "Tuning", "OrderMarkerRadius", orderMarkerRadius_);
+    json->SetValue("Route", "Tuning", "OrderMarkerSpacing", orderMarkerSpacing_);
+    json->SetValue("Route", "Tuning", "OrderMarkerHeight", orderMarkerHeight_);
     json->Save("Gimmick", "Route");
 }
 
 void RouteGimmick::DetermineMode() {
-    if (!singleColorTutorialCleared_) {
-        mode_ = Mode::SingleColorTutorial;
-        colorCount_ = 1;
-        return;
-    }
-    mode_ = guidedTutorialCleared_ ? Mode::Normal : Mode::GuidedTutorial;
-    colorCount_ = 4;
+    mode_ = singleColorTutorialCleared_ ? Mode::Normal : Mode::SingleColorTutorial;
+    colorCount_ = mode_ == Mode::SingleColorTutorial ? 1 : 4;
 }
 
 void RouteGimmick::GenerateColorOrder() {
@@ -220,6 +202,7 @@ void RouteGimmick::PlaceFloors() {
     for (int32_t i = 0; i < colorCount_; ++i) {
         ColorFloor floor;
         floor.color = colorOrder_[i];
+        floor.orderNumber = i + 1;
         floor.position = GenerateFloorPosition();
         floors_.push_back(std::move(floor));
     }
@@ -240,16 +223,57 @@ void RouteGimmick::PlaceFloors() {
             })
             ->Enable();
 
-        Vector4 tint = ColorToVector4(floor.color);
-        tint.w = floorOpacity_;
+        if (context_.particleSystem) {
+            floor.floorEmitter = context_.particleSystem->Emit(
+                FloorAreaTemplateNameFor(floor.color), floor.position);
+        }
 
-        floor.model = std::make_unique<Model>();
-        floor.model->Initialize("sphere");
-        floor.model->SetTexture("white_x16.png");
-        floor.model->SetColor(tint);
-        floor.model->SetTranslate(floor.position);
-        floor.model->SetScale({floorRadius_, floorRadius_, floorRadius_});
-        floor.model->Update();
+        CreateOrderMarkers(floor);
+    }
+}
+
+void RouteGimmick::CreateOrderMarkers(ColorFloor& _floor) {
+    _floor.orderMarkers.clear();
+    _floor.orderMarkers.reserve(_floor.orderNumber);
+
+    for (int32_t i = 0; i < _floor.orderNumber; ++i) {
+        auto marker = std::make_unique<Model>();
+        marker->Initialize("sphere");
+        marker->SetTexture("white_x16.png");
+        marker->SetColor(ColorToVector4(_floor.color));
+        _floor.orderMarkers.push_back(std::move(marker));
+    }
+
+    UpdateOrderMarkerTransforms(_floor);
+}
+
+void RouteGimmick::UpdateOrderMarkerTransforms(ColorFloor& _floor) {
+    const float totalWidth = orderMarkerSpacing_ * static_cast<float>(_floor.orderNumber - 1);
+    const float startX = -totalWidth * 0.5f;
+
+    for (std::size_t i = 0; i < _floor.orderMarkers.size(); ++i) {
+        _floor.orderMarkers[i]->SetTranslate(_floor.position
+            + Vector3{startX + orderMarkerSpacing_ * static_cast<float>(i), orderMarkerHeight_, 0.0f});
+        _floor.orderMarkers[i]->SetScale({orderMarkerRadius_, orderMarkerRadius_, orderMarkerRadius_});
+        _floor.orderMarkers[i]->Update();
+    }
+}
+
+void RouteGimmick::RefreshFloorVisuals() {
+    RegisterParticleTemplates();
+
+    for (ColorFloor& floor : floors_) {
+        if (floor.cleared) continue;
+
+        if (floor.collider) floor.collider->SetSize(Collision::SphereShape(floorRadius_));
+
+        floor.floorEmitter.Stop();
+        if (context_.particleSystem) {
+            floor.floorEmitter = context_.particleSystem->Emit(
+                FloorAreaTemplateNameFor(floor.color), floor.position);
+        }
+
+        UpdateOrderMarkerTransforms(floor);
     }
 }
 
@@ -275,28 +299,6 @@ Vector3 RouteGimmick::GenerateFloorPosition() const {
     return candidate;
 }
 
-void RouteGimmick::UpdateFloors(float _deltaTime) {
-    for (ColorFloor& floor : floors_) {
-        if (floor.cleared) UpdateFloorDisappear(floor, _deltaTime);
-    }
-}
-
-void RouteGimmick::UpdateFloorDisappear(ColorFloor& _floor, float _deltaTime) {
-    if (!_floor.model) return;
-
-    _floor.disappearTime += _deltaTime;
-    const float t = std::clamp(_floor.disappearTime / floorDisappearDuration_, 0.0f, 1.0f);
-    const float scale = floorRadius_ * (1.0f - t);
-
-    Vector4 tint = ColorToVector4(_floor.color);
-    tint.w = floorOpacity_ * (1.0f - t);
-    _floor.model->SetColor(tint);
-    _floor.model->SetScale({scale, scale, scale});
-    _floor.model->Update();
-
-    if (t >= 1.0f) _floor.model.reset();
-}
-
 void RouteGimmick::OnFloorEntered(std::size_t _index) {
     if (state_ != GimmickState::Active) return;
 
@@ -309,131 +311,84 @@ void RouteGimmick::OnFloorEntered(std::size_t _index) {
     }
 
     floor.cleared = true;
-    floor.disappearTime = 0.0f;
     if (floor.collider) floor.collider->Disable();
+    floor.floorEmitter.Stop();
+    floor.orderMarkers.clear();
     EmitFloorClear(floor.color, floor.position);
     ++nextFloorIndex_;
     if (nextFloorIndex_ >= colorCount_) {
-        if (mode_ == Mode::SingleColorTutorial) pendingAdvanceToGuidedTutorial_ = true;
+        if (mode_ == Mode::SingleColorTutorial) pendingAdvanceToNormal_ = true;
         else Finish(GimmickState::Success);
     }
 }
 
-void RouteGimmick::AdvanceToGuidedTutorial() {
+void RouteGimmick::AdvanceToNormal() {
     singleColorTutorialCleared_ = true;
-    mode_ = guidedTutorialCleared_ ? Mode::Normal : Mode::GuidedTutorial;
+    mode_ = Mode::Normal;
     colorCount_ = 4;
 
     elapsedTime_ = 0.0f;
     nextFloorIndex_ = 0;
-    revealedColorCount_ = 0;
-    colorRevealTimer_ = 0.0f;
-    guideNumberActive_ = false;
     floors_.clear();
 
     GenerateColorOrder();
     PlaceFloors();
-    StartColorRevealStep();
-}
-
-void RouteGimmick::UpdateColorReveal(float _deltaTime) {
-    if (revealedColorCount_ >= colorCount_) return;
-
-    colorRevealTimer_ += _deltaTime;
-
-    if (mode_ == Mode::GuidedTutorial) {
-        if (guideNumberActive_) {
-            if (colorRevealTimer_ < guideNumberLeadSeconds_) return;
-            HideGuideNumber();
-            EmitColorReveal(colorOrder_[revealedColorCount_]);
-            ++revealedColorCount_;
-            return;
-        }
-        if (colorRevealTimer_ >= guidedColorRevealInterval_) StartColorRevealStep();
-        return;
-    }
-
-    if (colorRevealTimer_ >= colorRevealInterval_) StartColorRevealStep();
-}
-
-void RouteGimmick::StartColorRevealStep() {
-    if (revealedColorCount_ >= colorCount_) return;
-
-    colorRevealTimer_ = 0.0f;
-    if (mode_ == Mode::GuidedTutorial) {
-        ShowGuideNumber(revealedColorCount_ + 1);
-        return;
-    }
-
-    EmitColorReveal(colorOrder_[revealedColorCount_]);
-    ++revealedColorCount_;
-}
-
-void RouteGimmick::ShowGuideNumber(int32_t _step) {
-    guideNumberActive_ = true;
-
-    const auto screen = Singleton<Screen>::GetInstance();
-    const float centerX = screen->Width() * 0.5f - 10.0f;
-    const float centerY = screen->Height() * 0.32f;
-
-    if (guideNumberText_.GetText().empty()) {
-        guideNumberText_.Initialize(std::to_string(_step), centerX, centerY, 36.0f);
-        guideNumberText_.SetColor({0.9f, 0.9f, 0.9f, 1.0f});
-    } else {
-        guideNumberText_.SetText(std::to_string(_step));
-        guideNumberText_.SetPosition(centerX, centerY);
-    }
-    guideNumberText_.SetVisible(true);
-}
-
-void RouteGimmick::HideGuideNumber() {
-    guideNumberActive_ = false;
-    guideNumberText_.SetVisible(false);
 }
 
 void RouteGimmick::RegisterParticleTemplates() const {
     if (!context_.particleSystem) return;
 
-    context_.particleSystem->RegisterSpawnFunc(REVEAL_SPAWN_FUNC_KEY,
-        [](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
+    const float floorRadius = floorRadius_;
+    context_.particleSystem->RegisterSpawnFunc(FLOOR_AREA_SPAWN_FUNC_KEY,
+        [floorRadius](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
             const float angle = MathUtils::Random(0.0f, MathUtils::F_PI * 2.0f);
             const Vector3 direction{std::cos(angle), 0.0f, std::sin(angle)};
-            const Vector3 tangent{-direction.z, 0.0f, direction.x};
-            _position = _center + direction * MathUtils::Random(0.2f, 0.4f);
-            _velocity = tangent * MathUtils::Random(1.5f, 2.5f)
-                + Vector3{0.0f, MathUtils::Random(1.5f, 2.5f), 0.0f};
+            _position = _center + direction * floorRadius + Vector3{0.0f, 0.6f, 0.0f};
+            _velocity = {0.0f, MathUtils::Random(0.05f, 0.15f), 0.0f};
+        });
+
+    context_.particleSystem->RegisterUpdateFunc(FLOOR_CLEAR_UPDATE_FUNC_KEY,
+        [](float, const Vector3&, Vector3&, Vector3& _velocity, Vector4&) {
+            constexpr float DT = 1.0f / 60.0f;
+            constexpr float ANGULAR_SPEED = MathUtils::F_PI * 1.0f;
+            const float cosA = std::cos(ANGULAR_SPEED * DT);
+            const float sinA = std::sin(ANGULAR_SPEED * DT);
+            const float vx = _velocity.x;
+            const float vz = _velocity.z;
+            _velocity.x = vx * cosA - vz * sinA;
+            _velocity.z = vx * sinA + vz * cosA;
         });
 
     context_.particleSystem->RegisterSpawnFunc(FLOOR_CLEAR_SPAWN_FUNC_KEY,
         [](const Vector3& _center, Vector3& _position, Vector3& _velocity) {
             const float angle = MathUtils::Random(0.0f, MathUtils::F_PI * 2.0f);
             const Vector3 direction{std::cos(angle), 0.0f, std::sin(angle)};
-            _position = _center + direction * MathUtils::Random(0.3f, 0.6f);
+            _position = _center + direction * MathUtils::Random(0.3f, 0.6f)
+                + Vector3{0.0f, MathUtils::Random(0.6f, 0.9f), 0.0f};
             _velocity = direction * MathUtils::Random(1.5f, 2.5f)
                 + Vector3{0.0f, MathUtils::Random(0.05f, 0.2f), 0.0f};
         });
 
     for (RouteColor color : {RouteColor::Red, RouteColor::Blue, RouteColor::Green, RouteColor::Yellow}) {
         const Vector4 tint = ColorToVector4(color);
-        const std::vector<GradientKey<Vector4>> fadeOut = {
-            GradientKey<Vector4>{0.0f, tint},
+
+        ParticleSystem::EmitterConfig floorArea;
+        floorArea.texture = "white_x16.png";
+        floorArea.frequency = 0.12f;
+        floorArea.duration = 120.0f;
+        floorArea.spawnCount = 2;
+        floorArea.size = {0.25f, 0.25f, 0.25f};
+        floorArea.particleLifetime = 1.0f;
+        floorArea.spawnFuncKey = FLOOR_AREA_SPAWN_FUNC_KEY;
+        floorArea.colorKeys = {
+            GradientKey<Vector4>{0.0f, {tint.x, tint.y, tint.z, floorOpacity_}},
             GradientKey<Vector4>{1.0f, {tint.x, tint.y, tint.z, 0.0f}}
         };
+        floorArea.canvasName = "Main";
 
-        ParticleSystem::EmitterConfig reveal;
-        reveal.texture = "white_x16.png";
-        reveal.frequency = 0.0f;
-        reveal.duration = 0.0f;
-        reveal.spawnCount = 16;
-        reveal.size = {0.3f, 0.3f, 0.3f};
-        reveal.particleLifetime = 0.5f;
-        reveal.spawnFuncKey = REVEAL_SPAWN_FUNC_KEY;
-        reveal.colorKeys = fadeOut;
-        reveal.canvasName = "Main";
-
-        ParticleSystem::Template revealTemplate;
-        revealTemplate.emitters.push_back(reveal);
-        context_.particleSystem->Register(TemplateNameFor(color), revealTemplate, true);
+        ParticleSystem::Template floorAreaTemplate;
+        floorAreaTemplate.emitters.push_back(floorArea);
+        context_.particleSystem->Register(FloorAreaTemplateNameFor(color), floorAreaTemplate, true);
 
         ParticleSystem::EmitterConfig floorClear;
         floorClear.texture = "white_x16.png";
@@ -443,19 +398,17 @@ void RouteGimmick::RegisterParticleTemplates() const {
         floorClear.size = {0.3f, 0.3f, 0.3f};
         floorClear.particleLifetime = 1.1f;
         floorClear.spawnFuncKey = FLOOR_CLEAR_SPAWN_FUNC_KEY;
-        floorClear.colorKeys = fadeOut;
+        floorClear.updateFuncKey = FLOOR_CLEAR_UPDATE_FUNC_KEY;
+        floorClear.colorKeys = {
+            GradientKey<Vector4>{0.0f, tint},
+            GradientKey<Vector4>{1.0f, {tint.x, tint.y, tint.z, 0.0f}}
+        };
         floorClear.canvasName = "Main";
 
         ParticleSystem::Template floorClearTemplate;
         floorClearTemplate.emitters.push_back(floorClear);
         context_.particleSystem->Register(FloorClearTemplateNameFor(color), floorClearTemplate, true);
     }
-}
-
-void RouteGimmick::EmitColorReveal(RouteColor _color) const {
-    if (!context_.particleSystem || !context_.player) return;
-    context_.particleSystem->Emit(
-        TemplateNameFor(_color), context_.player->GetPosition() + Vector3{0.0f, 2.2f, 0.0f});
 }
 
 void RouteGimmick::EmitFloorClear(RouteColor _color, const Vector3& _position) const {
@@ -467,6 +420,10 @@ void RouteGimmick::Finish(GimmickState _result) {
     state_ = _result;
     if (context_.towerManager) context_.towerManager->SetMainTowerSwitchSuspended(false);
 
+    for (ColorFloor& floor : floors_) {
+        if (floor.collider) floor.collider->Disable();
+        floor.floorEmitter.Stop();
+    }
+
     if (mode_ == Mode::SingleColorTutorial) singleColorTutorialCleared_ = true;
-    else if (mode_ == Mode::GuidedTutorial) guidedTutorialCleared_ = true;
 }

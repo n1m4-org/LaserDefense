@@ -14,7 +14,6 @@ void MyGame::Initialize(GameEngine::Config& _config) {
 
     _config.defaultScene = "Title";
 
-
     // cnf の値をゲーム側で強制上書きしたい場合はここで設定する
     // 例: _config.fps = 120;
 

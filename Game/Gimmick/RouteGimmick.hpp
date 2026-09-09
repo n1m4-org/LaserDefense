@@ -2,6 +2,7 @@
 #define ROUTE_GIMMICK_HPP_
 
 #include <array>
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -9,26 +10,26 @@
 #include "Gimmick/IGimmick.hpp"
 #include "Math/Vector3.hpp"
 #include "Model.hpp"
-#include "Text/Text.hpp"
+#include "src/ParticleSystem/Emitter/Emitter.hpp"
 
 enum class RouteColor : uint8_t { Red, Blue, Green, Yellow };
 
 class RouteGimmick final : public IGimmick {
 public:
-    enum class Mode { SingleColorTutorial, GuidedTutorial, Normal };
+    enum class Mode { SingleColorTutorial, Normal };
 
 private:
     struct ColorFloor {
         RouteColor color = RouteColor::Red;
         Vector3 position{};
+        int32_t orderNumber = 1;
         bool cleared = false;
-        float disappearTime = 0.0f;
         std::unique_ptr<Collision::Collider> collider;
-        std::unique_ptr<Model> model;
+        EmitterHandle floorEmitter;
+        std::vector<std::unique_ptr<Model>> orderMarkers;
     };
 
     static inline bool singleColorTutorialCleared_ = false;
-    static inline bool guidedTutorialCleared_ = false;
 
     GimmickContext context_{};
     GimmickState state_ = GimmickState::Ready;
@@ -44,21 +45,20 @@ private:
     float timeLimitSeconds_ = 20.0f;
     float floorRadius_ = 1.5f;
     float floorOpacity_ = 0.55f;
-    float floorDisappearDuration_ = 0.35f;
     float minFloorDistance_ = 6.0f;
     float minTowerDistance_ = 4.0f;
     float placementRadius_ = 18.0f;
 
-    float colorRevealInterval_ = 0.6f;
-    float guidedColorRevealInterval_ = 1.2f;
-    float guideNumberLeadSeconds_ = 0.5f;
-    int32_t revealedColorCount_ = 0;
-    float colorRevealTimer_ = 0.0f;
-    bool guideNumberActive_ = false;
-    mutable Text guideNumberText_{};
-    bool pendingAdvanceToGuidedTutorial_ = false;
+    float orderMarkerRadius_ = 0.22f;
+    float orderMarkerSpacing_ = 0.5f;
+    float orderMarkerHeight_ = 1.4f;
+
+    bool pendingAdvanceToNormal_ = false;
+    bool debugTuningPaused_ = false;
 
 public:
+    ~RouteGimmick() override;
+
     void Initialize(const GimmickContext& _context) override;
     void Update(float _deltaTime) override;
     void Draw() const override;
@@ -71,7 +71,6 @@ public:
 
     static void ResetTutorialProgress() {
         singleColorTutorialCleared_ = false;
-        guidedTutorialCleared_ = false;
     }
 
 private:
@@ -80,17 +79,13 @@ private:
     void DetermineMode();
     void GenerateColorOrder();
     void PlaceFloors();
+    void CreateOrderMarkers(ColorFloor& _floor);
+    void UpdateOrderMarkerTransforms(ColorFloor& _floor);
+    void RefreshFloorVisuals();
     Vector3 GenerateFloorPosition() const;
-    void UpdateFloors(float _deltaTime);
-    void UpdateFloorDisappear(ColorFloor& _floor, float _deltaTime);
     void OnFloorEntered(std::size_t _index);
-    void AdvanceToGuidedTutorial();
-    void UpdateColorReveal(float _deltaTime);
-    void StartColorRevealStep();
-    void ShowGuideNumber(int32_t _step);
-    void HideGuideNumber();
+    void AdvanceToNormal();
     void RegisterParticleTemplates() const;
-    void EmitColorReveal(RouteColor _color) const;
     void EmitFloorClear(RouteColor _color, const Vector3& _position) const;
     void Finish(GimmickState _result);
 };

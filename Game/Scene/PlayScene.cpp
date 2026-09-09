@@ -454,7 +454,6 @@ void PlayScene::Draw() {
     gimmickManager_->Draw();
     for (const auto& fence : fences_) fence->Draw();
 
-
     // UI は 3D の描画がすべて終わったあとに重ねる
 
     if (cursorVisible_) {
@@ -473,7 +472,7 @@ void PlayScene::Debug() {
 #endif
 }
 
-void PlayScene::UpdateTowerSelection() {
+void PlayScene::UpdateTowerSelection(float _deltaTime) {
     const auto mouse = Singleton<Input>::GetInstance();
     const auto screen = Singleton<Screen>::GetInstance();
     const auto camera = Singleton<CameraController>::GetInstance()->GetActive();
