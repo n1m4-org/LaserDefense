@@ -15,7 +15,8 @@
             "OrderMarkerRadius": 0.6200000047683716,
             "OrderMarkerSpacing": 1.3600000143051147,
             "PlacementRadius": 50.0,
-            "TimeLimitSeconds": 10.0
+            "BaseTimeLimitSeconds": 15.0,
+            "TimePerAdditionalFloorSeconds": 5.0
         }
     }
 }

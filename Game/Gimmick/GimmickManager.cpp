@@ -37,7 +37,7 @@ void GimmickManager::Initialize(const GimmickContext& _context) {
     lastRandomGimmick_.reset();
     LoadConfig();
     InitializeTimerGauge();
-    RouteGimmick::ResetTutorialProgress();
+    RouteGimmick::ResetInvocationCount();
 }
 
 void GimmickManager::Update(float _deltaTime) {
